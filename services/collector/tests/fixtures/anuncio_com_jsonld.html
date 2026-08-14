@@ -1,0 +1,33 @@
+<!doctype html>
+<!--
+  FIXTURE SINTÉTICA. Não é uma cópia de nenhuma página real.
+  Serve para provar que o caminho JSON-LD funciona. Antes de produção,
+  substitua por uma página real salva com:
+      python -m captacao_bot.cli fixture --fonte shopcar --url <URL>
+-->
+<html lang="pt-br">
+<head>
+  <meta property="og:title" content="Toyota Corolla XEi 2.0 2019/2020 Flex Automático">
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "Vehicle",
+    "name": "TOYOTA COROLLA XEI 2.0 FLEX AUT 2019/2020 COMPLETO IPVA PAGO!!!",
+    "modelDate": "2019/2020",
+    "color": "Prata",
+    "mileageFromOdometer": { "@type": "QuantitativeValue", "value": 68450, "unitCode": "KMT" },
+    "image": ["/img/corolla-1.jpg", "/img/corolla-2.jpg"],
+    "offers": { "@type": "Offer", "price": "104900.00", "priceCurrency": "BRL" }
+  }
+  </script>
+</head>
+<body>
+  <h1 class="veiculo-titulo">Toyota Corolla XEi 2.0</h1>
+  <span class="preco">R$ 104.900,00</span>
+  <span class="km">68.450 km</span>
+  <span class="cambio">Automático</span>
+  <span class="combustivel">Flex</span>
+  <span class="localizacao">Campo Grande - MS</span>
+  <div class="vendedor-nome">Revenda Exemplo</div>
+</body>
+</html>
