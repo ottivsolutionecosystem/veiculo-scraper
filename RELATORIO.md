@@ -1,4 +1,4 @@
-# RELATORIO — Fases 1, 2 e 3
+# RELATORIO — Fases 1, 2, 3 e 4
 
 ## Feito
 - Passo 0: SPEC.md, CLAUDE.md, PROMPT.md, README.md, db/schema.sql e
@@ -151,3 +151,37 @@ score_total DESC, veiculo_id LIMIT 24`), em duas escalas:
   custo) — mantive os valores da Fase 1 e a implementação de exemplo
   (`ParallelumFipeProvider`) como placeholders razoáveis, mas a escolha
   final de fornecedor é decisão sua, não técnica.
+
+## Fase 4 — apps/web ligado à apps/api de verdade
+- As 11 telas (+ fichas) trocaram `@/mocks` por `@/lib/api` (fetch para
+  `apps/api`, `cache: "no-store"`). Mutações reais: descartar, marcar
+  interesse, revelar contato (com auditoria), ligar (discador), mutar/DND
+  vendedor, checklist e avanço de estado de solicitação, confirmar match
+  FIPE, salvar Ajustes (`PUT /api/settings`), liga/desliga de fonte.
+- `packages/types/domain.ts`: `id`/chaves estrangeiras de Customer,
+  Interest, InterestMatch, AcquisitionRequest, Branch, Seller, AuditRecord,
+  Webhook eram `string`, mas todo `serialize.ts` sempre devolveu `number`
+  (SERIAL do Postgres) — corrigido no domain.ts em vez de forçar a API a
+  fingir string; era resquício da Fase 1 (mock com id tipo `"customer-1"`).
+- `apps/web/src/mocks/` (exceto `catalog.ts`, vocabulário compartilhado com
+  o normalizador do coletor, movido para `lib/catalog.ts`) e
+  `lib/demo-state.ts` foram deletados — nenhuma tela usa mock ou
+  `?demo=` mais; loading/erro reais vêm de `loading.tsx`/`error.tsx` do
+  App Router.
+- CORS: `@fastify/cors` liberando `WEB_ORIGIN` (default
+  `http://localhost:3000`) — Client Components (ex. descartar, revelar
+  contato) chamam `apps/api` direto do browser, origem diferente.
+- Achado real: `fila_do_dia` é view materializada (migration 0011) e nada
+  dava refresh nela — descartar um veículo não sumia da Fila do dia nem do
+  Discador. Corrigido com `REFRESH MATERIALIZED VIEW CONCURRENTLY` disparado
+  (fire-and-forget) depois de descarte e resultado de ligação, mais um job
+  `refresh-fila` no worker a cada 10 min (o intervalo já estava comentado
+  na migration, só faltava implementar) para cobrir mudanças de score/FIPE.
+- Validado ponta a ponta com Postgres+Redis+apps/api+apps/web reais: 11
+  telas sem erro de console/RSC, screenshots via Playwright, e cada
+  mutação testada via UI real ou curl direto contra a API rodando
+  (descartar, revelar contato, mutar vendedor, confirmar FIPE, salvar
+  Ajustes — todas persistem e refletem na tela).
+- `apps/web/src/lib/search.ts::filterVehicles` (filtro client-side sobre
+  mock) foi removido — a Busca agora filtra no Postgres via
+  `searchVehicles`; sobrou só `parseSearchFilters`.
