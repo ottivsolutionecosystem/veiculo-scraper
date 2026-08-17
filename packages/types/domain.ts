@@ -151,6 +151,7 @@ export interface Vehicle {
   fipeDiscountCents: number | null; // desconto_fipe_reais
   fipeAdjustedCents: number | null; // fipe_ajustada (curva de km, opcional)
   fipeMatchConfidence: number | null; // 0-1
+  fipeMatchCandidates: FipeMatchCandidate[] | null; // preenchido quando 0.60 ≤ confiança < 0.85
   score: Score | null;
   priceHistory: PriceHistoryPoint[];
   daysListed: number;
@@ -181,6 +182,14 @@ export interface FipePrice {
   fuelType: FuelType;
   referenceMonth: string; // "2026-07"
   valueCents: number;
+}
+
+/** Candidato da fila de revisão de match FIPE (seção 8 do SPEC): confiança
+ * entre 0.60 e 0.85 mostra até 3 candidatos para confirmação manual. */
+export interface FipeMatchCandidate {
+  fipeCode: string;
+  label: string; // "COROLLA XEI 2.0 16V 2020" já formatado para exibição
+  confidence: number; // 0-1
 }
 
 // ---------------------------------------------------------------------------
