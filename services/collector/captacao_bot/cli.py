@@ -4,6 +4,7 @@
     python -m captacao_bot.cli fixture --fonte shopcar --url https://...
     python -m captacao_bot.cli parse   --fonte shopcar --arquivo tests/fixtures/x.html
     python -m captacao_bot.cli coletar --fonte shopcar --limite 20 --dry-run
+    python -m captacao_bot.cli coletar --fonte shopcar --limite 20 --postgres  # requer DATABASE_URL
 """
 
 from __future__ import annotations
@@ -19,7 +20,7 @@ from .adapters.shopcar import ShopcarAdapter
 from .config import FONTES, USER_AGENT
 from .http_client import PoliteClient
 from .pipeline import normalizar, precisa_revisao
-from .storage import MemoryStorage
+from .storage import MemoryStorage, PostgresStorage
 from .runner import Runner
 
 ADAPTERS = {"shopcar": ShopcarAdapter}
@@ -70,18 +71,34 @@ def cmd_parse(args) -> None:
     print(f"\npendências: {pendencias or 'nenhuma'}")
 
 
+def _postgres_storage() -> PostgresStorage:
+    """Conecta em DATABASE_URL (mesma variável do apps/api — db/migrations
+    tem que já estar aplicado). Import de psycopg fica aqui dentro: os
+    comandos robots/fixture/parse não precisam de banco pra funcionar."""
+    import psycopg
+
+    dsn = os.environ.get("DATABASE_URL")
+    if not dsn:
+        sys.exit("--postgres exige a variável de ambiente DATABASE_URL")
+    conn = psycopg.connect(dsn)
+    return PostgresStorage(conn)
+
+
 def cmd_coletar(args) -> None:
     adapter = _adapter(args.fonte)
-    storage = MemoryStorage()  # trocar por PostgresStorage(conn) em produção
+    storage = _postgres_storage() if args.postgres else MemoryStorage()
     with PoliteClient(adapter.cfg) as client:
         runner = Runner(adapter, client, storage)
         resultado = runner.coletar(limite=args.limite)
     print(resultado.resumo())
-    if args.dry_run:
+    if args.dry_run and isinstance(storage, MemoryStorage):
         for (_, url), reg in list(storage.anuncios.items())[:10]:
             v = reg["veiculo"]
             print(f"  {v.marca or '?':<12} {v.modelo or '?':<14} "
                   f"{v.ano_modelo or '?'}  {(v.preco or 0)/100:>12,.2f}  {url}")
+    elif args.dry_run:
+        print("--dry-run não tem efeito com --postgres: PostgresStorage grava direto "
+              "(sempre gravou; a única forma de não gravar é não passar --postgres).")
 
 
 def main() -> None:
@@ -112,6 +129,10 @@ def main() -> None:
     pc.add_argument("--fonte", required=True)
     pc.add_argument("--limite", type=int)
     pc.add_argument("--dry-run", action="store_true")
+    pc.add_argument(
+        "--postgres", action="store_true",
+        help="grava em Postgres (DATABASE_URL) em vez de MemoryStorage",
+    )
     pc.set_defaults(func=cmd_coletar)
 
     args = p.parse_args()
