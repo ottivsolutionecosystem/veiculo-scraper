@@ -10,8 +10,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 
-export function RulesTab({ settings }: { settings: Settings }) {
-  const [reasons, setReasons] = React.useState(settings.discardReasons);
+export function RulesTab({
+  draft,
+  onChange,
+}: {
+  draft: Settings;
+  onChange: (patch: Partial<Settings>) => void;
+}) {
   const [newReason, setNewReason] = React.useState("");
 
   return (
@@ -22,10 +27,12 @@ export function RulesTab({ settings }: { settings: Settings }) {
         </CardHeader>
         <CardContent className="space-y-3">
           <div className="flex flex-wrap gap-1.5">
-            {reasons.map((reason) => (
+            {draft.discardReasons.map((reason) => (
               <Badge key={reason} variant="outline" className="gap-1">
                 {reason}
-                <button onClick={() => setReasons((r) => r.filter((x) => x !== reason))}>
+                <button
+                  onClick={() => onChange({ discardReasons: draft.discardReasons.filter((x) => x !== reason) })}
+                >
                   <X className="h-3 w-3" />
                 </button>
               </Badge>
@@ -41,7 +48,7 @@ export function RulesTab({ settings }: { settings: Settings }) {
               variant="outline"
               onClick={() => {
                 if (!newReason.trim()) return;
-                setReasons((r) => [...r, newReason.trim()]);
+                onChange({ discardReasons: [...draft.discardReasons, newReason.trim()] });
                 setNewReason("");
               }}
             >
@@ -58,27 +65,57 @@ export function RulesTab({ settings }: { settings: Settings }) {
         <CardContent className="grid grid-cols-2 gap-3">
           <div className="space-y-1">
             <Label>Queda de preço (%)</Label>
-            <Input type="number" defaultValue={settings.returnTriggerPricePct} />
+            <Input
+              type="number"
+              value={draft.returnTriggerPricePct}
+              onChange={(e) => onChange({ returnTriggerPricePct: Number(e.target.value) })}
+            />
           </div>
           <div className="space-y-1">
             <Label>Dias parados</Label>
-            <Input type="number" defaultValue={settings.returnTriggerDays} />
+            <Input
+              type="number"
+              value={draft.returnTriggerDays}
+              onChange={(e) => onChange({ returnTriggerDays: Number(e.target.value) })}
+            />
           </div>
           <div className="space-y-1">
             <Label>Cooldown por vendedor (h)</Label>
-            <Input type="number" defaultValue={settings.sellerCooldownHours} />
+            <Input
+              type="number"
+              value={draft.sellerCooldownHours}
+              onChange={(e) => onChange({ sellerCooldownHours: Number(e.target.value) })}
+            />
           </div>
           <div className="space-y-1">
             <Label>Follow-up (dias, separados por vírgula)</Label>
-            <Input defaultValue={settings.followUpDays.join(", ")} />
+            <Input
+              defaultValue={draft.followUpDays.join(", ")}
+              onBlur={(e) =>
+                onChange({
+                  followUpDays: e.target.value
+                    .split(",")
+                    .map((v) => Number(v.trim()))
+                    .filter((n) => !Number.isNaN(n)),
+                })
+              }
+            />
           </div>
           <div className="space-y-1">
             <Label>Horário permitido — início</Label>
-            <Input type="time" defaultValue={settings.allowedHoursStart} />
+            <Input
+              type="time"
+              value={draft.allowedHoursStart}
+              onChange={(e) => onChange({ allowedHoursStart: e.target.value })}
+            />
           </div>
           <div className="space-y-1">
             <Label>Horário permitido — fim</Label>
-            <Input type="time" defaultValue={settings.allowedHoursEnd} />
+            <Input
+              type="time"
+              value={draft.allowedHoursEnd}
+              onChange={(e) => onChange({ allowedHoursEnd: e.target.value })}
+            />
           </div>
         </CardContent>
       </Card>

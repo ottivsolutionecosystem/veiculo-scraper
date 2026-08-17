@@ -1,31 +1,27 @@
 import { ClipboardList } from "lucide-react";
 
-import { REQUESTS, BRANCHES, VEHICLES, vehicleById, primaryListing } from "@/mocks";
-import { getDemoState, delay, DemoError } from "@/lib/demo-state";
+import { getRequests, getBranches } from "@/lib/api";
 import { EmptyState } from "@/components/shared/empty-state";
 import { RequestsKanban } from "@/components/requests/kanban";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Card } from "@/components/ui/card";
 import { formatDate } from "@/lib/format";
 
-export default async function SolicitacoesPage({
-  searchParams,
-}: {
-  searchParams: { [key: string]: string | string[] | undefined };
-}) {
-  const demo = getDemoState(searchParams);
-  if (demo === "error") throw new DemoError("Solicitações");
-  if (demo === "loading") await delay(900);
-
-  const requests = demo === "empty" ? [] : REQUESTS;
-  const vehicleMap = new Map(VEHICLES.map((v) => [v.id, v]));
-  const branchMap = new Map(BRANCHES.map((b) => [b.id, b]));
+export default async function SolicitacoesPage() {
+  const [requestsPage, branches] = await Promise.all([
+    getRequests({ limit: 100 }),
+    getBranches(),
+  ]);
+  const requests = requestsPage.items;
 
   return (
     <div className="space-y-4 p-6">
       <div>
         <h1 className="text-xl font-bold">Solicitações de captação</h1>
-        <p className="text-sm text-muted-foreground">{requests.length} solicitações</p>
+        <p className="text-sm text-muted-foreground">
+          {requests.length}
+          {requestsPage.nextCursor ? "+" : ""} solicitações
+        </p>
       </div>
 
       {requests.length === 0 ? (
@@ -41,10 +37,10 @@ export default async function SolicitacoesPage({
             <TabsTrigger value="unidade">Por unidade</TabsTrigger>
           </TabsList>
           <TabsContent value="kanban">
-            <RequestsKanban requests={requests} vehicles={vehicleMap} branches={branchMap} />
+            <RequestsKanban requests={requests} branches={branches} />
           </TabsContent>
           <TabsContent value="unidade" className="space-y-4">
-            {BRANCHES.map((branch) => {
+            {branches.map((branch) => {
               const branchRequests = requests.filter((r) => r.branchId === branch.id);
               return (
                 <Card key={branch.id} className="p-4">
@@ -56,16 +52,12 @@ export default async function SolicitacoesPage({
                     <p className="text-sm text-muted-foreground">Nenhuma solicitação nesta unidade.</p>
                   ) : (
                     <div className="space-y-1">
-                      {branchRequests.map((r) => {
-                        const vehicle = vehicleById(r.vehicleId);
-                        const listing = vehicle ? primaryListing(vehicle) : undefined;
-                        return (
-                          <div key={r.id} className="flex justify-between text-sm">
-                            <span>{listing ? `${listing.brand} ${listing.model}` : r.id}</span>
-                            <span className="text-muted-foreground">{formatDate(r.proposedAt)}</span>
-                          </div>
-                        );
-                      })}
+                      {branchRequests.map((r) => (
+                        <div key={r.id} className="flex justify-between text-sm">
+                          <span>{r.vehicle ? `${r.vehicle.brand} ${r.vehicle.model}` : `#${r.id}`}</span>
+                          <span className="text-muted-foreground">{formatDate(r.proposedAt)}</span>
+                        </div>
+                      ))}
                     </div>
                   )}
                 </Card>

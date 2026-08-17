@@ -1,31 +1,25 @@
 import Link from "next/link";
 import { UserRound } from "lucide-react";
 
-import { SELLERS } from "@/mocks";
-import { getDemoState, delay, DemoError } from "@/lib/demo-state";
+import { getSellers } from "@/lib/api";
 import { EmptyState } from "@/components/shared/empty-state";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 
-export default async function VendedoresPage({
-  searchParams,
-}: {
-  searchParams: { [key: string]: string | string[] | undefined };
-}) {
-  const demo = getDemoState(searchParams);
-  if (demo === "error") throw new DemoError("Vendedores");
-  if (demo === "loading") await delay(900);
-
-  const sellers = demo === "empty" ? [] : [...SELLERS].sort((a, b) => b.totalListings - a.totalListings);
+export default async function VendedoresPage() {
+  const page = await getSellers({ limit: 100 });
 
   return (
     <div className="space-y-4 p-6">
       <div>
         <h1 className="text-xl font-bold">Vendedores</h1>
-        <p className="text-sm text-muted-foreground">{sellers.length} vendedores com anúncios ativos</p>
+        <p className="text-sm text-muted-foreground">
+          {page.items.length}
+          {page.nextCursor ? "+" : ""} vendedores com anúncios ativos
+        </p>
       </div>
 
-      {sellers.length === 0 ? (
+      {page.items.length === 0 ? (
         <EmptyState
           icon={UserRound}
           title="Nenhum vendedor ainda"
@@ -42,7 +36,7 @@ export default async function VendedoresPage({
             </TableRow>
           </TableHeader>
           <TableBody>
-            {sellers.map((seller) => (
+            {page.items.map((seller) => (
               <TableRow key={seller.id}>
                 <TableCell>
                   <Link href={`/vendedores/${seller.id}`} className="font-medium text-primary hover:underline">

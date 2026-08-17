@@ -1,6 +1,3 @@
-import type { Vehicle } from "@veiculo/types";
-import { primaryListing } from "@/mocks/vehicles";
-
 export interface SearchFilters {
   brand?: string;
   model?: string;
@@ -34,24 +31,4 @@ export function parseSearchFilters(params: Record<string, string | string[] | un
     transmission: get("transmission") || undefined,
     onlyActive: get("onlyActive") === "1",
   };
-}
-
-export function filterVehicles(vehicles: Vehicle[], filters: SearchFilters): Vehicle[] {
-  return vehicles.filter((vehicle) => {
-    const listing = primaryListing(vehicle);
-    if (filters.brand && listing.brand !== filters.brand) return false;
-    if (filters.model && !listing.model?.toLowerCase().includes(filters.model.toLowerCase())) return false;
-    if (filters.city && listing.city !== filters.city) return false;
-    if (filters.yearMin && (listing.modelYear ?? 0) < filters.yearMin) return false;
-    if (filters.yearMax && (listing.modelYear ?? 0) > filters.yearMax) return false;
-    if (filters.priceMaxCents && (listing.priceCents ?? Infinity) > filters.priceMaxCents) return false;
-    if (filters.transmission && listing.transmission !== filters.transmission) return false;
-    if (filters.onlyActive && !listing.active) return false;
-    if (
-      filters.minFipeDiscountPct !== undefined &&
-      (vehicle.fipeDiscountPct ?? -Infinity) < filters.minFipeDiscountPct
-    )
-      return false;
-    return true;
-  });
 }

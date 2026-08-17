@@ -1,15 +1,21 @@
-"use client";
-
-import * as React from "react";
 import type { Settings } from "@veiculo/types";
 
 import { Slider } from "@/components/ui/slider";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 
-export function WeightsTab({ settings }: { settings: Settings }) {
-  const [weights, setWeights] = React.useState(settings.weights);
-  const total = weights.reduce((sum, w) => sum + w.weight, 0);
+export function WeightsTab({
+  draft,
+  onChange,
+}: {
+  draft: Settings;
+  onChange: (patch: Partial<Settings>) => void;
+}) {
+  const total = draft.weights.reduce((sum, w) => sum + w.weight, 0);
+
+  function setWeight(idx: number, weight: number) {
+    onChange({ weights: draft.weights.map((w, i) => (i === idx ? { ...w, weight } : w)) });
+  }
 
   return (
     <div className="grid gap-4 lg:grid-cols-2">
@@ -18,7 +24,7 @@ export function WeightsTab({ settings }: { settings: Settings }) {
           <CardTitle>Pesos do score de oportunidade</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          {weights.map((w, idx) => (
+          {draft.weights.map((w, idx) => (
             <div key={w.key} className="space-y-1.5">
               <div className="flex justify-between text-sm">
                 <span>{w.label}</span>
@@ -28,9 +34,7 @@ export function WeightsTab({ settings }: { settings: Settings }) {
                 value={[w.weight * 100]}
                 max={40}
                 step={1}
-                onValueChange={([v]) =>
-                  setWeights((prev) => prev.map((p, i) => (i === idx ? { ...p, weight: (v ?? 0) / 100 } : p)))
-                }
+                onValueChange={([v]) => setWeight(idx, (v ?? 0) / 100)}
               />
             </div>
           ))}
@@ -47,19 +51,19 @@ export function WeightsTab({ settings }: { settings: Settings }) {
         <CardContent className="space-y-3 text-sm">
           <div className="flex items-center justify-between">
             <span>Quente</span>
-            <span className="text-muted-foreground">≥ {settings.bandThresholds.hot}</span>
+            <span className="text-muted-foreground">≥ {draft.bandThresholds.hot}</span>
           </div>
-          <Progress value={settings.bandThresholds.hot} />
+          <Progress value={draft.bandThresholds.hot} />
           <div className="flex items-center justify-between">
             <span>Boa</span>
-            <span className="text-muted-foreground">≥ {settings.bandThresholds.good}</span>
+            <span className="text-muted-foreground">≥ {draft.bandThresholds.good}</span>
           </div>
-          <Progress value={settings.bandThresholds.good} />
+          <Progress value={draft.bandThresholds.good} />
           <div className="flex items-center justify-between">
             <span>Morna</span>
-            <span className="text-muted-foreground">≥ {settings.bandThresholds.warm}</span>
+            <span className="text-muted-foreground">≥ {draft.bandThresholds.warm}</span>
           </div>
-          <Progress value={settings.bandThresholds.warm} />
+          <Progress value={draft.bandThresholds.warm} />
         </CardContent>
       </Card>
     </div>

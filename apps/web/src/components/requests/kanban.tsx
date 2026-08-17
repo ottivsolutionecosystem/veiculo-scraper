@@ -1,9 +1,10 @@
 "use client";
 
 import * as React from "react";
-import type { AcquisitionRequest, AcquisitionRequestState, Vehicle, Branch } from "@veiculo/types";
+import { useRouter } from "next/navigation";
+import type { AcquisitionRequestState } from "@veiculo/types";
 
-import { primaryListing } from "@/mocks/vehicles";
+import type { RequestListItem, BranchWithLoad } from "@/lib/api-types";
 import { formatCents, formatDate } from "@/lib/format";
 import { REQUEST_STATE_LABELS } from "@/lib/labels";
 import { Card } from "@/components/ui/card";
@@ -23,14 +24,15 @@ const COLUMN_ORDER: AcquisitionRequestState[] = [
 
 export function RequestsKanban({
   requests,
-  vehicles,
   branches,
 }: {
-  requests: AcquisitionRequest[];
-  vehicles: Map<number, Vehicle>;
-  branches: Map<string, Branch>;
+  requests: RequestListItem[];
+  branches: BranchWithLoad[];
 }) {
-  const [selected, setSelected] = React.useState<AcquisitionRequest | null>(null);
+  const router = useRouter();
+  const [selectedId, setSelectedId] = React.useState<number | null>(null);
+  const selected = requests.find((r) => r.id === selectedId) ?? null;
+  const branchMap = new Map(branches.map((b) => [b.id, b]));
 
   return (
     <>
@@ -42,33 +44,31 @@ export function RequestsKanban({
             </p>
             {requests
               .filter((r) => r.state === state)
-              .map((request) => {
-                const vehicle = vehicles.get(request.vehicleId);
-                const listing = vehicle ? primaryListing(vehicle) : undefined;
-                return (
-                  <Card
-                    key={request.id}
-                    className="cursor-pointer p-3 hover:bg-accent"
-                    onClick={() => setSelected(request)}
-                  >
-                    <p className="text-sm font-medium">
-                      {listing ? `${listing.brand} ${listing.model} ${listing.modelYear}` : "—"}
-                    </p>
-                    <p className="text-xs text-muted-foreground">{formatCents(listing?.priceCents ?? null)}</p>
-                    <p className="text-xs text-muted-foreground">{formatDate(request.proposedAt)}</p>
-                  </Card>
-                );
-              })}
+              .map((request) => (
+                <Card
+                  key={request.id}
+                  className="cursor-pointer p-3 hover:bg-accent"
+                  onClick={() => setSelectedId(request.id)}
+                >
+                  <p className="text-sm font-medium">
+                    {request.vehicle
+                      ? `${request.vehicle.brand} ${request.vehicle.model} ${request.vehicle.modelYear}`
+                      : "—"}
+                  </p>
+                  <p className="text-xs text-muted-foreground">{formatCents(request.vehicle?.priceCents ?? null)}</p>
+                  <p className="text-xs text-muted-foreground">{formatDate(request.proposedAt)}</p>
+                </Card>
+              ))}
           </div>
         ))}
       </div>
 
       <RequestSheet
         open={selected !== null}
-        onOpenChange={(open) => !open && setSelected(null)}
+        onOpenChange={(open) => !open && setSelectedId(null)}
         request={selected ?? requests[0]!}
-        vehicle={selected ? vehicles.get(selected.vehicleId) : undefined}
-        branch={selected ? branches.get(selected.branchId) : undefined}
+        branch={selected ? branchMap.get(selected.branchId) : undefined}
+        onChanged={() => router.refresh()}
       />
     </>
   );

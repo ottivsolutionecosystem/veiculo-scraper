@@ -1,23 +1,14 @@
 import { Flame } from "lucide-react";
 
-import { queueVehicles } from "@/mocks";
-import { getDemoState, delay, DemoError } from "@/lib/demo-state";
+import { getQueue } from "@/lib/api";
 import { EmptyState } from "@/components/shared/empty-state";
 import { QueueView } from "@/components/queue/queue-view";
 import { Badge } from "@/components/ui/badge";
 
-export default async function FilaDoDiaPage({
-  searchParams,
-}: {
-  searchParams: { [key: string]: string | string[] | undefined };
-}) {
-  const demo = getDemoState(searchParams);
-  if (demo === "error") throw new DemoError("Fila do dia");
-  if (demo === "loading") await delay(900);
-
-  const vehicles = demo === "empty" ? [] : queueVehicles();
-  const quente = vehicles.filter((v) => v.score?.band === "quente").length;
-  const comDemanda = vehicles.filter((v) => v.compatibleCustomersCount > 0).length;
+export default async function FilaDoDiaPage() {
+  const page = await getQueue({ limit: 40 });
+  const quente = page.items.filter((v) => v.score?.band === "quente").length;
+  const comDemanda = page.items.filter((v) => v.compatibleCustomersCount > 0).length;
 
   return (
     <div className="flex h-full flex-col">
@@ -25,16 +16,17 @@ export default async function FilaDoDiaPage({
         <div>
           <h1 className="text-xl font-bold">Fila do dia</h1>
           <p className="text-sm text-muted-foreground">
-            {vehicles.length} veículos ranqueados por oportunidade
+            {page.items.length}
+            {page.nextCursor ? "+" : ""} veículos carregados, ranqueados por oportunidade
           </p>
         </div>
         <div className="flex gap-2">
-          <Badge variant="quente">{quente} quentes</Badge>
+          <Badge variant="quente">{quente} quentes nesta página</Badge>
           <Badge variant="outline">{comDemanda} com demanda</Badge>
         </div>
       </div>
 
-      {vehicles.length === 0 ? (
+      {page.items.length === 0 ? (
         <div className="p-6">
           <EmptyState
             icon={Flame}
@@ -44,7 +36,7 @@ export default async function FilaDoDiaPage({
         </div>
       ) : (
         <div className="p-6 pt-4">
-          <QueueView vehicles={vehicles} />
+          <QueueView initial={page} source="queue" />
         </div>
       )}
     </div>

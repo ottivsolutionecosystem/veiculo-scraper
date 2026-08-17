@@ -1,12 +1,17 @@
 import Link from "next/link";
-import type { Seller, Vehicle } from "@veiculo/types";
+import type { Seller, Listing } from "@veiculo/types";
 import { UserRound, BellOff, VolumeX } from "lucide-react";
 
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { primaryListing } from "@/mocks/vehicles";
 
-export function SellerCard({ seller, otherVehicles }: { seller: Seller; otherVehicles: Vehicle[] }) {
+export function SellerCard({
+  seller,
+  otherVehicles,
+}: {
+  seller: Seller;
+  otherVehicles: { vehicleId: number; listing: Partial<Listing> }[];
+}) {
   return (
     <Card>
       <CardHeader>
@@ -34,18 +39,15 @@ export function SellerCard({ seller, otherVehicles }: { seller: Seller; otherVeh
               Outros {otherVehicles.length} carros deste vendedor
             </p>
             <div className="space-y-1">
-              {otherVehicles.slice(0, 5).map((v) => {
-                const l = primaryListing(v);
-                return (
-                  <Link
-                    key={v.id}
-                    href={`/veiculos/${v.id}`}
-                    className="block truncate text-sm text-primary hover:underline"
-                  >
-                    {l.brand} {l.model} {l.modelYear}
-                  </Link>
-                );
-              })}
+              {otherVehicles.slice(0, 5).map(({ vehicleId, listing }) => (
+                <Link
+                  key={vehicleId}
+                  href={`/veiculos/${vehicleId}`}
+                  className="block truncate text-sm text-primary hover:underline"
+                >
+                  {listing.brand} {listing.model} {listing.modelYear}
+                </Link>
+              ))}
             </div>
           </div>
         )}

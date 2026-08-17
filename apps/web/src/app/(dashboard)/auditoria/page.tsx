@@ -1,26 +1,14 @@
 import { ScrollText } from "lucide-react";
 
-import { AUDIT_RECORDS } from "@/mocks";
-import { getDemoState, delay, DemoError } from "@/lib/demo-state";
+import { getAudit } from "@/lib/api";
 import { AUDIT_ACTION_LABELS } from "@/lib/labels";
 import { formatDateTime } from "@/lib/format";
 import { EmptyState } from "@/components/shared/empty-state";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 
-export default async function AuditoriaPage({
-  searchParams,
-}: {
-  searchParams: { [key: string]: string | string[] | undefined };
-}) {
-  const demo = getDemoState(searchParams);
-  if (demo === "error") throw new DemoError("Auditoria");
-  if (demo === "loading") await delay(900);
-
-  const records =
-    demo === "empty"
-      ? []
-      : [...AUDIT_RECORDS].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+export default async function AuditoriaPage() {
+  const page = await getAudit({ limit: 100 });
 
   return (
     <div className="space-y-4 p-6">
@@ -31,7 +19,7 @@ export default async function AuditoriaPage({
         </p>
       </div>
 
-      {records.length === 0 ? (
+      {page.items.length === 0 ? (
         <EmptyState
           icon={ScrollText}
           title="Nenhum registro de auditoria"
@@ -49,7 +37,7 @@ export default async function AuditoriaPage({
             </TableRow>
           </TableHeader>
           <TableBody>
-            {records.map((record) => (
+            {page.items.map((record) => (
               <TableRow key={record.id}>
                 <TableCell className="whitespace-nowrap text-muted-foreground">
                   {formatDateTime(record.createdAt)}

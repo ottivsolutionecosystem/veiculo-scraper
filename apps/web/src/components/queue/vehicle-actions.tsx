@@ -1,7 +1,8 @@
 "use client";
 
 import * as React from "react";
-import { Phone, MessageCircle, ThumbsUp, XCircle, Send, Eye } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { Phone, MessageCircle, ThumbsUp, XCircle, Send, Eye, Loader2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -15,19 +16,67 @@ import {
 } from "@/components/ui/dialog";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { SETTINGS } from "@/mocks";
+import { discardVehicle, postInteraction, revealSellerContact } from "@/lib/api";
 
-/** Ações rápidas de um veículo (Fila do dia e Busca). Sem backend nesta
- * fase: o estado é só local, para demonstrar o fluxo (seção 12 do SPEC). */
-export function VehicleActions({ maskedPhone }: { maskedPhone: string }) {
-  const [revealed, setRevealed] = React.useState(false);
+const DISCARD_REASONS = [
+  "Preço fora da faixa",
+  "Vendedor sem resposta",
+  "Veículo já vendido",
+  "Sinistro declarado",
+  "Documentação irregular",
+  "Duplicidade confirmada",
+];
+
+/** Ações rápidas de um veículo (Fila do dia, Busca, Discador) — chamam a
+ * API real (seção 12 do SPEC). */
+export function VehicleActions({ vehicleId, maskedPhone }: { vehicleId: number; maskedPhone: string }) {
+  const router = useRouter();
+  const [phone, setPhone] = React.useState<string | null>(null);
+  const [revealing, setRevealing] = React.useState(false);
   const [interested, setInterested] = React.useState(false);
+  const [savingInterest, setSavingInterest] = React.useState(false);
   const [discarded, setDiscarded] = React.useState(false);
   const [discardOpen, setDiscardOpen] = React.useState(false);
+  const [discarding, setDiscarding] = React.useState(false);
   const [reason, setReason] = React.useState<string>("");
+  const [notes, setNotes] = React.useState("");
 
   if (discarded) {
     return <span className="text-xs text-muted-foreground">Descartado: {reason}</span>;
+  }
+
+  async function reveal() {
+    setRevealing(true);
+    try {
+      const { phone: revealed } = await revealSellerContact(vehicleId);
+      setPhone(revealed);
+    } catch {
+      setPhone(null);
+    } finally {
+      setRevealing(false);
+    }
+  }
+
+  async function markInterest() {
+    setSavingInterest(true);
+    try {
+      await postInteraction(vehicleId, { channel: "phone", outcome: "negotiating" });
+      setInterested(true);
+    } finally {
+      setSavingInterest(false);
+    }
+  }
+
+  async function confirmDiscard() {
+    setDiscarding(true);
+    try {
+      await discardVehicle(vehicleId, reason, notes || undefined);
+      setDiscarded(true);
+      setDiscardOpen(false);
+      router.refresh();
+    } finally {
+      setDiscarding(false);
+    }
   }
 
   return (
@@ -40,13 +89,13 @@ export function VehicleActions({ maskedPhone }: { maskedPhone: string }) {
           </Button>
         </PopoverTrigger>
         <PopoverContent className="w-64 text-sm">
-          <p className="mb-2 font-medium">{revealed ? "(67) 99812-4471" : maskedPhone}</p>
-          {!revealed ? (
-            <Button size="sm" variant="secondary" onClick={() => setRevealed(true)}>
-              <Eye /> Revelar (gera auditoria)
+          <p className="mb-2 font-medium">{phone ?? maskedPhone}</p>
+          {!phone ? (
+            <Button size="sm" variant="secondary" onClick={reveal} disabled={revealing}>
+              {revealing ? <Loader2 className="animate-spin" /> : <Eye />} Revelar (gera auditoria)
             </Button>
           ) : (
-            <a href="tel:+5567998124471" className="text-primary underline">
+            <a href={`tel:${phone}`} className="text-primary underline">
               Discar agora
             </a>
           )}
@@ -54,18 +103,14 @@ export function VehicleActions({ maskedPhone }: { maskedPhone: string }) {
       </Popover>
 
       <Button size="sm" variant="outline" asChild>
-        <a href="https://wa.me/5567998124471" target="_blank" rel="noreferrer">
+        <a href={`https://wa.me/${(phone ?? "").replace(/\D/g, "")}`} target="_blank" rel="noreferrer">
           <MessageCircle />
           WhatsApp
         </a>
       </Button>
 
-      <Button
-        size="sm"
-        variant={interested ? "default" : "outline"}
-        onClick={() => setInterested((v) => !v)}
-      >
-        <ThumbsUp />
+      <Button size="sm" variant={interested ? "default" : "outline"} onClick={markInterest} disabled={savingInterest || interested}>
+        {savingInterest ? <Loader2 className="animate-spin" /> : <ThumbsUp />}
         {interested ? "Interessado" : "Interesse"}
       </Button>
 
@@ -81,28 +126,21 @@ export function VehicleActions({ maskedPhone }: { maskedPhone: string }) {
                 <SelectValue placeholder="Motivo do descarte" />
               </SelectTrigger>
               <SelectContent>
-                {SETTINGS.discardReasons.map((r) => (
+                {DISCARD_REASONS.map((r) => (
                   <SelectItem key={r} value={r}>
                     {r}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
-            <Textarea placeholder="Observações (opcional)" />
+            <Textarea placeholder="Observações (opcional)" value={notes} onChange={(e) => setNotes(e.target.value)} />
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setDiscardOpen(false)}>
               Cancelar
             </Button>
-            <Button
-              variant="destructive"
-              disabled={!reason}
-              onClick={() => {
-                setDiscarded(true);
-                setDiscardOpen(false);
-              }}
-            >
-              Confirmar descarte
+            <Button variant="destructive" disabled={!reason || discarding} onClick={confirmDiscard}>
+              {discarding && <Loader2 className="animate-spin" />} Confirmar descarte
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -112,9 +150,11 @@ export function VehicleActions({ maskedPhone }: { maskedPhone: string }) {
         Descartar
       </Button>
 
-      <Button size="sm" variant="ghost">
-        <Send />
-        Solicitar
+      <Button size="sm" variant="ghost" asChild>
+        <a href={`/veiculos/${vehicleId}`}>
+          <Send />
+          Solicitar
+        </a>
       </Button>
     </div>
   );

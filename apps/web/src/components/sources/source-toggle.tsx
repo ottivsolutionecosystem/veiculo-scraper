@@ -4,6 +4,7 @@ import * as React from "react";
 
 import { Switch } from "@/components/ui/switch";
 import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from "@/components/ui/tooltip";
+import { patchSource } from "@/lib/api";
 
 export function SourceToggle({
   source,
@@ -17,8 +18,21 @@ export function SourceToggle({
   lockedReason?: string;
 }) {
   const [checked, setChecked] = React.useState(active);
+  const [saving, setSaving] = React.useState(false);
 
-  const toggle = <Switch checked={checked} disabled={locked} onCheckedChange={setChecked} />;
+  async function onCheckedChange(value: boolean) {
+    setChecked(value);
+    setSaving(true);
+    try {
+      await patchSource(source, value);
+    } catch {
+      setChecked(!value);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  const toggle = <Switch checked={checked} disabled={locked || saving} onCheckedChange={onCheckedChange} />;
 
   if (!locked) return toggle;
 

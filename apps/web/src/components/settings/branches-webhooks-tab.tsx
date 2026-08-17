@@ -1,10 +1,11 @@
-import type { Branch, Webhook } from "@veiculo/types";
+import type { Webhook } from "@veiculo/types";
 
+import type { BranchWithLoad } from "@/lib/api-types";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { formatDateTime } from "@/lib/format";
 
-export function BranchesWebhooksTab({ branches, webhooks }: { branches: Branch[]; webhooks: Webhook[] }) {
+export function BranchesWebhooksTab({ branches, webhooks }: { branches: BranchWithLoad[]; webhooks: Webhook[] }) {
   return (
     <div className="grid gap-4 lg:grid-cols-2">
       <Card>

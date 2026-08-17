@@ -1,19 +1,10 @@
-import { SETTINGS, BRANCHES, WEBHOOKS } from "@/mocks";
-import { getDemoState, delay, DemoError } from "@/lib/demo-state";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { WeightsTab } from "@/components/settings/weights-tab";
-import { RulesTab } from "@/components/settings/rules-tab";
-import { CurveTemplateTab } from "@/components/settings/curve-template-tab";
-import { BranchesWebhooksTab } from "@/components/settings/branches-webhooks-tab";
+import { getSettings, getBranches, getWebhooks } from "@/lib/api";
+import { EmptyState } from "@/components/shared/empty-state";
+import { SettingsForm } from "@/components/settings/settings-form";
+import { SlidersHorizontal } from "lucide-react";
 
-export default async function AjustesPage({
-  searchParams,
-}: {
-  searchParams: { [key: string]: string | string[] | undefined };
-}) {
-  const demo = getDemoState(searchParams);
-  if (demo === "error") throw new DemoError("Ajustes");
-  if (demo === "loading") await delay(900);
+export default async function AjustesPage() {
+  const [settings, branches, webhooks] = await Promise.all([getSettings(), getBranches(), getWebhooks()]);
 
   return (
     <div className="space-y-4 p-6">
@@ -25,29 +16,15 @@ export default async function AjustesPage({
         </p>
       </div>
 
-      <Tabs defaultValue="pesos">
-        <TabsList>
-          <TabsTrigger value="pesos">Pesos e faixas</TabsTrigger>
-          <TabsTrigger value="regras">Descarte e cadência</TabsTrigger>
-          <TabsTrigger value="templates">Curva e templates</TabsTrigger>
-          <TabsTrigger value="integracoes">Unidades e webhooks</TabsTrigger>
-        </TabsList>
-        <TabsContent value="pesos">
-          <WeightsTab settings={SETTINGS} />
-        </TabsContent>
-        <TabsContent value="regras">
-          <RulesTab settings={SETTINGS} />
-        </TabsContent>
-        <TabsContent value="templates">
-          <CurveTemplateTab settings={SETTINGS} />
-        </TabsContent>
-        <TabsContent value="integracoes">
-          <BranchesWebhooksTab
-            branches={demo === "empty" ? [] : BRANCHES}
-            webhooks={demo === "empty" ? [] : WEBHOOKS}
-          />
-        </TabsContent>
-      </Tabs>
+      {settings === null ? (
+        <EmptyState
+          icon={SlidersHorizontal}
+          title="Nenhuma configuração salva ainda"
+          description="Rode o seed inicial ou salve a primeira versão de ajustes para começar."
+        />
+      ) : (
+        <SettingsForm initial={settings} branches={branches} webhooks={webhooks} />
+      )}
     </div>
   );
 }

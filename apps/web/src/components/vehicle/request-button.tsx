@@ -1,7 +1,8 @@
 "use client";
 
 import * as React from "react";
-import { Send, Check } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { Send, Check, Loader2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -15,12 +16,17 @@ import {
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
-import { BRANCHES } from "@/mocks/branches";
+import type { BranchWithLoad } from "@/lib/api-types";
+import { createRequest, ApiError } from "@/lib/api";
 
-export function RequestButton() {
+export function RequestButton({ vehicleId, branches }: { vehicleId: number; branches: BranchWithLoad[] }) {
+  const router = useRouter();
   const [open, setOpen] = React.useState(false);
   const [done, setDone] = React.useState(false);
   const [branchId, setBranchId] = React.useState("");
+  const [proposedAt, setProposedAt] = React.useState("");
+  const [sending, setSending] = React.useState(false);
+  const [error, setError] = React.useState<string | null>(null);
 
   if (done) {
     return (
@@ -28,6 +34,25 @@ export function RequestButton() {
         <Check /> Solicitação enviada
       </Button>
     );
+  }
+
+  async function send() {
+    setSending(true);
+    setError(null);
+    try {
+      await createRequest({
+        vehicleId,
+        branchId: Number(branchId),
+        proposedAt: proposedAt ? new Date(proposedAt).toISOString() : new Date().toISOString(),
+      });
+      setDone(true);
+      setOpen(false);
+      router.refresh();
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Falha ao enviar solicitação.");
+    } finally {
+      setSending(false);
+    }
   }
 
   return (
@@ -51,8 +76,8 @@ export function RequestButton() {
                 <SelectValue placeholder="Selecione a unidade" />
               </SelectTrigger>
               <SelectContent>
-                {BRANCHES.map((b) => (
-                  <SelectItem key={b.id} value={b.id}>
+                {branches.map((b) => (
+                  <SelectItem key={b.id} value={String(b.id)}>
                     {b.name}
                   </SelectItem>
                 ))}
@@ -61,21 +86,16 @@ export function RequestButton() {
           </div>
           <div className="space-y-1">
             <Label>Data e hora propostas</Label>
-            <Input type="datetime-local" />
+            <Input type="datetime-local" value={proposedAt} onChange={(e) => setProposedAt(e.target.value)} />
           </div>
+          {error && <p className="text-sm text-destructive">{error}</p>}
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => setOpen(false)}>
             Cancelar
           </Button>
-          <Button
-            disabled={!branchId}
-            onClick={() => {
-              setDone(true);
-              setOpen(false);
-            }}
-          >
-            Enviar solicitação
+          <Button disabled={!branchId || sending} onClick={send}>
+            {sending && <Loader2 className="animate-spin" />} Enviar solicitação
           </Button>
         </DialogFooter>
       </DialogContent>

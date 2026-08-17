@@ -1,11 +1,11 @@
 "use client";
 
 import * as React from "react";
-import type { Vehicle, CallOutcome } from "@veiculo/types";
-import { Phone, ThumbsUp, XCircle, ArrowRight, ImageOff } from "lucide-react";
+import type { CallOutcome } from "@veiculo/types";
+import { Phone, ThumbsUp, XCircle, ArrowRight, ImageOff, Loader2 } from "lucide-react";
 
-import { primaryListing } from "@/mocks/vehicles";
-import { sellerById } from "@/mocks/sellers";
+import type { Page, QueueItem } from "@/lib/api-types";
+import { getDialerQueue, postCall, postInteraction, discardVehicle } from "@/lib/api";
 import { formatCents, formatKm, daysAgoLabel } from "@/lib/format";
 import { CALL_OUTCOME_LABELS } from "@/lib/labels";
 import { Card } from "@/components/ui/card";
@@ -15,31 +15,80 @@ import { ScoreBadge } from "@/components/shared/score-badge";
 import { EmptyState } from "@/components/shared/empty-state";
 import { OutcomeDialog } from "@/components/dialer/outcome-dialog";
 
-export function DialerView({ vehicles }: { vehicles: Vehicle[] }) {
+export function DialerView({ initial }: { initial: Page<QueueItem> }) {
+  const [items, setItems] = React.useState(initial.items);
+  const [cursor, setCursor] = React.useState(initial.nextCursor);
   const [index, setIndex] = React.useState(0);
   const [dialogOpen, setDialogOpen] = React.useState(false);
   const [lastOutcome, setLastOutcome] = React.useState<CallOutcome | null>(null);
+  const [busy, setBusy] = React.useState(false);
 
-  const vehicle = vehicles[index];
+  const item = items[index];
+
+  React.useEffect(() => {
+    if (index >= items.length - 3 && cursor && !busy) {
+      getDialerQueue({ cursor, limit: 40 }).then((page) => {
+        setItems((prev) => [...prev, ...page.items]);
+        setCursor(page.nextCursor);
+      });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [index, cursor]);
 
   const next = React.useCallback(() => {
     setLastOutcome(null);
-    setIndex((i) => Math.min(i + 1, vehicles.length));
-  }, [vehicles.length]);
+    setIndex((i) => Math.min(i + 1, items.length));
+  }, [items.length]);
+
+  async function handleOutcome(outcome: CallOutcome) {
+    if (!item) return;
+    setBusy(true);
+    try {
+      await postCall(item.id, { outcome });
+      setLastOutcome(outcome);
+      setDialogOpen(false);
+      setTimeout(next, 400);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function handleInterest() {
+    if (!item) return;
+    setBusy(true);
+    try {
+      await postInteraction(item.id, { channel: "phone", outcome: "negotiating" });
+      next();
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function handleDiscard() {
+    if (!item) return;
+    setBusy(true);
+    try {
+      await discardVehicle(item.id, "Vendedor sem resposta");
+      next();
+    } finally {
+      setBusy(false);
+    }
+  }
 
   React.useEffect(() => {
     function onKey(e: KeyboardEvent) {
-      if (dialogOpen || !vehicle) return;
+      if (dialogOpen || !item || busy) return;
       if (e.key === "l" || e.key === "L") setDialogOpen(true);
-      if (e.key === "d" || e.key === "D") next();
-      if (e.key === "i" || e.key === "I") next();
+      if (e.key === "d" || e.key === "D") void handleDiscard();
+      if (e.key === "i" || e.key === "I") void handleInterest();
       if (e.key === "ArrowRight") next();
     }
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [dialogOpen, vehicle, next]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dialogOpen, item, busy, next]);
 
-  if (!vehicle) {
+  if (!item) {
     return (
       <EmptyState
         icon={Phone}
@@ -49,19 +98,19 @@ export function DialerView({ vehicles }: { vehicles: Vehicle[] }) {
     );
   }
 
-  const listing = primaryListing(vehicle);
-  const seller = vehicle.sellerId ? sellerById(vehicle.sellerId) : undefined;
+  const { listing } = item;
   const photo = listing.photos[0];
 
   return (
     <div className="mx-auto max-w-xl space-y-4">
       <p className="text-center text-sm text-muted-foreground">
-        {index + 1} de {vehicles.length} · atalhos: L ligar · D descartar · I interesse · → próximo
+        {index + 1} de {items.length}
+        {cursor ? "+" : ""} · atalhos: L ligar · D descartar · I interesse · → próximo
       </p>
 
       <Card className="overflow-hidden">
         {photo ? (
-          // eslint-disable-next-line @next/next/no-img-element -- data URI local
+          // eslint-disable-next-line @next/next/no-img-element -- data URI local, sem chamada de rede
           <img src={photo} alt="" className="h-56 w-full object-cover" />
         ) : (
           <div className="flex h-56 items-center justify-center bg-muted">
@@ -73,17 +122,17 @@ export function DialerView({ vehicles }: { vehicles: Vehicle[] }) {
             <h2 className="text-lg font-bold">
               {listing.brand} {listing.model} {listing.modelYear}
             </h2>
-            <ScoreBadge score={vehicle.score} />
+            <ScoreBadge score={item.score} />
           </div>
           <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-muted-foreground">
             <span className="font-semibold text-foreground">{formatCents(listing.priceCents)}</span>
             <span>{formatKm(listing.km)}</span>
-            <span>{daysAgoLabel(vehicle.daysListed)}</span>
+            <span>{daysAgoLabel(item.daysListed)}</span>
           </div>
-          {seller && (
+          {item.sellerName && (
             <div className="rounded-md border p-2 text-sm">
-              <p className="font-medium">{seller.name}</p>
-              <p className="text-muted-foreground">{seller.maskedPhone}</p>
+              <p className="font-medium">{item.sellerName}</p>
+              <p className="text-muted-foreground">{item.sellerMaskedPhone ?? "sem telefone"}</p>
             </div>
           )}
           {lastOutcome && (
@@ -91,30 +140,23 @@ export function DialerView({ vehicles }: { vehicles: Vehicle[] }) {
           )}
 
           <div className="flex flex-wrap gap-2 pt-2">
-            <Button onClick={() => setDialogOpen(true)}>
-              <Phone /> Ligar (L)
+            <Button onClick={() => setDialogOpen(true)} disabled={busy}>
+              {busy ? <Loader2 className="animate-spin" /> : <Phone />} Ligar (L)
             </Button>
-            <Button variant="outline" onClick={next}>
+            <Button variant="outline" onClick={handleInterest} disabled={busy}>
               <ThumbsUp /> Interesse (I)
             </Button>
-            <Button variant="ghost" onClick={next}>
+            <Button variant="ghost" onClick={handleDiscard} disabled={busy}>
               <XCircle /> Descartar (D)
             </Button>
-            <Button variant="ghost" onClick={next}>
+            <Button variant="ghost" onClick={next} disabled={busy}>
               <ArrowRight /> Próximo (→)
             </Button>
           </div>
         </div>
       </Card>
 
-      <OutcomeDialog
-        open={dialogOpen}
-        onChoose={(outcome) => {
-          setLastOutcome(outcome);
-          setDialogOpen(false);
-          setTimeout(next, 400);
-        }}
-      />
+      <OutcomeDialog open={dialogOpen} onChoose={handleOutcome} />
     </div>
   );
 }

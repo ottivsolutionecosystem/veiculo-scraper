@@ -1,7 +1,6 @@
 import { notFound } from "next/navigation";
 
-import { VEHICLES, vehicleById, primaryListing, sellerById, matchesByVehicle, INTERESTS, CUSTOMERS } from "@/mocks";
-import { getDemoState, delay, DemoError } from "@/lib/demo-state";
+import { getVehicle, getBranches, ApiError } from "@/lib/api";
 import { formatCents, formatKm, daysAgoLabel } from "@/lib/format";
 import { VEHICLE_STATE_LABELS } from "@/lib/labels";
 import { Badge } from "@/components/ui/badge";
@@ -14,30 +13,18 @@ import { SellerCard } from "@/components/vehicle/seller-card";
 import { MatchesCard } from "@/components/vehicle/matches-card";
 import { RequestButton } from "@/components/vehicle/request-button";
 
-export default async function VehiclePage({
-  params,
-  searchParams,
-}: {
-  params: { id: string };
-  searchParams: { [key: string]: string | string[] | undefined };
-}) {
-  const demo = getDemoState(searchParams);
-  if (demo === "error") throw new DemoError("Ficha do veículo");
-  if (demo === "loading") await delay(900);
-
-  const vehicle = vehicleById(Number(params.id));
-  if (!vehicle) notFound();
-
-  const listing = primaryListing(vehicle);
-  const seller = vehicle.sellerId ? sellerById(vehicle.sellerId) : undefined;
-  const otherVehicles = VEHICLES.filter((v) => v.sellerId === vehicle.sellerId && v.id !== vehicle.id);
-  const matchRows = matchesByVehicle(vehicle.id)
-    .map((match) => {
-      const interest = INTERESTS.find((i) => i.id === match.interestId);
-      const customer = interest ? CUSTOMERS.find((c) => c.id === interest.customerId) : undefined;
-      return interest && customer ? { match, interest, customer } : null;
-    })
-    .filter((row): row is NonNullable<typeof row> => row !== null);
+export default async function VehiclePage({ params }: { params: { id: string } }) {
+  const vehicleId = Number(params.id);
+  let data;
+  try {
+    data = await getVehicle(vehicleId);
+  } catch (err) {
+    if (err instanceof ApiError && err.status === 404) notFound();
+    throw err;
+  }
+  const branches = await getBranches();
+  const { vehicle, seller, otherVehicles, matches } = data;
+  const listing = vehicle.listings.find((l) => l.id === vehicle.primaryListingId) ?? vehicle.listings[0]!;
 
   return (
     <div className="grid gap-6 p-6 lg:grid-cols-3">
@@ -56,7 +43,7 @@ export default async function VehiclePage({
               )}
             </div>
           </div>
-          <RequestButton />
+          <RequestButton vehicleId={vehicle.id} branches={branches} />
         </div>
 
         <Gallery photos={listing.photos} alt={`${listing.brand} ${listing.model}`} />
@@ -81,7 +68,7 @@ export default async function VehiclePage({
       <div className="space-y-4">
         <ScoreBreakdown score={vehicle.score} />
         {seller && <SellerCard seller={seller} otherVehicles={otherVehicles} />}
-        <MatchesCard rows={matchRows} />
+        <MatchesCard rows={matches} />
       </div>
     </div>
   );

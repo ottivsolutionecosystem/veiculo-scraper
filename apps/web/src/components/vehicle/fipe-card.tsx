@@ -1,14 +1,38 @@
+"use client";
+
+import * as React from "react";
+import { useRouter } from "next/navigation";
 import type { Vehicle, Listing } from "@veiculo/types";
-import { GitCompareArrows } from "lucide-react";
+import { GitCompareArrows, Loader2 } from "lucide-react";
 
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { formatCents, formatPct } from "@/lib/format";
-import { findFipePrice } from "@/mocks/fipe";
+import { confirmFipeMatch, ApiError } from "@/lib/api";
 
 export function FipeCard({ vehicle, listing }: { vehicle: Vehicle; listing: Listing }) {
-  const fipe = findFipePrice(listing.brand, listing.model, listing.modelYear);
+  const router = useRouter();
+  const [confirming, setConfirming] = React.useState<string | null>(null);
+  const [error, setError] = React.useState<string | null>(null);
+
+  const fipeValueCents =
+    listing.priceCents !== null && vehicle.fipeDiscountCents !== null
+      ? listing.priceCents + vehicle.fipeDiscountCents
+      : null;
+
+  async function confirm(fipeCode: string) {
+    setConfirming(fipeCode);
+    setError(null);
+    try {
+      await confirmFipeMatch(vehicle.id, fipeCode);
+      router.refresh();
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Falha ao confirmar match.");
+    } finally {
+      setConfirming(null);
+    }
+  }
 
   return (
     <Card>
@@ -23,13 +47,20 @@ export function FipeCard({ vehicle, listing }: { vehicle: Vehicle; listing: List
           <span className="font-medium">{formatCents(listing.priceCents)}</span>
         </div>
         <div className="flex justify-between text-sm">
-          <span className="text-muted-foreground">Valor FIPE ({fipe?.referenceMonth ?? "—"})</span>
-          <span className="font-medium">{fipe ? formatCents(fipe.valueCents) : "sem match"}</span>
+          <span className="text-muted-foreground">Valor FIPE (tabela vigente)</span>
+          <span className="font-medium">{fipeValueCents !== null ? formatCents(fipeValueCents) : "sem match"}</span>
         </div>
         <div className="flex justify-between border-t pt-2 text-sm">
           <span className="text-muted-foreground">Desconto</span>
-          <span className={vehicle.fipeDiscountPct && vehicle.fipeDiscountPct > 0 ? "font-semibold text-boa" : "font-semibold text-destructive"}>
-            {formatPct(vehicle.fipeDiscountPct)} {vehicle.fipeDiscountCents ? `(${formatCents(vehicle.fipeDiscountCents)})` : ""}
+          <span
+            className={
+              vehicle.fipeDiscountPct && vehicle.fipeDiscountPct > 0
+                ? "font-semibold text-boa"
+                : "font-semibold text-destructive"
+            }
+          >
+            {formatPct(vehicle.fipeDiscountPct)}{" "}
+            {vehicle.fipeDiscountCents ? `(${formatCents(vehicle.fipeDiscountCents)})` : ""}
           </span>
         </div>
 
@@ -41,8 +72,8 @@ export function FipeCard({ vehicle, listing }: { vehicle: Vehicle; listing: List
             {vehicle.fipeMatchCandidates?.map((c) => (
               <div key={c.fipeCode} className="flex items-center justify-between gap-2 py-1">
                 <span className="text-xs">{c.label}</span>
-                <Button size="sm" variant="outline">
-                  Confirmar
+                <Button size="sm" variant="outline" disabled={confirming !== null} onClick={() => confirm(c.fipeCode)}>
+                  {confirming === c.fipeCode && <Loader2 className="animate-spin" />} Confirmar
                 </Button>
               </div>
             ))}
@@ -52,6 +83,7 @@ export function FipeCard({ vehicle, listing }: { vehicle: Vehicle; listing: List
         {vehicle.fipeMatchConfidence === null && (
           <Badge variant="outline">Sem match FIPE — fila de revisão</Badge>
         )}
+        {error && <p className="text-xs text-destructive">{error}</p>}
       </CardContent>
     </Card>
   );
