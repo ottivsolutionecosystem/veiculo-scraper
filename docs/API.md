@@ -45,7 +45,7 @@ tabela nova (`docs/MODELO.md`), `[W]` calculado pelo worker e persistido
 
 | Método | Rota | Params | Body |
 |---|---|---|---|
-| GET | `/api/queue` | `cursor?`, `limit?`, `estado?[]` | — |
+| GET | `/api/queue` | `cursor?`, `limit?`, `estado?[]`, `sellerType?` | — |
 | POST | `/api/vehicles/:id/interactions` | — | `{ channel, outcome?, durationSeconds? }` |
 | POST | `/api/vehicles/:id/discard` | — | `{ reason: string, notes?: string }` |
 | POST | `/api/sellers/:id/reveal-contact` | — | — |
@@ -58,6 +58,11 @@ materializada `fila_do_dia` [N] (junta `veiculos` [N], `anuncios` [E],
 
 `estado` default exclui `discarded`/`lost` (mesma regra de
 `queueVehicles()` da Fase 1).
+
+`sellerType` (Fase 4, pedido do usuário): `"individual"` (particular) ou
+`"dealer"` (loja); omitido = ambos. Mapeia `anuncios.tipo_anunciante` —
+`null` (não detectado pelo coletor) nunca casa com nenhum dos dois valores,
+só aparece quando o filtro está ausente.
 
 `POST .../discard`: 422 se `reason` vazio (seção 7.2: "todo descarte exige
 motivo"). Grava em `estados_veiculo` [N] + atualiza `veiculos.estado` [N].
@@ -73,7 +78,7 @@ por engano em Fase 4.
 
 | Método | Rota | Params |
 |---|---|---|
-| GET | `/api/vehicles/search` | `cursor?`, `limit?`, `brand?`, `model?`, `city?`, `yearMin?`, `yearMax?`, `priceMaxCents?`, `minFipeDiscountPct?`, `transmission?`, `onlyActive?` |
+| GET | `/api/vehicles/search` | `cursor?`, `limit?`, `brand?`, `model?`, `city?`, `yearMin?`, `yearMax?`, `priceMaxCents?`, `minFipeDiscountPct?`, `transmission?`, `onlyActive?`, `sellerType?` |
 
 Mesmo shape de item do `/api/queue`, mesma origem (`fila_do_dia` [N]) —
 mas **sem** o filtro implícito de estado da fila: Busca mostra qualquer
@@ -219,9 +224,11 @@ filtro ano/combustível), não recalculados na hora do GET.
 | GET | `/api/sources` | — |
 | GET | `/api/sources/:source/runs` | `cursor?`, `limit?` |
 | PATCH | `/api/sources/:source` | `{ active: boolean }` |
+| POST | `/api/sources/:source/run` | `{ sellerType?: "individual"\|"dealer", limit?: number }` |
 
 `GET /api/sources`: `Source` [E] (`fontes`) + última linha de
-`scrape_runs` [E] por fonte.
+`scrape_runs` [E] por fonte + `pendingRequest` (última linha não
+processada de `execucoes_solicitadas` [N], Fase 4).
 
 `PATCH`: 403 se `source` não for `shopcar` — `webmotors` e `olx` não têm
 self-service de ligar por API (CLAUDE.md: "não ligue por conta própria");
@@ -229,6 +236,15 @@ a mudança delas só acontece por migration/config manual depois de
 homologação (`webmotors`) ou nunca via automação (`olx`, modo manual por
 definição). O toggle da tela em Fase 1 já nasceu travado pra essas duas —
 isso é só o espelho no backend.
+
+`POST .../run` (Fase 4, botão "Rodar coleta agora"): mesma trava do
+`PATCH` — 403 se `source` não for self-service. 409 se já existe pedido
+pendente pra essa fonte (`processado_em IS NULL`), pra não empilhar clique.
+Grava linha em `execucoes_solicitadas` [N] e retorna 202 — **não** dispara
+a coleta: não é RPC (SPEC seção 5), é o coletor Python que lê essa tabela
+quando roda (`captacao_bot.cli pedidos --fonte <fonte>`, hoje só manual;
+agendamento em produção é decisão de infra, seção 5 do SPEC — "orquestrador
+de produção em aberto").
 
 ## 10. Ajustes (`/ajustes`)
 

@@ -399,6 +399,35 @@ prontos pra filtrar/ordenar sem join em tempo de request.
 a definir) — mantive o valor default e deixei configurável, mesma lógica
 aplicada aos outros parâmetros `<<>>` no mock da Fase 1.
 
+## Coleta sob demanda (Fase 4)
+
+### `execucoes_solicitadas`
+Fila do botão "Rodar coleta agora" da tela Fontes. Não é RPC — a API só
+grava a linha (SPEC seção 5: fronteira TS/Python é o Postgres); o coletor
+Python lê essa tabela quando roda (`captacao_bot.cli pedidos --fonte
+<fonte>`), processa e marca `processado_em`/`scrape_run_id`.
+
+`tipo_anunciante` (particular/loja, `anuncios.tipo_anunciante`) não estava
+no SPEC original — pedido do usuário na Fase 4. Detectado pelo coletor via
+`offers.seller.@type` do JSON-LD (Organization/Person), com fallback de
+seletor CSS; fica em `anuncios`, não em tabela própria, por ser 1:1 com o
+anúncio (mesmo raciocínio dos campos FIPE em `veiculos`).
+
+| Coluna | Tipo | Nota |
+|---|---|---|
+| `id` | bigserial PK | |
+| `fonte` | text FK `fontes.fonte` | só fonte self-service (hoje: shopcar) aceita POST |
+| `tipo_anunciante_filtro` | text, nullable | `particular`\|`loja`\|null=ambos |
+| `limite` | integer, nullable | |
+| `solicitado_por` | text | |
+| `solicitado_em` | timestamptz | |
+| `processado_em` | timestamptz, nullable | null = pendente |
+| `scrape_run_id` | bigint FK `scrape_runs.id`, nullable | preenchido ao processar |
+
+**Índice**: `btree (fonte, solicitado_em DESC) WHERE processado_em IS NULL`
+— parcial; é exatamente a pergunta que a rota de trigger faz ("já tem
+pedido pendente pra essa fonte?") antes de aceitar um novo.
+
 ## Fora de escopo desta fase
 
 Nenhuma migration foi escrita. `EXPLAIN ANALYZE` das queries novas fica

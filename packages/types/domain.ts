@@ -63,6 +63,7 @@ export interface Listing {
   city: string | null; // cidade
   stateCode: string | null; // uf
   photos: string[]; // fotos
+  sellerType: "individual" | "dealer" | null; // tipo_anunciante — null = não detectado
 
   fingerprint: string;
   contentHash: string; // content_hash
