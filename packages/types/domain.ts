@@ -155,7 +155,7 @@ export interface Vehicle {
   score: Score | null;
   priceHistory: PriceHistoryPoint[];
   daysListed: number;
-  sellerId: string | null;
+  sellerId: number | null;
   compatibleCustomersCount: number; // etiqueta "N clientes procurando"
 }
 
@@ -197,7 +197,7 @@ export interface FipeMatchCandidate {
 // ---------------------------------------------------------------------------
 
 export interface Seller {
-  id: string;
+  id: number;
   name: string;
   maskedPhone: string; // "(67) 9****-1234" — telefone real nunca trafega aqui
   totalListings: number;
@@ -215,9 +215,9 @@ export type CallOutcome =
   | "wrong_number";
 
 export interface Interaction {
-  id: string;
+  id: number;
   vehicleId: number;
-  sellerId: string;
+  sellerId: number;
   channel: "phone" | "whatsapp";
   outcome: CallOutcome | null;
   durationSeconds: number | null;
@@ -230,7 +230,7 @@ export interface Interaction {
 // ---------------------------------------------------------------------------
 
 export interface Customer {
-  id: string;
+  id: number;
   name: string;
   contact: string;
   source: string; // origem do lead
@@ -243,8 +243,8 @@ export type InterestStatus = "active" | "paused" | "fulfilled";
 export type InterestPriority = "high" | "medium" | "low";
 
 export interface Interest {
-  id: string;
-  customerId: string;
+  id: number;
+  customerId: number;
   brand: string | null;
   model: string | null;
   yearMin: number | null;
@@ -262,8 +262,8 @@ export interface Interest {
 export type InterestMatchState = "suggested" | "accepted" | "discarded";
 
 export interface InterestMatch {
-  id: string;
-  interestId: string;
+  id: number;
+  interestId: number;
   vehicleId: number;
   matchScore: number; // 0-100, aderência
   state: InterestMatchState;
@@ -295,11 +295,11 @@ export interface IntakeChecklist {
 }
 
 export interface AcquisitionRequest {
-  id: string;
+  id: number;
   vehicleId: number;
-  sellerId: string;
-  customerId: string | null;
-  branchId: string;
+  sellerId: number;
+  customerId: number | null;
+  branchId: number;
   owner: string; // responsável
   proposedAt: string; // data_hora_proposta
   state: AcquisitionRequestState;
@@ -310,7 +310,7 @@ export interface AcquisitionRequest {
 }
 
 export interface Branch {
-  id: string;
+  id: number;
   name: string;
   address: string;
   intakeLimitPerPeriod: number;
@@ -353,7 +353,7 @@ export type AuditAction =
   | "delete_contact";
 
 export interface AuditRecord {
-  id: string;
+  id: number;
   action: AuditAction;
   author: string;
   targetType: string;
@@ -363,7 +363,7 @@ export interface AuditRecord {
 }
 
 export interface Webhook {
-  id: string;
+  id: number;
   url: string;
   events: string[];
   active: boolean;
