@@ -7,6 +7,20 @@
 
 const num = (v: unknown): number | null => (v === null || v === undefined ? null : Number(v));
 
+const SELLER_TYPE_MAP: Record<string, "individual" | "dealer"> = {
+  particular: "individual",
+  loja: "dealer",
+};
+const sellerType = (v: unknown): "individual" | "dealer" | null =>
+  typeof v === "string" ? (SELLER_TYPE_MAP[v] ?? null) : null;
+
+/** Inglês (API) -> português (`anuncios.tipo_anunciante`, filtros SQL). */
+export function unmapSellerType(v: "individual" | "dealer" | undefined): "particular" | "loja" | null {
+  if (v === "individual") return "particular";
+  if (v === "dealer") return "loja";
+  return null;
+}
+
 /** Linha de `fila_do_dia` (docs/MODELO.md) -> item de lista da API (docs/API.md
  * `Pick<Vehicle, "id"|"listings"|"state"|"score"|"fipeDiscountPct"|
  * "daysListed"|"compatibleCustomersCount"|"sellerId">`, achatado). */
@@ -51,6 +65,7 @@ export function mapQueueRow(row: Record<string, unknown>) {
       city: row.cidade,
       stateCode: row.uf,
       photos: row.fotos,
+      sellerType: sellerType(row.tipo_anunciante),
       active: row.ativo,
       pendingFields: row.pendencias,
     },
@@ -78,6 +93,7 @@ export function mapListing(row: Record<string, unknown>) {
     city: row.cidade,
     stateCode: row.uf,
     photos: row.fotos,
+    sellerType: sellerType(row.tipo_anunciante),
     fingerprint: row.fingerprint,
     contentHash: row.content_hash,
     pendingFields: row.pendencias,
@@ -275,6 +291,23 @@ export function mapSource(row: Record<string, unknown>) {
     disabled: row.desativado,
     reason: row.motivo,
     lastRun: row.ultima_execucao ? mapScrapeRun(row.ultima_execucao as Record<string, unknown>) : null,
+    pendingRequest: row.pedido_pendente
+      ? mapScrapeRequest(row.pedido_pendente as Record<string, unknown>)
+      : null,
+  };
+}
+
+/** Linha de `execucoes_solicitadas` (docs/MODELO.md — Fase 4). */
+export function mapScrapeRequest(row: Record<string, unknown>) {
+  return {
+    id: num(row.id),
+    source: row.fonte,
+    sellerType: sellerType(row.tipo_anunciante_filtro),
+    limit: num(row.limite),
+    requestedBy: row.solicitado_por,
+    requestedAt: row.solicitado_em,
+    processedAt: row.processado_em ?? null,
+    scrapeRunId: row.scrape_run_id === null || row.scrape_run_id === undefined ? null : num(row.scrape_run_id),
   };
 }
 

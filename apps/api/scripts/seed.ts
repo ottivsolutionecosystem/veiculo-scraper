@@ -138,6 +138,9 @@ async function seedVehicles(client: import("pg").PoolClient, sellers: Seller[]):
     const source = pick(rng, ["shopcar", "shopcar", "shopcar", "webmotors", "olx"]);
     const active = chance(rng, 0.92);
     const transmission = pick(rng, ["MANUAL", "MANUAL", "AUTOMATICO", "AUTOMATIZADO"]);
+    // Reflete o coletor real: nem todo anúncio tem sinal de tipo detectável
+    // (JSON-LD sem seller, CSS sem casar) — por isso ~30% fica null.
+    const tipoAnunciante = chance(rng, 0.7) ? (chance(rng, 0.55) ? "loja" : "particular") : null;
 
     const tituloOriginal = `${brand} ${model} ${manufactureYear}/${modelYear}`;
     const tituloNormalizado = tituloOriginal.toUpperCase();
@@ -148,15 +151,15 @@ async function seedVehicles(client: import("pg").PoolClient, sellers: Seller[]):
       `INSERT INTO anuncios (
          fonte, id_externo, url, titulo_original, titulo_normalizado, marca, modelo,
          ano_fabricacao, ano_modelo, km, preco, cambio, combustivel, cor, cidade, uf,
-         fotos, fingerprint, content_hash, pendencias, primeira_vista_em, ultima_vista_em, ativo
-       ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23)
+         fotos, tipo_anunciante, fingerprint, content_hash, pendencias, primeira_vista_em, ultima_vista_em, ativo
+       ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24)
        RETURNING id`,
       [
         source, `seed-${i}`, `https://www.${source}.com.br/veiculo/${100000 + i}`,
         tituloOriginal, tituloNormalizado, brand, model,
         manufactureYear, modelYear, km, preco,
         transmission, fuelFor(model), color, city, state,
-        [], fp, contentHash, km === null ? ["km"] : [],
+        [], tipoAnunciante, fp, contentHash, km === null ? ["km"] : [],
         daysAgo(daysListed), daysAgo(0), active,
       ],
     );

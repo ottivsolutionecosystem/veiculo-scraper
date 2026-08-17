@@ -2,7 +2,7 @@ import type { FastifyInstance } from "fastify";
 import { z } from "zod";
 
 import { pool } from "../db.js";
-import { mapQueueRow } from "../lib/serialize.js";
+import { mapQueueRow, unmapSellerType } from "../lib/serialize.js";
 import { decodeCursor, encodeCursor, parseLimit } from "../lib/pagination.js";
 
 const querySchema = z.object({
@@ -17,6 +17,7 @@ const querySchema = z.object({
   minFipeDiscountPct: z.coerce.number().optional(),
   transmission: z.string().optional(),
   onlyActive: z.coerce.boolean().optional(),
+  sellerType: z.enum(["individual", "dealer"]).optional(),
 });
 
 /** GET /api/vehicles/search — Busca (docs/API.md seção 2). Mesma origem
@@ -42,6 +43,7 @@ export async function searchRoutes(app: FastifyInstance) {
     if (q.minFipeDiscountPct !== undefined) push("f.desconto_fipe_pct >= ?", q.minFipeDiscountPct);
     if (q.transmission) push("f.cambio = ?", q.transmission);
     if (q.onlyActive) conditions.push("f.ativo = true");
+    if (q.sellerType) push("f.tipo_anunciante = ?", unmapSellerType(q.sellerType));
 
     const cursorParts = decodeCursor(q.cursor);
     if (cursorParts) {

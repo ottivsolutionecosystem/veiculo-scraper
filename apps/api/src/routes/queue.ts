@@ -2,12 +2,13 @@ import type { FastifyInstance } from "fastify";
 import { z } from "zod";
 
 import { pool } from "../db.js";
-import { mapQueueRow } from "../lib/serialize.js";
+import { mapQueueRow, unmapSellerType } from "../lib/serialize.js";
 import { decodeCursor, encodeCursor, parseLimit } from "../lib/pagination.js";
 
 const querySchema = z.object({
   cursor: z.string().optional(),
   limit: z.string().optional(),
+  sellerType: z.enum(["individual", "dealer"]).optional(),
 });
 
 /** GET /api/queue — Fila do dia (docs/API.md seção 1). Fonte: view
@@ -19,6 +20,12 @@ export async function queueRoutes(app: FastifyInstance) {
     const cursorParts = decodeCursor(query.cursor);
 
     const values: unknown[] = [];
+    let sellerTypeClause = "";
+    if (query.sellerType) {
+      values.push(unmapSellerType(query.sellerType));
+      sellerTypeClause = `AND f.tipo_anunciante = $${values.length}`;
+    }
+
     let cursorClause = "";
     if (cursorParts) {
       const [score, id] = cursorParts as [number, number];
@@ -33,6 +40,7 @@ export async function queueRoutes(app: FastifyInstance) {
          LEFT JOIN vendedores vd ON vd.id = f.vendedor_id
          LEFT JOIN contatos_vendedor cv ON cv.vendedor_id = vd.id
         WHERE f.estado NOT IN ('discarded', 'lost')
+        ${sellerTypeClause}
         ${cursorClause}
         ORDER BY f.score_total DESC NULLS LAST, f.veiculo_id ASC
         LIMIT $${values.length}`,
