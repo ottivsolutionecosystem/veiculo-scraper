@@ -2,6 +2,7 @@ import type { FastifyInstance } from "fastify";
 import { z } from "zod";
 
 import { pool } from "../db.js";
+import { mapBranch } from "../lib/serialize.js";
 import { NotFoundError } from "../lib/http-errors.js";
 
 const branchBody = z.object({ name: z.string(), address: z.string(), intakeLimitPerPeriod: z.number() });
@@ -19,7 +20,7 @@ export async function branchRoutes(app: FastifyInstance) {
       ) AS solicitacoes_no_periodo
       FROM unidades u ORDER BY u.id
     `);
-    reply.send(rows);
+    reply.send(rows.map(mapBranch));
   });
 
   app.post("/api/branches", async (req, reply) => {
@@ -28,7 +29,7 @@ export async function branchRoutes(app: FastifyInstance) {
       "INSERT INTO unidades (nome, endereco, limite_veiculos_por_periodo) VALUES ($1,$2,$3) RETURNING *",
       [body.name, body.address, body.intakeLimitPerPeriod],
     );
-    reply.status(201).send(rows[0]);
+    reply.status(201).send(mapBranch(rows[0]!));
   });
 
   app.patch("/api/branches/:id", async (req, reply) => {
@@ -42,6 +43,6 @@ export async function branchRoutes(app: FastifyInstance) {
       [id, body.name, body.address, body.intakeLimitPerPeriod],
     );
     if (!rows[0]) throw new NotFoundError("Unidade não encontrada.");
-    reply.send(rows[0]);
+    reply.send(mapBranch(rows[0]));
   });
 }

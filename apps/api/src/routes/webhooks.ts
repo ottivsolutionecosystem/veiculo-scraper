@@ -3,6 +3,7 @@ import { z } from "zod";
 
 import { pool } from "../db.js";
 import { decodeCursor, encodeCursor, parseLimit } from "../lib/pagination.js";
+import { mapWebhook, mapWebhookDelivery } from "../lib/serialize.js";
 import { NotFoundError } from "../lib/http-errors.js";
 
 const webhookBody = z.object({ url: z.string().url(), events: z.array(z.string()), secret: z.string().optional() });
@@ -13,7 +14,7 @@ const listQuery = z.object({ cursor: z.string().optional(), limit: z.string().op
 export async function webhookRoutes(app: FastifyInstance) {
   app.get("/api/webhooks", async (_req, reply) => {
     const { rows } = await pool.query("SELECT id, url, eventos, ativo, criado_em, atualizado_em FROM webhooks ORDER BY id");
-    reply.send(rows);
+    reply.send(rows.map(mapWebhook));
   });
 
   app.post("/api/webhooks", async (req, reply) => {
@@ -23,7 +24,7 @@ export async function webhookRoutes(app: FastifyInstance) {
       "INSERT INTO webhooks (url, eventos, segredo) VALUES ($1,$2,$3) RETURNING id, url, eventos, ativo, criado_em",
       [body.url, JSON.stringify(body.events), body.secret],
     );
-    reply.status(201).send(rows[0]);
+    reply.status(201).send(mapWebhook(rows[0]!));
   });
 
   app.patch("/api/webhooks/:id", async (req, reply) => {
@@ -36,7 +37,7 @@ export async function webhookRoutes(app: FastifyInstance) {
       [id, body.url ?? null, body.events ? JSON.stringify(body.events) : null],
     );
     if (!rows[0]) throw new NotFoundError("Webhook não encontrado.");
-    reply.send(rows[0]);
+    reply.send(mapWebhook(rows[0]));
   });
 
   app.get("/api/webhooks/:id/deliveries", async (req, reply) => {
@@ -58,6 +59,9 @@ export async function webhookRoutes(app: FastifyInstance) {
       values,
     );
     const last = rows[rows.length - 1];
-    reply.send({ items: rows, nextCursor: rows.length === limit && last ? encodeCursor([last.id]) : null });
+    reply.send({
+      items: rows.map(mapWebhookDelivery),
+      nextCursor: rows.length === limit && last ? encodeCursor([Number(last.id)]) : null,
+    });
   });
 }

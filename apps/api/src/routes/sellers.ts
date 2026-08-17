@@ -3,10 +3,25 @@ import { z } from "zod";
 
 import { pool } from "../db.js";
 import { decodeCursor, encodeCursor, parseLimit } from "../lib/pagination.js";
+import { mapSeller, mapListing, maskPhone } from "../lib/serialize.js";
 import { NotFoundError } from "../lib/http-errors.js";
 
 const listQuery = z.object({ cursor: z.string().optional(), limit: z.string().optional() });
 const patchBody = z.object({ muted: z.boolean().optional(), doNotDisturb: z.boolean().optional() });
+
+const SELLER_SELECT = `
+  SELECT vd.*, cv.telefone_e164,
+         (SELECT count(*) FROM veiculos v WHERE v.vendedor_id = vd.id) AS total_anuncios,
+         (SELECT max(i.criado_em) FROM interacoes i WHERE i.vendedor_id = vd.id) AS ultimo_contato_em
+    FROM vendedores vd
+    LEFT JOIN contatos_vendedor cv ON cv.vendedor_id = vd.id
+`;
+
+function toSeller(row: Record<string, unknown>) {
+  const seller = mapSeller(row);
+  seller.maskedPhone = maskPhone(row.telefone_e164 as string | null);
+  return seller;
+}
 
 /** GET/PATCH /api/sellers* — Vendedores (docs/API.md seção 7). Telefone
  * sempre mascarado; revelação é a única via de acesso ao dado bruto,
@@ -25,29 +40,30 @@ export async function sellerRoutes(app: FastifyInstance) {
     values.push(limit);
 
     const { rows } = await pool.query(
-      `SELECT vd.id, vd.nome, vd.mutado, vd.nao_perturbe,
-              (SELECT count(*) FROM veiculos v WHERE v.vendedor_id = vd.id) AS total_anuncios
-         FROM vendedores vd
-        WHERE true ${cursorClause}
-        ORDER BY vd.id ASC
-        LIMIT $${values.length}`,
+      `${SELLER_SELECT} WHERE true ${cursorClause} ORDER BY vd.id ASC LIMIT $${values.length}`,
       values,
     );
     const last = rows[rows.length - 1];
-    reply.send({ items: rows, nextCursor: rows.length === limit && last ? encodeCursor([last.id]) : null });
+    reply.send({
+      items: rows.map(toSeller),
+      nextCursor: rows.length === limit && last ? encodeCursor([Number(last.id)]) : null,
+    });
   });
 
   app.get("/api/sellers/:id", async (req, reply) => {
     const id = Number((req.params as { id: string }).id);
-    const { rows } = await pool.query("SELECT * FROM vendedores WHERE id = $1", [id]);
+    const { rows } = await pool.query(`${SELLER_SELECT} WHERE vd.id = $1`, [id]);
     if (!rows[0]) throw new NotFoundError("Vendedor não encontrado.");
-    const { rows: vehicles } = await pool.query(
-      `SELECT v.id, a.marca, a.modelo, a.ano_modelo, a.preco, a.km FROM veiculos v
+    const { rows: vehicleRows } = await pool.query(
+      `SELECT v.id AS veiculo_id, a.* FROM veiculos v
          JOIN anuncios a ON a.id = v.anuncio_principal_id
         WHERE v.vendedor_id = $1`,
       [id],
     );
-    reply.send({ seller: rows[0], vehicles });
+    reply.send({
+      seller: toSeller(rows[0]),
+      vehicles: vehicleRows.map((r) => ({ vehicleId: Number(r.veiculo_id), listing: mapListing(r) })),
+    });
   });
 
   app.patch("/api/sellers/:id", async (req, reply) => {
@@ -58,7 +74,7 @@ export async function sellerRoutes(app: FastifyInstance) {
          mutado = COALESCE($2, mutado),
          nao_perturbe = COALESCE($3, nao_perturbe),
          atualizado_em = now()
-       WHERE id = $1 RETURNING *`,
+       WHERE id = $1 RETURNING id`,
       [id, body.muted ?? null, body.doNotDisturb ?? null],
     );
     if (!rows[0]) throw new NotFoundError("Vendedor não encontrado.");
@@ -68,7 +84,8 @@ export async function sellerRoutes(app: FastifyInstance) {
         [String(id), body.muted ? "Vendedor mutado" : "Vendedor desmutado"],
       );
     }
-    reply.send(rows[0]);
+    const { rows: refreshed } = await pool.query(`${SELLER_SELECT} WHERE vd.id = $1`, [id]);
+    reply.send(toSeller(refreshed[0]!));
   });
 
   app.post("/api/sellers/:id/reveal-contact", async (req, reply) => {

@@ -3,6 +3,7 @@ import { z } from "zod";
 
 import { pool } from "../db.js";
 import { decodeCursor, encodeCursor, parseLimit } from "../lib/pagination.js";
+import { mapFipeReviewItem } from "../lib/serialize.js";
 
 const listQuery = z.object({ cursor: z.string().optional(), limit: z.string().optional() });
 
@@ -33,6 +34,9 @@ export async function fipeReviewRoutes(app: FastifyInstance) {
       values,
     );
     const last = rows[rows.length - 1];
-    reply.send({ items: rows, nextCursor: rows.length === limit && last ? encodeCursor([last.id]) : null });
+    reply.send({
+      items: rows.map(mapFipeReviewItem),
+      nextCursor: rows.length === limit && last ? encodeCursor([Number(last.id)]) : null,
+    });
   });
 }

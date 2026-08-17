@@ -3,6 +3,7 @@ import { z } from "zod";
 
 import { pool, withTransaction } from "../db.js";
 import { decodeCursor, encodeCursor, parseLimit } from "../lib/pagination.js";
+import { mapRequest, unmapChecklist } from "../lib/serialize.js";
 import { ConflictError, NotFoundError, ValidationError } from "../lib/http-errors.js";
 
 const listQuery = z.object({
@@ -17,17 +18,30 @@ const createRequest = z.object({
   customerId: z.number().optional(),
   proposedAt: z.string(),
 });
+const checklistSchema = z.object({
+  document: z.boolean(),
+  spareKey: z.boolean(),
+  manual: z.boolean(),
+  inspection: z.boolean(),
+  standardPhotos: z.boolean(),
+  appraisal: z.boolean(),
+});
 const patchRequest = z.object({
   state: z.string().optional(),
-  checklist: z.record(z.boolean()).optional(),
+  checklist: checklistSchema.optional(),
   lossReason: z.string().optional(),
   notes: z.string().optional(),
 });
 
-const CHECKLIST_KEYS = ["documento", "chaveReserva", "manual", "vistoria", "fotosPadronizadas", "avaliacao"];
+const REQUEST_SELECT = `
+  SELECT s.*, a.marca, a.modelo, a.ano_modelo, a.preco, u.nome AS unidade_nome
+    FROM solicitacoes_captacao s
+    JOIN veiculos v ON v.id = s.veiculo_id
+    JOIN anuncios a ON a.id = v.anuncio_principal_id
+    JOIN unidades u ON u.id = s.unidade_id
+`;
 
-/** GET/POST/PATCH /api/requests, GET /api/branches — Solicitações
- * (docs/API.md seção 6). */
+/** GET/POST/PATCH /api/requests — Solicitações (docs/API.md seção 6). */
 export async function requestRoutes(app: FastifyInstance) {
   app.get("/api/requests", async (req, reply) => {
     const q = listQuery.parse(req.query);
@@ -45,23 +59,17 @@ export async function requestRoutes(app: FastifyInstance) {
     values.push(limit);
 
     const where = conditions.length ? `WHERE ${conditions.join(" AND ")}` : "";
-    const { rows } = await pool.query(
-      `SELECT s.*, a.marca, a.modelo, a.ano_modelo, a.preco, u.nome AS unidade_nome
-         FROM solicitacoes_captacao s
-         JOIN veiculos v ON v.id = s.veiculo_id
-         JOIN anuncios a ON a.id = v.anuncio_principal_id
-         JOIN unidades u ON u.id = s.unidade_id
-         ${where}
-        ORDER BY s.id ASC
-        LIMIT $${values.length}`,
-      values,
-    );
+    const { rows } = await pool.query(`${REQUEST_SELECT} ${where} ORDER BY s.id ASC LIMIT $${values.length}`, values);
     const last = rows[rows.length - 1];
-    reply.send({ items: rows, nextCursor: rows.length === limit && last ? encodeCursor([last.id]) : null });
+    reply.send({
+      items: rows.map(mapRequest),
+      nextCursor: rows.length === limit && last ? encodeCursor([Number(last.id)]) : null,
+    });
   });
 
   app.post("/api/requests", async (req, reply) => {
     const body = createRequest.parse(req.body);
+    let insertedId = 0;
 
     await withTransaction(async (client) => {
       const { rows: openRows } = await client.query(
@@ -75,24 +83,26 @@ export async function requestRoutes(app: FastifyInstance) {
 
       const { rows } = await client.query(
         `INSERT INTO solicitacoes_captacao (veiculo_id, vendedor_id, cliente_id, unidade_id, responsavel, data_hora_proposta, estado)
-         VALUES ($1,$2,$3,$4,'api',$5,'requested') RETURNING *`,
+         VALUES ($1,$2,$3,$4,'api',$5,'requested') RETURNING id`,
         [body.vehicleId, vRows[0].vendedor_id, body.customerId ?? null, body.branchId, body.proposedAt],
       );
-      req.log.info({ requestId: rows[0].id }, "solicitação criada");
+      insertedId = rows[0]!.id;
     });
 
-    reply.status(201).send();
+    const { rows } = await pool.query(`${REQUEST_SELECT} WHERE s.id = $1`, [insertedId]);
+    reply.status(201).send(mapRequest(rows[0]!));
   });
 
   app.patch("/api/requests/:id", async (req, reply) => {
     const id = Number((req.params as { id: string }).id);
     const body = patchRequest.parse(req.body);
+    const checklistPt = body.checklist ? unmapChecklist(body.checklist) : null;
 
     if (body.state === "closed") {
       const { rows } = await pool.query("SELECT checklist FROM solicitacoes_captacao WHERE id = $1", [id]);
       if (!rows[0]) throw new NotFoundError("Solicitação não encontrada.");
-      const checklist = body.checklist ?? rows[0].checklist;
-      const incomplete = CHECKLIST_KEYS.some((key) => !checklist[key]);
+      const checklist = checklistPt ?? rows[0].checklist;
+      const incomplete = Object.values(checklist).some((done) => !done);
       if (incomplete) throw new ValidationError("Não fecha sem checklist completo (seção 11 do SPEC).");
     }
 
@@ -103,10 +113,12 @@ export async function requestRoutes(app: FastifyInstance) {
          motivo_perda = COALESCE($4, motivo_perda),
          observacoes = COALESCE($5, observacoes),
          atualizado_em = now()
-       WHERE id = $1 RETURNING *`,
-      [id, body.state ?? null, body.checklist ? JSON.stringify(body.checklist) : null, body.lossReason ?? null, body.notes ?? null],
+       WHERE id = $1 RETURNING id`,
+      [id, body.state ?? null, checklistPt ? JSON.stringify(checklistPt) : null, body.lossReason ?? null, body.notes ?? null],
     );
     if (!rows[0]) throw new NotFoundError("Solicitação não encontrada.");
-    reply.send(rows[0]);
+
+    const { rows: refreshed } = await pool.query(`${REQUEST_SELECT} WHERE s.id = $1`, [id]);
+    reply.send(mapRequest(refreshed[0]!));
   });
 }

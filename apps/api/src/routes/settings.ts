@@ -2,6 +2,7 @@ import type { FastifyInstance } from "fastify";
 import { z } from "zod";
 
 import { pool } from "../db.js";
+import { mapSettings } from "../lib/serialize.js";
 
 const weightSchema = z.object({ key: z.string(), label: z.string(), weight: z.number() });
 const settingsBody = z.object({
@@ -24,7 +25,7 @@ const settingsBody = z.object({
 export async function settingsRoutes(app: FastifyInstance) {
   app.get("/api/settings", async (_req, reply) => {
     const { rows } = await pool.query("SELECT * FROM configuracoes ORDER BY versao DESC LIMIT 1");
-    reply.send(rows[0] ?? null);
+    reply.send(rows[0] ? mapSettings(rows[0]) : null);
   });
 
   app.put("/api/settings", async (req, reply) => {
@@ -57,6 +58,6 @@ export async function settingsRoutes(app: FastifyInstance) {
       );
     }
 
-    reply.status(201).send(rows[0]);
+    reply.status(201).send(mapSettings(rows[0]!));
   });
 }

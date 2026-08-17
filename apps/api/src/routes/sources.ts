@@ -3,6 +3,7 @@ import { z } from "zod";
 
 import { pool } from "../db.js";
 import { decodeCursor, encodeCursor, parseLimit } from "../lib/pagination.js";
+import { mapSource, mapScrapeRun } from "../lib/serialize.js";
 import { ForbiddenError, NotFoundError } from "../lib/http-errors.js";
 
 const patchBody = z.object({ active: z.boolean() });
@@ -24,7 +25,7 @@ export async function sourceRoutes(app: FastifyInstance) {
       );
       source.ultima_execucao = lastRun[0] ?? null;
     }
-    reply.send(sources);
+    reply.send(sources.map(mapSource));
   });
 
   app.get("/api/sources/:source/runs", async (req, reply) => {
@@ -46,7 +47,10 @@ export async function sourceRoutes(app: FastifyInstance) {
       values,
     );
     const last = rows[rows.length - 1];
-    reply.send({ items: rows, nextCursor: rows.length === limit && last ? encodeCursor([last.id]) : null });
+    reply.send({
+      items: rows.map(mapScrapeRun),
+      nextCursor: rows.length === limit && last ? encodeCursor([Number(last.id)]) : null,
+    });
   });
 
   app.patch("/api/sources/:source", async (req, reply) => {
@@ -59,6 +63,6 @@ export async function sourceRoutes(app: FastifyInstance) {
     }
     const { rows } = await pool.query("UPDATE fontes SET ativa = $2 WHERE fonte = $1 RETURNING *", [source, body.active]);
     if (!rows[0]) throw new NotFoundError("Fonte não encontrada.");
-    reply.send(rows[0]);
+    reply.send(mapSource({ ...rows[0], ultima_execucao: null }));
   });
 }

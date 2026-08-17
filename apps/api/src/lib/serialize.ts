@@ -1,30 +1,39 @@
+/**
+ * Toda rota devolve o shape de packages/types/domain.ts (camelCase,
+ * inglês) — nunca a linha crua do Postgres (snake_case, português). Estes
+ * mapeadores são a única fronteira de tradução; nenhuma rota deve montar
+ * JSON à mão a partir de `row.*` fora daqui.
+ */
+
+const num = (v: unknown): number | null => (v === null || v === undefined ? null : Number(v));
+
 /** Linha de `fila_do_dia` (docs/MODELO.md) -> item de lista da API (docs/API.md
  * `Pick<Vehicle, "id"|"listings"|"state"|"score"|"fipeDiscountPct"|
  * "daysListed"|"compatibleCustomersCount"|"sellerId">`, achatado). */
 export function mapQueueRow(row: Record<string, unknown>) {
   return {
-    id: row.veiculo_id,
+    id: num(row.veiculo_id),
     state: row.estado,
-    motivoDescarte: row.motivo_descarte,
-    sellerId: row.vendedor_id,
-    fipeDiscountPct: row.desconto_fipe_pct === null ? null : Number(row.desconto_fipe_pct),
-    fipeDiscountCents: row.desconto_fipe_reais === null ? null : Number(row.desconto_fipe_reais),
-    fipeMatchConfidence: row.fipe_confianca === null ? null : Number(row.fipe_confianca),
-    daysListed: Number(row.dias_no_ar),
-    compatibleCustomersCount: Number(row.clientes_compativeis),
-    listingsCount: Number(row.total_fontes),
+    discardReason: row.motivo_descarte,
+    sellerId: num(row.vendedor_id),
+    fipeDiscountPct: num(row.desconto_fipe_pct),
+    fipeDiscountCents: num(row.desconto_fipe_reais),
+    fipeMatchConfidence: num(row.fipe_confianca),
+    daysListed: num(row.dias_no_ar),
+    compatibleCustomersCount: num(row.clientes_compativeis),
+    listingsCount: num(row.total_fontes),
     score:
       row.score_total === null
         ? null
         : {
-            vehicleId: row.veiculo_id,
-            total: Number(row.score_total),
+            vehicleId: num(row.veiculo_id),
+            total: num(row.score_total),
             band: row.score_faixa,
             components: row.score_componentes,
             calculatedAt: row.score_calculado_em,
           },
     listing: {
-      id: row.anuncio_id,
+      id: num(row.anuncio_id),
       source: row.fonte,
       normalizedTitle: row.titulo_normalizado,
       brand: row.marca,
@@ -33,7 +42,7 @@ export function mapQueueRow(row: Record<string, unknown>) {
       manufactureYear: row.ano_fabricacao,
       modelYear: row.ano_modelo,
       km: row.km,
-      priceCents: row.preco === null ? null : Number(row.preco),
+      priceCents: num(row.preco),
       transmission: row.cambio,
       fuelType: row.combustivel,
       color: row.cor,
@@ -43,5 +52,317 @@ export function mapQueueRow(row: Record<string, unknown>) {
       active: row.ativo,
       pendingFields: row.pendencias,
     },
+  };
+}
+
+export function mapListing(row: Record<string, unknown>) {
+  return {
+    id: num(row.id),
+    source: row.fonte,
+    externalId: row.id_externo,
+    url: row.url,
+    originalTitle: row.titulo_original,
+    normalizedTitle: row.titulo_normalizado,
+    brand: row.marca,
+    model: row.modelo,
+    trim: row.versao,
+    manufactureYear: row.ano_fabricacao,
+    modelYear: row.ano_modelo,
+    km: row.km,
+    priceCents: num(row.preco),
+    transmission: row.cambio,
+    fuelType: row.combustivel,
+    color: row.cor,
+    city: row.cidade,
+    stateCode: row.uf,
+    photos: row.fotos,
+    fingerprint: row.fingerprint,
+    contentHash: row.content_hash,
+    pendingFields: row.pendencias,
+    firstSeenAt: row.primeira_vista_em,
+    lastSeenAt: row.ultima_vista_em,
+    active: row.ativo,
+  };
+}
+
+export function mapPriceHistoryPoint(row: Record<string, unknown>) {
+  return {
+    id: num(row.id),
+    listingId: num(row.anuncio_id),
+    priceCents: num(row.preco),
+    observedAt: row.observado_em,
+  };
+}
+
+export function mapVehicleDetail(
+  vehicle: Record<string, unknown>,
+  listings: Record<string, unknown>[],
+  priceHistory: Record<string, unknown>[],
+  extra: { daysListed: number; compatibleCustomersCount: number },
+) {
+  return {
+    id: num(vehicle.id),
+    fingerprint: vehicle.fingerprint,
+    listings: listings.map(mapListing),
+    primaryListingId: num(vehicle.anuncio_principal_id),
+    state: vehicle.estado,
+    discardReason: vehicle.motivo_descarte,
+    returnTrigger: vehicle.gatilho_retorno_tipo
+      ? { kind: vehicle.gatilho_retorno_tipo, value: num(vehicle.gatilho_retorno_valor) }
+      : null,
+    fipeDiscountPct: num(vehicle.desconto_fipe_pct),
+    fipeDiscountCents: num(vehicle.desconto_fipe_reais),
+    fipeAdjustedCents: num(vehicle.fipe_ajustada),
+    fipeMatchConfidence: num(vehicle.fipe_confianca),
+    fipeMatchCandidates: vehicle.fipe_candidatos ?? null,
+    score:
+      vehicle.score_total === null || vehicle.score_total === undefined
+        ? null
+        : {
+            vehicleId: num(vehicle.id),
+            total: num(vehicle.score_total),
+            band: vehicle.score_faixa,
+            components: vehicle.score_componentes,
+            calculatedAt: vehicle.score_calculado_em,
+          },
+    priceHistory: priceHistory.map(mapPriceHistoryPoint),
+    daysListed: extra.daysListed,
+    sellerId: num(vehicle.vendedor_id),
+    compatibleCustomersCount: extra.compatibleCustomersCount,
+  };
+}
+
+/** "+5567980001000" -> "(67) 9****-1000". Nunca expõe o telefone cru —
+ * só quem chama /reveal-contact vê o valor completo (seção 4.6/12). */
+export function maskPhone(e164: string | null): string | null {
+  if (!e164) return null;
+  const digits = e164.replace(/\D/g, "").replace(/^55/, "");
+  if (digits.length < 10) return null;
+  const ddd = digits.slice(0, 2);
+  const last4 = digits.slice(-4);
+  return `(${ddd}) 9****-${last4}`;
+}
+
+export function mapSeller(row: Record<string, unknown>) {
+  return {
+    id: num(row.id),
+    name: row.nome,
+    maskedPhone: row.masked_phone ?? null,
+    totalListings: row.total_anuncios === undefined ? null : num(row.total_anuncios),
+    muted: row.mutado,
+    doNotDisturb: row.nao_perturbe,
+    lastContactedAt: row.ultimo_contato_em ?? null,
+  };
+}
+
+export function mapCustomer(row: Record<string, unknown>) {
+  return {
+    id: num(row.id),
+    name: row.nome,
+    contact: row.contato,
+    source: row.origem,
+    owner: row.responsavel,
+    notes: row.observacoes,
+    createdAt: row.criado_em,
+    totalInterests: row.total_interesses === undefined ? undefined : num(row.total_interesses),
+    totalMatches: row.total_matches === undefined ? undefined : num(row.total_matches),
+  };
+}
+
+export function mapInterest(row: Record<string, unknown>) {
+  return {
+    id: num(row.id),
+    customerId: num(row.cliente_id),
+    brand: row.marca,
+    model: row.modelo,
+    yearMin: row.ano_min,
+    yearMax: row.ano_max,
+    maxKm: row.km_maximo,
+    priceMinCents: num(row.preco_min),
+    priceMaxCents: num(row.preco_max),
+    transmission: row.cambio,
+    city: row.cidade,
+    priority: row.prioridade,
+    validUntil: row.validade_ate,
+    status: row.status,
+  };
+}
+
+export function mapInterestMatch(row: Record<string, unknown>) {
+  return {
+    id: num(row.id),
+    interestId: num(row.interesse_id),
+    vehicleId: num(row.veiculo_id),
+    matchScore: num(row.score_aderencia),
+    state: row.estado,
+    createdAt: row.criado_em,
+  };
+}
+
+export function mapBranch(row: Record<string, unknown>) {
+  return {
+    id: num(row.id),
+    name: row.nome,
+    address: row.endereco,
+    intakeLimitPerPeriod: num(row.limite_veiculos_por_periodo),
+    requestsThisPeriod: row.solicitacoes_no_periodo === undefined ? undefined : num(row.solicitacoes_no_periodo),
+  };
+}
+
+const CHECKLIST_KEY_MAP: Record<string, string> = {
+  documento: "document",
+  chaveReserva: "spareKey",
+  manual: "manual",
+  vistoria: "inspection",
+  fotosPadronizadas: "standardPhotos",
+  avaliacao: "appraisal",
+};
+
+function mapChecklist(raw: Record<string, boolean> | null): Record<string, boolean> | null {
+  if (!raw) return null;
+  const mapped: Record<string, boolean> = {};
+  for (const [key, value] of Object.entries(raw)) {
+    mapped[CHECKLIST_KEY_MAP[key] ?? key] = value;
+  }
+  return mapped;
+}
+
+const CHECKLIST_KEY_MAP_INVERSE: Record<string, string> = Object.fromEntries(
+  Object.entries(CHECKLIST_KEY_MAP).map(([pt, en]) => [en, pt]),
+);
+
+/** Inglês (API, domain.ts) -> português (coluna `checklist` jsonb). */
+export function unmapChecklist(raw: Record<string, boolean>): Record<string, boolean> {
+  const mapped: Record<string, boolean> = {};
+  for (const [key, value] of Object.entries(raw)) {
+    mapped[CHECKLIST_KEY_MAP_INVERSE[key] ?? key] = value;
+  }
+  return mapped;
+}
+
+export function mapRequest(row: Record<string, unknown>) {
+  return {
+    id: num(row.id),
+    vehicleId: num(row.veiculo_id),
+    sellerId: num(row.vendedor_id),
+    customerId: num(row.cliente_id),
+    branchId: num(row.unidade_id),
+    owner: row.responsavel,
+    proposedAt: row.data_hora_proposta,
+    state: row.estado,
+    lossReason: row.motivo_perda,
+    notes: row.observacoes,
+    checklist: mapChecklist(row.checklist as Record<string, boolean> | null),
+    createdAt: row.criado_em,
+    vehicle:
+      row.marca !== undefined
+        ? { brand: row.marca, model: row.modelo, modelYear: row.ano_modelo, priceCents: num(row.preco) }
+        : undefined,
+    branchName: row.unidade_nome,
+  };
+}
+
+export function mapSource(row: Record<string, unknown>) {
+  return {
+    source: row.fonte,
+    accessLevel: ACCESS_LEVEL_MAP[row.nivel_acesso as string] ?? row.nivel_acesso,
+    legalBasis: row.base_legal,
+    active: row.ativa,
+    cursor: row.cursor,
+    pausedUntil: row.pausado_ate,
+    disabled: row.desativado,
+    reason: row.motivo,
+    lastRun: row.ultima_execucao ? mapScrapeRun(row.ultima_execucao as Record<string, unknown>) : null,
+  };
+}
+
+const ACCESS_LEVEL_MAP: Record<string, string> = {
+  feed_oficial: "official_feed",
+  autorizado: "authorized",
+  publico_educado: "public_polite",
+  manual: "manual",
+};
+
+export function mapScrapeRun(row: Record<string, unknown>) {
+  return {
+    id: num(row.id),
+    source: row.fonte,
+    startedAt: row.iniciado_em,
+    finishedAt: row.finalizado_em,
+    requests: num(row.requisicoes),
+    notModified: num(row.nao_modificados),
+    new: num(row.novos),
+    updated: num(row.atualizados),
+    unchanged: num(row.inalterados),
+    needsReview: num(row.revisao),
+    errors: num(row.erros),
+    endedBy: row.encerrado_por,
+  };
+}
+
+export function mapSettings(row: Record<string, unknown>) {
+  return {
+    weights: row.pesos,
+    bandThresholds: row.faixas,
+    discardReasons: row.motivos_descarte,
+    returnTriggerPricePct: num(row.gatilho_retorno_pct),
+    returnTriggerDays: num(row.gatilho_retorno_dias),
+    sellerCooldownHours: num(row.cooldown_vendedor_horas),
+    followUpDays: row.follow_up_dias,
+    kmCurve: row.curva_km,
+    whatsappTemplate: row.template_whatsapp,
+    allowedHoursStart: row.horario_permitido_inicio,
+    allowedHoursEnd: row.horario_permitido_fim,
+    version: num(row.versao),
+  };
+}
+
+export function mapAuditRecord(row: Record<string, unknown>) {
+  return {
+    id: num(row.id),
+    action: row.acao,
+    author: row.autor,
+    targetType: row.alvo_tipo,
+    targetId: row.alvo_id,
+    detail: row.detalhe,
+    createdAt: row.criado_em,
+  };
+}
+
+export function mapWebhook(row: Record<string, unknown>) {
+  return {
+    id: num(row.id),
+    url: row.url,
+    events: row.eventos,
+    active: row.ativo,
+    lastDeliveryAt: row.ultima_entrega_em ?? null,
+    lastDeliveryStatus: row.ultima_entrega_status ?? null,
+  };
+}
+
+export function mapWebhookDelivery(row: Record<string, unknown>) {
+  return {
+    id: num(row.id),
+    webhookId: num(row.webhook_id),
+    event: row.evento,
+    payload: row.payload,
+    attempt: num(row.tentativa),
+    statusHttp: num(row.status_http),
+    success: row.sucesso,
+    createdAt: row.criado_em,
+  };
+}
+
+export function mapFipeReviewItem(row: Record<string, unknown>) {
+  return {
+    id: num(row.id),
+    fipeMatchConfidence: num(row.fipe_confianca),
+    fipeMatchCandidates: row.fipe_candidatos ?? null,
+    brand: row.marca,
+    model: row.modelo,
+    trim: row.versao,
+    modelYear: row.ano_modelo,
+    priceCents: num(row.preco),
+    normalizedTitle: row.titulo_normalizado,
   };
 }

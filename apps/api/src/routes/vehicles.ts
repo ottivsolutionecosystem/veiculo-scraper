@@ -2,6 +2,7 @@ import type { FastifyInstance } from "fastify";
 import { z } from "zod";
 
 import { pool, withTransaction } from "../db.js";
+import { mapVehicleDetail, mapSeller, mapListing, maskPhone, mapInterestMatch } from "../lib/serialize.js";
 import { NotFoundError, ValidationError } from "../lib/http-errors.js";
 import { assertHasDiscardReason } from "../lib/regras-descarte.js";
 
@@ -23,16 +24,18 @@ export async function vehicleRoutes(app: FastifyInstance) {
 
     const { rows: veiculoRows } = await pool.query(
       `SELECT v.*, s.total AS score_total, s.faixa AS score_faixa, s.componentes AS score_componentes,
-              s.calculado_em AS score_calculado_em
+              s.calculado_em AS score_calculado_em,
+              EXTRACT(DAY FROM now() - pa.primeira_vista_em)::int AS dias_no_ar
          FROM veiculos v
          LEFT JOIN scores s ON s.veiculo_id = v.id
+         JOIN anuncios pa ON pa.id = v.anuncio_principal_id
         WHERE v.id = $1`,
       [id],
     );
     const vehicle = veiculoRows[0];
     if (!vehicle) throw new NotFoundError("Veículo não encontrado.");
 
-    const { rows: listings } = await pool.query(
+    const { rows: listingRows } = await pool.query(
       `SELECT a.* FROM anuncios a
          JOIN anuncio_veiculo av ON av.anuncio_id = a.id
         WHERE av.veiculo_id = $1
@@ -40,7 +43,7 @@ export async function vehicleRoutes(app: FastifyInstance) {
       [id],
     );
 
-    const { rows: priceHistory } = await pool.query(
+    const { rows: priceHistoryRows } = await pool.query(
       `SELECT ph.* FROM preco_historico ph
          JOIN anuncio_veiculo av ON av.anuncio_id = ph.anuncio_id
         WHERE av.veiculo_id = $1
@@ -48,22 +51,8 @@ export async function vehicleRoutes(app: FastifyInstance) {
       [id],
     );
 
-    const seller = vehicle.vendedor_id
-      ? (await pool.query("SELECT * FROM vendedores WHERE id = $1", [vehicle.vendedor_id])).rows[0]
-      : null;
-    const otherVehicles = vehicle.vendedor_id
-      ? (
-          await pool.query(
-            `SELECT v.id, a.marca, a.modelo, a.ano_modelo FROM veiculos v
-               JOIN anuncios a ON a.id = v.anuncio_principal_id
-              WHERE v.vendedor_id = $1 AND v.id != $2`,
-            [vehicle.vendedor_id, id],
-          )
-        ).rows
-      : [];
-
-    const { rows: matches } = await pool.query(
-      `SELECT mi.*, c.nome AS cliente_nome, c.id AS cliente_id
+    const { rows: matchRows } = await pool.query(
+      `SELECT mi.*, c.id AS cliente_id, c.nome AS cliente_nome
          FROM matches_interesse mi
          JOIN interesses i ON i.id = mi.interesse_id
          JOIN clientes c ON c.id = i.cliente_id
@@ -71,7 +60,39 @@ export async function vehicleRoutes(app: FastifyInstance) {
       [id],
     );
 
-    reply.send({ vehicle, listings, priceHistory, seller, otherVehicles, matches });
+    const vehicleDetail = mapVehicleDetail(vehicle, listingRows, priceHistoryRows, {
+      daysListed: Number(vehicle.dias_no_ar ?? 0),
+      compatibleCustomersCount: matchRows.length,
+    });
+
+    let seller = null;
+    let otherVehicles: unknown[] = [];
+    if (vehicle.vendedor_id) {
+      const { rows: sellerRows } = await pool.query(
+        `SELECT vd.*, cv.telefone_e164 FROM vendedores vd
+           LEFT JOIN contatos_vendedor cv ON cv.vendedor_id = vd.id
+          WHERE vd.id = $1`,
+        [vehicle.vendedor_id],
+      );
+      if (sellerRows[0]) {
+        seller = mapSeller(sellerRows[0]);
+        seller.maskedPhone = maskPhone(sellerRows[0].telefone_e164);
+      }
+      const { rows: otherRows } = await pool.query(
+        `SELECT v.id AS veiculo_id, a.* FROM veiculos v
+           JOIN anuncios a ON a.id = v.anuncio_principal_id
+          WHERE v.vendedor_id = $1 AND v.id != $2`,
+        [vehicle.vendedor_id, id],
+      );
+      otherVehicles = otherRows.map((r) => ({ vehicleId: Number(r.veiculo_id), listing: mapListing(r) }));
+    }
+
+    const matches = matchRows.map((m) => ({
+      ...mapInterestMatch(m),
+      customer: { id: Number(m.cliente_id), name: m.cliente_nome },
+    }));
+
+    reply.send({ vehicle: vehicleDetail, seller, otherVehicles, matches });
   });
 
   app.post("/api/vehicles/:id/discard", async (req, reply) => {

@@ -3,6 +3,7 @@ import { z } from "zod";
 
 import { pool } from "../db.js";
 import { decodeCursor, encodeCursor, parseLimit } from "../lib/pagination.js";
+import { mapCustomer, mapInterest, mapInterestMatch } from "../lib/serialize.js";
 import { NotFoundError } from "../lib/http-errors.js";
 
 const listQuery = z.object({ cursor: z.string().optional(), limit: z.string().optional() });
@@ -53,7 +54,10 @@ export async function customerRoutes(app: FastifyInstance) {
       values,
     );
     const last = rows[rows.length - 1];
-    reply.send({ items: rows, nextCursor: rows.length === limit && last ? encodeCursor([last.id]) : null });
+    reply.send({
+      items: rows.map(mapCustomer),
+      nextCursor: rows.length === limit && last ? encodeCursor([Number(last.id)]) : null,
+    });
   });
 
   app.get("/api/customers/:id", async (req, reply) => {
@@ -61,20 +65,27 @@ export async function customerRoutes(app: FastifyInstance) {
     const { rows: customerRows } = await pool.query("SELECT * FROM clientes WHERE id = $1", [id]);
     if (!customerRows[0]) throw new NotFoundError("Cliente não encontrado.");
 
-    const { rows: interests } = await pool.query("SELECT * FROM interesses WHERE cliente_id = $1", [id]);
-    for (const interest of interests) {
-      const { rows: matches } = await pool.query(
+    const { rows: interestRows } = await pool.query("SELECT * FROM interesses WHERE cliente_id = $1", [id]);
+    const interests = [];
+    for (const interestRow of interestRows) {
+      const { rows: matchRows } = await pool.query(
         `SELECT mi.*, a.marca, a.modelo, a.ano_modelo, a.preco FROM matches_interesse mi
            JOIN veiculos v ON v.id = mi.veiculo_id
            JOIN anuncios a ON a.id = v.anuncio_principal_id
           WHERE mi.interesse_id = $1 AND mi.estado != 'discarded'
           ORDER BY mi.score_aderencia DESC`,
-        [interest.id],
+        [interestRow.id],
       );
-      interest.matches = matches;
+      interests.push({
+        ...mapInterest(interestRow),
+        matches: matchRows.map((m) => ({
+          ...mapInterestMatch(m),
+          vehicle: { brand: m.marca, model: m.modelo, modelYear: m.ano_modelo, priceCents: m.preco === null ? null : Number(m.preco) },
+        })),
+      });
     }
 
-    reply.send({ customer: customerRows[0], interests });
+    reply.send({ customer: mapCustomer(customerRows[0]!), interests });
   });
 
   app.post("/api/customers", async (req, reply) => {
@@ -83,7 +94,7 @@ export async function customerRoutes(app: FastifyInstance) {
       "INSERT INTO clientes (nome, contato, origem, responsavel, observacoes) VALUES ($1,$2,$3,$4,$5) RETURNING *",
       [body.name, body.contact, body.source, body.owner, body.notes ?? null],
     );
-    reply.status(201).send(rows[0]);
+    reply.status(201).send(mapCustomer(rows[0]!));
   });
 
   app.patch("/api/customers/:id", async (req, reply) => {
@@ -98,7 +109,7 @@ export async function customerRoutes(app: FastifyInstance) {
       [id, body.name, body.contact, body.source, body.owner, body.notes],
     );
     if (!rows[0]) throw new NotFoundError("Cliente não encontrado.");
-    reply.send(rows[0]);
+    reply.send(mapCustomer(rows[0]));
   });
 
   app.post("/api/customers/:id/interests", async (req, reply) => {
@@ -115,6 +126,6 @@ export async function customerRoutes(app: FastifyInstance) {
         body.transmission ?? null, body.city ?? null, body.priority,
       ],
     );
-    reply.status(201).send(rows[0]);
+    reply.status(201).send(mapInterest(rows[0]!));
   });
 }
