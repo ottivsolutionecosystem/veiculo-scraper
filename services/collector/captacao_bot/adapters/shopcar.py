@@ -47,10 +47,29 @@ SELETORES = {
     "cor": ".cor, [data-cor]",
     "cidade": ".cidade, .localizacao, [itemprop='addressLocality']",
     "fotos": ".galeria img, [itemprop='image']",
-    "vendedor": ".vendedor-nome, .loja-nome",
+    # Separados (não combinados) porque qual dos dois casa é o próprio sinal
+    # de tipo_anunciante quando falta o @type no JSON-LD.
+    "vendedor_particular": ".vendedor-nome",
+    "vendedor_loja": ".loja-nome",
 }
 
 TIPOS_JSONLD = {"Vehicle", "Car", "Product", "Motorcycle"}
+
+# schema.org: vendedor Organization = loja, Person = particular. Sinal mais
+# confiável que qualquer seletor CSS — é o que o próprio site publica pro
+# Google, então sobrevive a redesign (mesma lógica do restante do JSON-LD).
+TIPO_ANUNCIANTE_JSONLD = {"Organization": "loja", "Person": "particular"}
+
+
+def _tipo_anunciante_do_seller(seller) -> str | None:
+    if not isinstance(seller, dict):
+        return None
+    tipo = seller.get("@type")
+    tipos = {tipo} if isinstance(tipo, str) else set(tipo or [])
+    for t in tipos:
+        if t in TIPO_ANUNCIANTE_JSONLD:
+            return TIPO_ANUNCIANTE_JSONLD[t]
+    return None
 
 
 def _texto(node) -> str | None:
@@ -140,6 +159,7 @@ class ShopcarAdapter(Adapter):
         km = None
         cor = None
         cidade = None
+        tipo_anunciante = None
 
         if jsonld:
             titulo = jsonld.get("name")
@@ -148,6 +168,8 @@ class ShopcarAdapter(Adapter):
                 oferta = oferta[0] if oferta else {}
             if isinstance(oferta, dict) and oferta.get("price") is not None:
                 preco = str(oferta.get("price"))
+            if isinstance(oferta, dict):
+                tipo_anunciante = _tipo_anunciante_do_seller(oferta.get("seller"))
             imagem = jsonld.get("image")
             if isinstance(imagem, str):
                 fotos = [imagem]
@@ -189,6 +211,28 @@ class ShopcarAdapter(Adapter):
 
         ano = str(ano_jsonld) if ano_jsonld else _primeiro(tree, SELETORES["ano"])
 
+        vendedor_nome = None
+        if jsonld:
+            oferta = jsonld.get("offers") or {}
+            if isinstance(oferta, list):
+                oferta = oferta[0] if oferta else {}
+            seller = oferta.get("seller") if isinstance(oferta, dict) else None
+            if isinstance(seller, dict):
+                vendedor_nome = seller.get("name")
+
+        # CSS é fallback pro tipo, não só pro nome: qual dos dois seletores
+        # casou já diz particular ou loja quando falta @type no JSON-LD.
+        if not vendedor_nome or not tipo_anunciante:
+            nome_loja = _primeiro(tree, SELETORES["vendedor_loja"])
+            if nome_loja:
+                vendedor_nome = vendedor_nome or nome_loja
+                tipo_anunciante = tipo_anunciante or "loja"
+            else:
+                nome_particular = _primeiro(tree, SELETORES["vendedor_particular"])
+                if nome_particular:
+                    vendedor_nome = vendedor_nome or nome_particular
+                    tipo_anunciante = tipo_anunciante or "particular"
+
         return AnuncioBruto(
             fonte=self.cfg.fonte,
             id_externo=self.id_externo(url),
@@ -202,10 +246,11 @@ class ShopcarAdapter(Adapter):
             cor_texto=cor,
             cidade_texto=cidade,
             fotos=[urljoin(url, f) for f in fotos][:20],
-            vendedor_nome=_primeiro(tree, SELETORES["vendedor"]),
+            vendedor_nome=vendedor_nome,
             # Telefone NÃO é coletado aqui. Contato entra pelo fluxo com base
             # legal registrada e mascaramento (seção 4.7 do SPEC).
             vendedor_telefone=None,
+            vendedor_tipo=tipo_anunciante,
             raw={"jsonld": jsonld} if jsonld else {},
         )
 

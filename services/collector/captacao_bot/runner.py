@@ -40,16 +40,21 @@ class ResultadoColeta:
     inalterados: int = 0
     revisao: int = 0
     erros: int = 0
+    ignorados_filtro: int = 0
     encerrado_por: str = "fim"
     iniciado_em: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
+    scrape_run_id: int | None = None  # preenchido por registrar_execucao (só PostgresStorage)
 
     def resumo(self) -> str:
-        return (
+        base = (
             f"[{self.fonte}] req={self.requisicoes} 304={self.nao_modificados} "
             f"novos={self.novos} atualizados={self.atualizados} "
             f"inalterados={self.inalterados} revisao={self.revisao} "
             f"erros={self.erros} fim={self.encerrado_por}"
         )
+        if self.ignorados_filtro:
+            base += f" ignorados_filtro={self.ignorados_filtro}"
+        return base
 
 
 class Runner:
@@ -59,7 +64,14 @@ class Runner:
         self.storage = storage
         self.cfg = adapter.cfg
 
-    def coletar(self, limite: int | None = None) -> ResultadoColeta:
+    def coletar(
+        self, limite: int | None = None, tipo_anunciante: str | None = None
+    ) -> ResultadoColeta:
+        """`tipo_anunciante` ("particular"/"loja") filtra o que é salvo, não o
+        que é requisitado — só se sabe o tipo depois de parsear a página do
+        anúncio (SPEC: sem heurística de listagem). Anúncio filtrado ainda
+        conta pra early stop normalmente: o conteúdo dele é novo/mudou, só
+        não interessa pro pedido atual."""
         res = ResultadoColeta(fonte=self.cfg.fonte)
         if not self.cfg.ativa:
             res.encerrado_por = "fonte inativa"
@@ -112,6 +124,11 @@ class Runner:
 
                 conhecidos_seguidos = 0
                 veiculo = normalizar(bruto)
+
+                if tipo_anunciante is not None and veiculo.tipo_anunciante != tipo_anunciante:
+                    res.ignorados_filtro += 1
+                    continue
+
                 pendencias = precisa_revisao(veiculo)
                 if pendencias:
                     res.revisao += 1
@@ -138,7 +155,7 @@ class Runner:
             res.encerrado_por = "robots.txt"
             log.warning("%s", exc)
 
-        self.storage.registrar_execucao(res)
+        res.scrape_run_id = self.storage.registrar_execucao(res)
         return res
 
     def _parar(self, conhecidos_seguidos: int, res: ResultadoColeta) -> bool:

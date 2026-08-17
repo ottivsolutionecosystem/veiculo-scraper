@@ -32,7 +32,7 @@ class Storage(Protocol):
         last_modified: str | None,
         pendencias: list[str],
     ) -> bool: ...
-    def registrar_execucao(self, resultado) -> None: ...
+    def registrar_execucao(self, resultado) -> int: ...
 
 
 class MemoryStorage:
@@ -67,8 +67,9 @@ class MemoryStorage:
         }
         return novo
 
-    def registrar_execucao(self, resultado) -> None:
+    def registrar_execucao(self, resultado) -> int:
         self.execucoes.append(resultado)
+        return len(self.execucoes)
 
 
 class PostgresStorage:
@@ -112,12 +113,12 @@ class PostgresStorage:
                 INSERT INTO anuncios (
                     fonte, id_externo, url, titulo_original, titulo_normalizado,
                     marca, modelo, ano_fabricacao, ano_modelo, km, preco,
-                    cambio, combustivel, cor, cidade, uf, fotos,
+                    cambio, combustivel, cor, cidade, uf, fotos, tipo_anunciante,
                     fingerprint, content_hash, etag, last_modified,
                     pendencias, raw_json,
                     primeira_vista_em, ultima_vista_em, ativo
                 ) VALUES (
-                    %s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,
+                    %s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,
                     %s,%s,%s,%s,%s,%s, now(), now(), true
                 )
                 ON CONFLICT (fonte, id_externo) DO UPDATE SET
@@ -136,6 +137,7 @@ class PostgresStorage:
                     cidade = EXCLUDED.cidade,
                     uf = EXCLUDED.uf,
                     fotos = EXCLUDED.fotos,
+                    tipo_anunciante = EXCLUDED.tipo_anunciante,
                     fingerprint = EXCLUDED.fingerprint,
                     content_hash = EXCLUDED.content_hash,
                     etag = EXCLUDED.etag,
@@ -152,7 +154,7 @@ class PostgresStorage:
                     veiculo.marca, veiculo.modelo, veiculo.ano_fabricacao,
                     veiculo.ano_modelo, veiculo.km, veiculo.preco,
                     veiculo.cambio, veiculo.combustivel, veiculo.cor,
-                    veiculo.cidade, veiculo.uf, veiculo.fotos,
+                    veiculo.cidade, veiculo.uf, veiculo.fotos, veiculo.tipo_anunciante,
                     veiculo.fingerprint, veiculo.content_hash, etag,
                     last_modified, pendencias, json.dumps(raw, ensure_ascii=False),
                 ),
@@ -181,7 +183,7 @@ class PostgresStorage:
         self.conn.commit()
         return bool(inserido)
 
-    def registrar_execucao(self, resultado) -> None:
+    def registrar_execucao(self, resultado) -> int:
         with self.conn.cursor() as cur:
             cur.execute(
                 """
@@ -190,6 +192,7 @@ class PostgresStorage:
                     nao_modificados, novos, atualizados, inalterados,
                     revisao, erros, encerrado_por
                 ) VALUES (%s,%s, now(), %s,%s,%s,%s,%s,%s,%s,%s)
+                RETURNING id
                 """,
                 (
                     resultado.fonte, resultado.iniciado_em, resultado.requisicoes,
@@ -197,5 +200,32 @@ class PostgresStorage:
                     resultado.atualizados, resultado.inalterados,
                     resultado.revisao, resultado.erros, resultado.encerrado_por,
                 ),
+            )
+            (scrape_run_id,) = cur.fetchone()
+        self.conn.commit()
+        return scrape_run_id
+
+    def pedidos_pendentes(self, fonte: str) -> list[dict]:
+        """Pedidos de coleta sob demanda (botão na tela Fontes) ainda não
+        processados, mais antigo primeiro — não é RPC, é o coletor lendo o
+        Postgres, a mesma fronteira de sempre (SPEC seção 5)."""
+        with self.conn.cursor() as cur:
+            cur.execute(
+                """
+                SELECT id, tipo_anunciante_filtro, limite
+                  FROM execucoes_solicitadas
+                 WHERE fonte = %s AND processado_em IS NULL
+                 ORDER BY solicitado_em ASC
+                """,
+                (fonte,),
+            )
+            colunas = [d.name for d in cur.description]
+            return [dict(zip(colunas, row)) for row in cur.fetchall()]
+
+    def marcar_pedido_processado(self, pedido_id: int, scrape_run_id: int) -> None:
+        with self.conn.cursor() as cur:
+            cur.execute(
+                "UPDATE execucoes_solicitadas SET processado_em = now(), scrape_run_id = %s WHERE id = %s",
+                (scrape_run_id, pedido_id),
             )
         self.conn.commit()

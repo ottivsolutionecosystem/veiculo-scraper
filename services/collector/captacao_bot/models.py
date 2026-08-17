@@ -30,6 +30,7 @@ class AnuncioBruto:
     fotos: list[str] = field(default_factory=list)
     vendedor_nome: str | None = None
     vendedor_telefone: str | None = None
+    vendedor_tipo: str | None = None  # "particular" | "loja" | None (não detectado)
     raw: dict[str, Any] = field(default_factory=dict)
     coletado_em: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
 
@@ -73,6 +74,7 @@ class VeiculoNormalizado:
     cidade: str | None = None
     uf: str | None = None
     fotos: list[str] = field(default_factory=list)
+    tipo_anunciante: str | None = None  # "particular" | "loja" | None
 
     content_hash: str = ""
     fingerprint: str = ""

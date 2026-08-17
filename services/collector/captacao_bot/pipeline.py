@@ -69,6 +69,7 @@ def normalizar(bruto: AnuncioBruto) -> VeiculoNormalizado:
         cidade=cidade,
         uf=uf,
         fotos=bruto.fotos,
+        tipo_anunciante=bruto.vendedor_tipo,
         content_hash=bruto.content_hash(),
     )
     v.fingerprint = fingerprint(v)

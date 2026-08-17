@@ -5,6 +5,8 @@
     python -m captacao_bot.cli parse   --fonte shopcar --arquivo tests/fixtures/x.html
     python -m captacao_bot.cli coletar --fonte shopcar --limite 20 --dry-run
     python -m captacao_bot.cli coletar --fonte shopcar --limite 20 --postgres  # requer DATABASE_URL
+    python -m captacao_bot.cli coletar --fonte shopcar --tipo-anunciante loja --postgres
+    python -m captacao_bot.cli pedidos --fonte shopcar  # processa fila de execucoes_solicitadas
 """
 
 from __future__ import annotations
@@ -89,7 +91,7 @@ def cmd_coletar(args) -> None:
     storage = _postgres_storage() if args.postgres else MemoryStorage()
     with PoliteClient(adapter.cfg) as client:
         runner = Runner(adapter, client, storage)
-        resultado = runner.coletar(limite=args.limite)
+        resultado = runner.coletar(limite=args.limite, tipo_anunciante=args.tipo_anunciante)
     print(resultado.resumo())
     if args.dry_run and isinstance(storage, MemoryStorage):
         for (_, url), reg in list(storage.anuncios.items())[:10]:
@@ -99,6 +101,29 @@ def cmd_coletar(args) -> None:
     elif args.dry_run:
         print("--dry-run não tem efeito com --postgres: PostgresStorage grava direto "
               "(sempre gravou; a única forma de não gravar é não passar --postgres).")
+
+
+def cmd_pedidos(args) -> None:
+    """Processa pedidos de coleta sob demanda gravados pelo botão da tela
+    Fontes (tabela execucoes_solicitadas — migration 0012). O botão não
+    chama o coletor, só grava a linha; isto aqui é quem lê (fronteira
+    TS/Python é o Postgres, SPEC seção 5, sem RPC)."""
+    adapter = _adapter(args.fonte)
+    storage = _postgres_storage()
+    pendentes = storage.pedidos_pendentes(args.fonte)
+    if not pendentes:
+        print(f"[{args.fonte}] nenhum pedido pendente.")
+        return
+
+    with PoliteClient(adapter.cfg) as client:
+        runner = Runner(adapter, client, storage)
+        for pedido in pendentes:
+            resultado = runner.coletar(
+                limite=pedido["limite"], tipo_anunciante=pedido["tipo_anunciante_filtro"]
+            )
+            storage.marcar_pedido_processado(pedido["id"], resultado.scrape_run_id)
+            print(f"pedido #{pedido['id']} (tipo_anunciante={pedido['tipo_anunciante_filtro'] or 'ambos'}): "
+                  f"{resultado.resumo()}")
 
 
 def main() -> None:
@@ -133,7 +158,17 @@ def main() -> None:
         "--postgres", action="store_true",
         help="grava em Postgres (DATABASE_URL) em vez de MemoryStorage",
     )
+    pc.add_argument(
+        "--tipo-anunciante", choices=["particular", "loja"], dest="tipo_anunciante",
+        help="só salva anúncio desse tipo (detectado por anúncio, não por listagem)",
+    )
     pc.set_defaults(func=cmd_coletar)
+
+    pd = sub.add_parser(
+        "pedidos", help="processa pedidos de coleta sob demanda (tabela execucoes_solicitadas)"
+    )
+    pd.add_argument("--fonte", required=True)
+    pd.set_defaults(func=cmd_pedidos)
 
     args = p.parse_args()
     args.func(args)
