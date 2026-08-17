@@ -1,0 +1,7 @@
+{
+  "name": "@veiculo/types",
+  "version": "0.0.0",
+  "private": true,
+  "main": "./domain.ts",
+  "types": "./domain.ts"
+}
