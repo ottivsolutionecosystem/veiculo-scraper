@@ -1,4 +1,4 @@
-# RELATORIO — Fases 1, 2, 3 e 4
+# RELATORIO — Fases 1, 2, 3 e 4 (+ coleta sob demanda)
 
 ## Feito
 - Passo 0: SPEC.md, CLAUDE.md, PROMPT.md, README.md, db/schema.sql e
@@ -185,3 +185,47 @@ score_total DESC, veiculo_id LIMIT 24`), em duas escalas:
 - `apps/web/src/lib/search.ts::filterVehicles` (filtro client-side sobre
   mock) foi removido — a Busca agora filtra no Postgres via
   `searchVehicles`; sobrou só `parseSearchFilters`.
+
+## Coleta sob demanda + filtro particular/loja (pedido do usuário)
+- Pedido explícito autorizou mexer em `services/collector` (normalmente
+  território fechado) — confirmado antes de tocar no código, porque SPEC
+  seção 5 proíbe RPC entre TS/Python: a fronteira é só o Postgres.
+- Botão "Rodar coleta agora" na tela Fontes (particular/loja/ambos, com
+  limite opcional) grava uma linha em `execucoes_solicitadas` (migration
+  0012) via `POST /api/sources/:source/run` — 403 se a fonte não for
+  self-service (mesma trava do liga/desliga), 409 se já tem pedido
+  pendente. **Não dispara nada**: quem processa é
+  `python -m captacao_bot.cli pedidos --fonte shopcar`, que lê a fila,
+  roda a coleta e marca `processado_em`/`scrape_run_id`. Agendar isso em
+  produção (cron, systemd timer, etc.) é decisão de infra — mesma
+  observação já registrada pra "orquestrador de produção em aberto".
+- `tipo_anunciante` (particular/loja) em `anuncios`: coletor detecta via
+  `offers.seller.@type` do JSON-LD (Organization=loja, Person=particular),
+  com fallback pro seletor CSS que casar (`.loja-nome` vs
+  `.vendedor-nome`, antes combinados num só seletor). `NULL` continua
+  válido — nem todo anúncio tem o sinal.
+- `Runner.coletar(tipo_anunciante=...)`: filtra o que é *salvo*, não o que
+  é requisitado — só dá pra saber o tipo depois de parsear a página do
+  anúncio. Anúncio filtrado ainda conta pra early stop normalmente (o
+  conteúdo é novo/mudou, só não interessa pro pedido atual).
+- Exposto em `sellerType` (`individual`/`dealer`) no `Listing` do
+  domain.ts, filtro em `GET /api/queue` e `GET /api/vehicles/search`,
+  badge no card e select na Busca e na Fila do dia.
+- `fila_do_dia` precisou ser recriada (DROP+CREATE, migration 0012) pra
+  ganhar a coluna — materialized view não aceita ALTER ADD COLUMN. Não é
+  destrutivo (dado derivado); a mesma migration já deixa reindexada.
+- 8 testes Python novos (detecção JSON-LD/CSS, propagação até
+  `VeiculoNormalizado`, filtro no `Runner`) — suíte completa 75→83,
+  passando. `apps/api` typecheck + 35 testes vitest + lint + build de
+  produção do `apps/web` todos limpos depois da mudança.
+- Validado ponta a ponta de verdade: cliquei o botão no browser real
+  (Playwright), a linha foi gravada, `cli.py pedidos` leu do Postgres e
+  tentou coletar — bateu no mesmo bloqueio de rede de sempre
+  (`shopcar.com.br` retorna 403 nesta sandbox, já documentado), mas
+  terminou graciosamente, gravou o `scrape_runs` e marcou o pedido como
+  processado. O caminho está correto de ponta a ponta; só falta rede
+  liberada pra coletar dado de verdade (mesmo bloqueio já registrado
+  acima pra ingestão FIPE).
+- `apps/api/scripts/seed.ts`: ~70% dos 180 veículos ganham
+  `tipo_anunciante` (loja/particular) determinístico, 30% ficam `null` —
+  reflete a imperfeição real do detector, dá pra demonstrar o filtro.
