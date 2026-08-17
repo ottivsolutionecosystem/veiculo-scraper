@@ -109,6 +109,22 @@ export function SearchFiltersForm() {
           </Select>
         </div>
 
+        <div className="space-y-1">
+          <Label>Tipo de anunciante</Label>
+          <Select
+            value={searchParams.get("sellerType") ?? ""}
+            onValueChange={(v) => setParam("sellerType", v || null)}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Particular e loja" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="individual">Particular</SelectItem>
+              <SelectItem value="dealer">Loja</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
         <div className="flex items-end gap-2 pb-1.5">
           <Checkbox
             id="onlyActive"

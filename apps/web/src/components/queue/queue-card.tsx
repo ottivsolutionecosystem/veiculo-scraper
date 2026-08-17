@@ -41,6 +41,9 @@ export function QueueCard({ item }: { item: QueueItem }) {
             </Badge>
           )}
           {!listing.active && <Badge variant="secondary">Inativo</Badge>}
+          {listing.sellerType && (
+            <Badge variant="outline">{listing.sellerType === "dealer" ? "Loja" : "Particular"}</Badge>
+          )}
           {listing.pendingFields.length > 0 && <Badge variant="outline">Pendências</Badge>}
         </div>
         <p className="mt-0.5 truncate text-sm text-muted-foreground">{listing.normalizedTitle}</p>

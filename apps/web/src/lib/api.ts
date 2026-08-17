@@ -19,6 +19,7 @@ import type {
   FipeReviewItem,
   SourceWithLastRun,
   SettingsResponse,
+  ScrapeRequest,
 } from "./api-types";
 
 export class ApiError extends Error {
@@ -55,7 +56,7 @@ function qs(params: Record<string, string | number | boolean | undefined>): stri
 
 // ---- Fila do dia / Busca -----------------------------------------------
 
-export function getQueue(params: { cursor?: string; limit?: number } = {}) {
+export function getQueue(params: { cursor?: string; limit?: number; sellerType?: "individual" | "dealer" } = {}) {
   return apiFetch<Page<QueueItem>>(`/api/queue${qs(params)}`);
 }
 
@@ -72,6 +73,7 @@ export function searchVehicles(
     minFipeDiscountPct?: number;
     transmission?: string;
     onlyActive?: boolean;
+    sellerType?: "individual" | "dealer";
   } = {},
 ) {
   return apiFetch<Page<QueueItem>>(`/api/vehicles/search${qs(params)}`);
@@ -182,6 +184,12 @@ export function getSources() {
 
 export function patchSource(source: string, active: boolean) {
   return apiFetch<SourceWithLastRun>(`/api/sources/${source}`, { method: "PATCH", body: JSON.stringify({ active }) });
+}
+
+/** Botão "Rodar coleta agora" — só grava o pedido (202); quem processa é o
+ * coletor Python lendo execucoes_solicitadas (sem RPC, SPEC seção 5). */
+export function triggerScrapeRun(source: string, body: { sellerType?: "individual" | "dealer"; limit?: number }) {
+  return apiFetch<ScrapeRequest>(`/api/sources/${source}/run`, { method: "POST", body: JSON.stringify(body) });
 }
 
 // ---- Ajustes ---------------------------------------------------------

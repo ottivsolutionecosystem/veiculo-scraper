@@ -7,6 +7,7 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 import { SourceToggle } from "@/components/sources/source-toggle";
+import { RunScrapeButton } from "@/components/sources/run-scrape-button";
 import { formatDateTime } from "@/lib/format";
 
 const MANUALLY_LOCKED = new Set(["webmotors", "olx"]);
@@ -60,6 +61,13 @@ export default async function FontesPage() {
                   ) : (
                     <p className="text-xs text-muted-foreground">Nunca executada.</p>
                   )}
+                  <div className="border-t pt-2">
+                    <RunScrapeButton
+                      source={source.source}
+                      locked={locked}
+                      pendingRequest={source.pendingRequest}
+                    />
+                  </div>
                 </CardContent>
               </Card>
             );

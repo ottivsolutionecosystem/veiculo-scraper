@@ -50,6 +50,7 @@ export interface QueueItem {
     | "city"
     | "stateCode"
     | "photos"
+    | "sellerType"
     | "active"
     | "pendingFields"
   >;
@@ -111,8 +112,22 @@ export interface FipeReviewItem {
   normalizedTitle: string;
 }
 
+/** Linha de execucoes_solicitadas (docs/MODELO.md — Fase 4): botão
+ * "Rodar coleta agora" só grava isso, quem processa é o coletor Python. */
+export interface ScrapeRequest {
+  id: number;
+  source: string;
+  sellerType: "individual" | "dealer" | null;
+  limit: number | null;
+  requestedBy: string;
+  requestedAt: string;
+  processedAt: string | null;
+  scrapeRunId: number | null;
+}
+
 export interface SourceWithLastRun extends Source {
   lastRun: ScrapeRun | null;
+  pendingRequest: ScrapeRequest | null;
 }
 
 export interface SettingsResponse extends Settings {

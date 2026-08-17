@@ -20,10 +20,12 @@ export function QueueView({
   initial,
   source,
   filters,
+  sellerType,
 }: {
   initial: Page<QueueItem>;
   source: "queue" | "search";
   filters?: SearchFilters;
+  sellerType?: "individual" | "dealer";
 }) {
   const [items, setItems] = React.useState(initial.items);
   const [cursor, setCursor] = React.useState(initial.nextCursor);
@@ -48,7 +50,7 @@ export function QueueView({
     try {
       const page =
         source === "queue"
-          ? await getQueue({ cursor, limit: 40 })
+          ? await getQueue({ cursor, limit: 40, sellerType })
           : await searchVehicles({ ...filters, cursor, limit: 30 });
       setItems((prev) => [...prev, ...page.items]);
       setCursor(page.nextCursor);

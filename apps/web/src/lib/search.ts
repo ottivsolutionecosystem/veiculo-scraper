@@ -8,6 +8,7 @@ export interface SearchFilters {
   minFipeDiscountPct?: number;
   transmission?: string;
   onlyActive?: boolean;
+  sellerType?: "individual" | "dealer";
 }
 
 export function parseSearchFilters(params: Record<string, string | string[] | undefined>): SearchFilters {
@@ -20,6 +21,8 @@ export function parseSearchFilters(params: Record<string, string | string[] | un
     return v ? Number(v) : undefined;
   };
 
+  const sellerType = get("sellerType");
+
   return {
     brand: get("brand") || undefined,
     model: get("model") || undefined,
@@ -30,5 +33,6 @@ export function parseSearchFilters(params: Record<string, string | string[] | un
     minFipeDiscountPct: num("minFipeDiscountPct"),
     transmission: get("transmission") || undefined,
     onlyActive: get("onlyActive") === "1",
+    sellerType: sellerType === "individual" || sellerType === "dealer" ? sellerType : undefined,
   };
 }
