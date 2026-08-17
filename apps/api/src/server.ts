@@ -1,4 +1,5 @@
 import Fastify from "fastify";
+import cors from "@fastify/cors";
 import { ZodError } from "zod";
 
 import { env } from "./env.js";
@@ -19,6 +20,10 @@ import { webhookRoutes } from "./routes/webhooks.js";
 
 export function buildServer() {
   const app = Fastify({ logger: true });
+
+  app.register(cors, {
+    origin: env.webOrigin,
+  });
 
   app.setErrorHandler((err, _req, reply) => {
     if (err instanceof HttpError) {

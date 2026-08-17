@@ -16,6 +16,8 @@ export function mapQueueRow(row: Record<string, unknown>) {
     state: row.estado,
     discardReason: row.motivo_descarte,
     sellerId: num(row.vendedor_id),
+    sellerName: row.vendedor_nome ?? null,
+    sellerMaskedPhone: row.vendedor_telefone_e164 !== undefined ? maskPhone(row.vendedor_telefone_e164 as string | null) : null,
     fipeDiscountPct: num(row.desconto_fipe_pct),
     fipeDiscountCents: num(row.desconto_fipe_reais),
     fipeMatchConfidence: num(row.fipe_confianca),

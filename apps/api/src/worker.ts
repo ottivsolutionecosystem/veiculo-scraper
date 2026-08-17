@@ -1,7 +1,7 @@
 import { Queue, Worker, type ConnectionOptions } from "bullmq";
 
 import { env } from "./env.js";
-import { pool } from "./db.js";
+import { pool, refreshFilaDoDiaAsync } from "./db.js";
 import { normalizeAnuncio } from "./jobs/normalize.js";
 import { matchFipeForVehicle } from "./jobs/match-fipe.js";
 import { calculateScoreForVehicle } from "./jobs/score.js";
@@ -31,6 +31,7 @@ export const queues = {
   thumbs: new Queue("thumbs", { connection }),
   matchInterest: new Queue("match-interesse", { connection }),
   notify: new Queue("notify", { connection }),
+  refreshFila: new Queue("refresh-fila", { connection }),
 };
 
 async function withClient<T>(fn: (client: import("pg").PoolClient) => Promise<T>): Promise<T> {
@@ -89,7 +90,22 @@ export function startWorkers() {
     { connection },
   );
 
-  return [normalizeWorker, matchFipeWorker, scoreWorker, matchInterestWorker, notifyWorker, thumbsWorker, dedupeWorker];
+  const refreshFilaWorker = new Worker("refresh-fila", async () => refreshFilaDoDiaAsync(), { connection });
+
+  // fila_do_dia é materializada — refresh a cada 10 min (db/migrations/0011).
+  // Descarte e resultado de ligação também disparam refresh direto (db.ts).
+  void queues.refreshFila.add("refresh", {}, { repeat: { every: 10 * 60 * 1000 }, removeOnComplete: true });
+
+  return [
+    normalizeWorker,
+    matchFipeWorker,
+    scoreWorker,
+    matchInterestWorker,
+    notifyWorker,
+    thumbsWorker,
+    dedupeWorker,
+    refreshFilaWorker,
+  ];
 }
 
 if (import.meta.url === `file://${process.argv[1]}`) {

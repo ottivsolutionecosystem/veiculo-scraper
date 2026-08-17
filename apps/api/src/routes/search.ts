@@ -33,27 +33,32 @@ export async function searchRoutes(app: FastifyInstance) {
       conditions.push(sql.replace("?", `$${values.length}`));
     }
 
-    if (q.brand) push("marca = ?", q.brand);
-    if (q.model) push("modelo ILIKE '%' || ? || '%'", q.model);
-    if (q.city) push("cidade = ?", q.city);
-    if (q.yearMin !== undefined) push("ano_modelo >= ?", q.yearMin);
-    if (q.yearMax !== undefined) push("ano_modelo <= ?", q.yearMax);
-    if (q.priceMaxCents !== undefined) push("preco <= ?", q.priceMaxCents);
-    if (q.minFipeDiscountPct !== undefined) push("desconto_fipe_pct >= ?", q.minFipeDiscountPct);
-    if (q.transmission) push("cambio = ?", q.transmission);
-    if (q.onlyActive) conditions.push("ativo = true");
+    if (q.brand) push("f.marca = ?", q.brand);
+    if (q.model) push("f.modelo ILIKE '%' || ? || '%'", q.model);
+    if (q.city) push("f.cidade = ?", q.city);
+    if (q.yearMin !== undefined) push("f.ano_modelo >= ?", q.yearMin);
+    if (q.yearMax !== undefined) push("f.ano_modelo <= ?", q.yearMax);
+    if (q.priceMaxCents !== undefined) push("f.preco <= ?", q.priceMaxCents);
+    if (q.minFipeDiscountPct !== undefined) push("f.desconto_fipe_pct >= ?", q.minFipeDiscountPct);
+    if (q.transmission) push("f.cambio = ?", q.transmission);
+    if (q.onlyActive) conditions.push("f.ativo = true");
 
     const cursorParts = decodeCursor(q.cursor);
     if (cursorParts) {
       const [id] = cursorParts as [number];
       values.push(id);
-      conditions.push(`veiculo_id > $${values.length}`);
+      conditions.push(`f.veiculo_id > $${values.length}`);
     }
     values.push(limit);
 
     const where = conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
     const { rows } = await pool.query(
-      `SELECT * FROM fila_do_dia ${where} ORDER BY veiculo_id ASC LIMIT $${values.length}`,
+      `SELECT f.*, vd.nome AS vendedor_nome, cv.telefone_e164 AS vendedor_telefone_e164
+         FROM fila_do_dia f
+         LEFT JOIN vendedores vd ON vd.id = f.vendedor_id
+         LEFT JOIN contatos_vendedor cv ON cv.vendedor_id = vd.id
+         ${where}
+        ORDER BY f.veiculo_id ASC LIMIT $${values.length}`,
       values,
     );
 

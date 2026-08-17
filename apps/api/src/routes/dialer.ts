@@ -1,7 +1,7 @@
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
 
-import { pool } from "../db.js";
+import { pool, refreshFilaDoDia } from "../db.js";
 import { mapQueueRow } from "../lib/serialize.js";
 import { decodeCursor, encodeCursor, parseLimit } from "../lib/pagination.js";
 import { NotFoundError, ValidationError } from "../lib/http-errors.js";
@@ -41,8 +41,10 @@ export async function dialerRoutes(app: FastifyInstance) {
     values.push(limit);
 
     const { rows } = await pool.query(
-      `SELECT f.* FROM fila_do_dia f
+      `SELECT f.*, vd.nome AS vendedor_nome, cv.telefone_e164 AS vendedor_telefone_e164
+         FROM fila_do_dia f
          JOIN vendedores vd ON vd.id = f.vendedor_id
+         LEFT JOIN contatos_vendedor cv ON cv.vendedor_id = vd.id
         WHERE f.estado IN ('new', 'interested')
           AND vd.mutado = false AND vd.nao_perturbe = false
           AND NOT EXISTS (
@@ -79,6 +81,7 @@ export async function dialerRoutes(app: FastifyInstance) {
     const newState = OUTCOME_TO_STATE[body.outcome];
     if (newState) {
       await pool.query("UPDATE veiculos SET estado = $2, atualizado_em = now() WHERE id = $1", [id, newState]);
+      refreshFilaDoDia();
     }
 
     reply.status(201).send();

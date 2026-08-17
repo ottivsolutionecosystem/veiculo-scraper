@@ -1,7 +1,7 @@
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
 
-import { pool, withTransaction } from "../db.js";
+import { pool, withTransaction, refreshFilaDoDia } from "../db.js";
 import { mapVehicleDetail, mapSeller, mapListing, maskPhone, mapInterestMatch } from "../lib/serialize.js";
 import { NotFoundError, ValidationError } from "../lib/http-errors.js";
 import { assertHasDiscardReason } from "../lib/regras-descarte.js";
@@ -120,6 +120,7 @@ export async function vehicleRoutes(app: FastifyInstance) {
       ]);
     });
 
+    refreshFilaDoDia();
     reply.status(204).send();
   });
 

@@ -23,15 +23,18 @@ export async function queueRoutes(app: FastifyInstance) {
     if (cursorParts) {
       const [score, id] = cursorParts as [number, number];
       values.push(score, id);
-      cursorClause = `AND (score_total < $${values.length - 1} OR (score_total = $${values.length - 1} AND veiculo_id > $${values.length}))`;
+      cursorClause = `AND (f.score_total < $${values.length - 1} OR (f.score_total = $${values.length - 1} AND f.veiculo_id > $${values.length}))`;
     }
     values.push(limit);
 
     const { rows } = await pool.query(
-      `SELECT * FROM fila_do_dia
-        WHERE estado NOT IN ('discarded', 'lost')
+      `SELECT f.*, vd.nome AS vendedor_nome, cv.telefone_e164 AS vendedor_telefone_e164
+         FROM fila_do_dia f
+         LEFT JOIN vendedores vd ON vd.id = f.vendedor_id
+         LEFT JOIN contatos_vendedor cv ON cv.vendedor_id = vd.id
+        WHERE f.estado NOT IN ('discarded', 'lost')
         ${cursorClause}
-        ORDER BY score_total DESC NULLS LAST, veiculo_id ASC
+        ORDER BY f.score_total DESC NULLS LAST, f.veiculo_id ASC
         LIMIT $${values.length}`,
       values,
     );
