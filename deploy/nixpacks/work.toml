@@ -5,7 +5,7 @@
 providers = ["node", "python"]
 
 [phases.setup]
-nixPkgs = ["nodejs_20", "python312"]
+nixPkgs = ["nodejs_20"]
 
 [phases.install]
 cmds = [
