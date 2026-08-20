@@ -1,19 +1,16 @@
-# RELATORIO — web Nixpacks (server.js)
+# RELATORIO — web.toml alinhado ao api
 
 ## Feito
-- Start do `web` no Dokploy falhava: `Cannot find module '/app/apps/web/server.js'`.
-- Com `output: standalone` no monorepo, o Next gera
-  `apps/web/.next/standalone/apps/web/server.js` — não `apps/web/server.js`.
-- `deploy/start-web.sh` sobe esse arquivo e, se faltar, copia `.next/static`
-  e `public` para dentro do standalone (o Next não inclui esses assets).
-- `web.toml` agora usa o script; o Dockerfile também copia `public`.
+- `deploy/nixpacks/web.toml` ficou no mesmo formato do `api.toml`:
+  setup node 20, `npm ci`, `npm run build --workspace=apps/web`,
+  start via `sh deploy/start-web.sh`.
+- Cópia de `.next/static` e `public` sai do build e fica só no
+  `start-web.sh` (o Next standalone não inclui esses assets).
 
 ## Decidido por mim e por quê
-- Espelhar o `api` (`start-*.sh`) em vez de um `node ...` solto no toml:
-  o caminho do standalone depende do `outputFileTracingRoot`.
-- Copiar static/public no build e de novo no start só se ainda não
-  estiverem lá: Dokploy às vezes sobrescreve o comando de start.
+- Não duplicar `cp` no toml: o script de start já sabe o caminho do
+  monorepo (`apps/web/.next/standalone/apps/web/server.js`).
 
 ## Pendente de decisão sua
-- Redeploy do serviço `web`. Se o Start Command estiver fixo no painel
-  do Dokploy, troque para `sh deploy/start-web.sh`.
+- Redeploy do `web`. Se o Start Command estiver fixo no Dokploy,
+  use `sh deploy/start-web.sh`.
