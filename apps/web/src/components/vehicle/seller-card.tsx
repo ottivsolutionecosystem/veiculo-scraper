@@ -4,13 +4,22 @@ import { UserRound, BellOff, VolumeX } from "lucide-react";
 
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { ContactActions } from "@/components/vehicle/contact-actions";
 
 export function SellerCard({
   seller,
   otherVehicles,
+  listing,
 }: {
   seller: Seller;
   otherVehicles: { vehicleId: number; listing: Partial<Listing> }[];
+  listing?: {
+    brand: string | null;
+    model: string | null;
+    year: number | null;
+    priceCents: number | null;
+    fipeDiscountPct: number | null;
+  };
 }) {
   return (
     <Card>
@@ -20,7 +29,14 @@ export function SellerCard({
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-3">
-        <p className="text-sm text-muted-foreground">{seller.maskedPhone}</p>
+        <ContactActions
+          sellerId={seller.id}
+          maskedPhone={seller.maskedPhone}
+          muted={seller.muted}
+          doNotDisturb={seller.doNotDisturb}
+          hasPhone={Boolean(seller.maskedPhone)}
+          listing={listing}
+        />
         <div className="flex gap-2">
           {seller.muted && (
             <Badge variant="secondary" className="gap-1">
@@ -39,13 +55,13 @@ export function SellerCard({
               Outros {otherVehicles.length} carros deste vendedor
             </p>
             <div className="space-y-1">
-              {otherVehicles.slice(0, 5).map(({ vehicleId, listing }) => (
+              {otherVehicles.slice(0, 5).map(({ vehicleId, listing: other }) => (
                 <Link
                   key={vehicleId}
                   href={`/veiculos/${vehicleId}`}
                   className="block truncate text-sm text-primary hover:underline"
                 >
-                  {listing.brand} {listing.model} {listing.modelYear}
+                  {other.brand} {other.model} {other.modelYear}
                 </Link>
               ))}
             </div>

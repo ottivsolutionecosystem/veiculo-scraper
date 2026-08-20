@@ -1,7 +1,8 @@
 import { Queue, Worker, type ConnectionOptions } from "bullmq";
 
 import { env } from "./env.js";
-import { pool, refreshFilaDoDiaAsync } from "./db.js";
+import { isMainModule } from "./lib/is-main.js";
+import { pool, refreshFilaDoDia, refreshFilaDoDiaAsync } from "./db.js";
 import { normalizeAnuncio } from "./jobs/normalize.js";
 import { matchFipeForVehicle } from "./jobs/match-fipe.js";
 import { calculateScoreForVehicle } from "./jobs/score.js";
@@ -32,6 +33,7 @@ export const queues = {
   matchInterest: new Queue("match-interesse", { connection }),
   notify: new Queue("notify", { connection }),
   refreshFila: new Queue("refresh-fila", { connection }),
+  ingest: new Queue("ingest", { connection }),
 };
 
 async function withClient<T>(fn: (client: import("pg").PoolClient) => Promise<T>): Promise<T> {
@@ -66,7 +68,10 @@ export function startWorkers() {
 
   const scoreWorker = new Worker(
     "score",
-    async (job) => withClient((client) => calculateScoreForVehicle(client, job.data.veiculoId)),
+    async (job) => {
+      await withClient((client) => calculateScoreForVehicle(client, job.data.veiculoId));
+      refreshFilaDoDia();
+    },
     { connection },
   );
 
@@ -92,9 +97,71 @@ export function startWorkers() {
 
   const refreshFilaWorker = new Worker("refresh-fila", async () => refreshFilaDoDiaAsync(), { connection });
 
+  // O coletor só grava em `anuncios` (fronteira = Postgres). Este job puxa
+  // anúncios ainda sem veículo e enfileira normalize — sem RPC TS↔Python.
+  const ingestWorker = new Worker(
+    "ingest",
+    async () => {
+      const { rows } = await pool.query<{ id: number }>(
+        `SELECT a.id FROM anuncios a
+           LEFT JOIN anuncio_veiculo av ON av.anuncio_id = a.id
+          WHERE av.anuncio_id IS NULL
+          ORDER BY a.id
+          LIMIT 200`,
+      );
+      for (const row of rows) {
+        // jobId estável + Redis depois de TRUNCATE faz o ingest achar que o
+        // anúncio 1, 2, 3… já foi promovido. removeOnComplete/Fail deixa o
+        // id livre na próxima coleta; o catch cobre o lixo que já está lá.
+        try {
+          await queues.normalize.add(
+            "normalize",
+            { anuncioId: row.id },
+            { jobId: `anuncio-${row.id}`, removeOnComplete: true, removeOnFail: true },
+          );
+        } catch {
+          await queues.normalize.add("normalize", { anuncioId: row.id }, { removeOnComplete: true });
+        }
+      }
+
+      // Preço mudou no anúncio já ligado: o desconto FIPE foi calculado no
+      // match antigo e fica mentindo até refazer. JobId por minuto evita
+      // enfileirar o mesmo veículo a cada scan de 15s.
+      const { rows: priceRows } = await pool.query<{ veiculo_id: number }>(
+        `SELECT DISTINCT av.veiculo_id
+           FROM preco_historico ph
+           JOIN anuncio_veiculo av ON av.anuncio_id = ph.anuncio_id
+          WHERE ph.observado_em > now() - interval '3 minutes'
+          LIMIT 30`,
+      );
+      const minuto = Math.floor(Date.now() / 60_000);
+      for (const row of priceRows) {
+        await queues.matchFipe.add(
+          "match",
+          { veiculoId: row.veiculo_id },
+          { jobId: `fipe-preco-${row.veiculo_id}-${minuto}`, removeOnComplete: true },
+        );
+      }
+
+      const { rows: dirtyRows } = await pool.query<{ precisa: boolean }>(
+        `SELECT EXISTS (
+           SELECT 1 FROM execucoes_solicitadas WHERE processado_em IS NULL
+         ) OR EXISTS (
+           SELECT 1 FROM scrape_runs WHERE finalizado_em > now() - interval '3 minutes'
+         ) AS precisa`,
+      );
+      if (rows.length > 0 || priceRows.length > 0 || dirtyRows[0]?.precisa) {
+        await refreshFilaDoDiaAsync();
+      }
+      return { enqueued: rows.length, rematch: priceRows.length };
+    },
+    { connection },
+  );
+
   // fila_do_dia é materializada — refresh a cada 10 min (db/migrations/0011).
   // Descarte e resultado de ligação também disparam refresh direto (db.ts).
   void queues.refreshFila.add("refresh", {}, { repeat: { every: 10 * 60 * 1000 }, removeOnComplete: true });
+  void queues.ingest.add("scan", {}, { repeat: { every: 15_000 }, removeOnComplete: true });
 
   return [
     normalizeWorker,
@@ -105,10 +172,11 @@ export function startWorkers() {
     thumbsWorker,
     dedupeWorker,
     refreshFilaWorker,
+    ingestWorker,
   ];
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) {
+if (isMainModule(import.meta.url)) {
   const workers = startWorkers();
   console.log(`worker rodando, ${workers.length} filas registradas`);
 }

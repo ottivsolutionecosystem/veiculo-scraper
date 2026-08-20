@@ -15,6 +15,7 @@ CREATE TABLE IF NOT EXISTS vendedores (
 -- Chave de dedupe: todo anúncio do mesmo telefone cai no mesmo vendedor.
 CREATE UNIQUE INDEX IF NOT EXISTS ux_vendedores_telefone_hash ON vendedores (telefone_hash);
 
+ALTER TABLE veiculos DROP CONSTRAINT IF EXISTS fk_veiculos_vendedor;
 ALTER TABLE veiculos
     ADD CONSTRAINT fk_veiculos_vendedor FOREIGN KEY (vendedor_id) REFERENCES vendedores(id);
 

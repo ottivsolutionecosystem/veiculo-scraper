@@ -10,6 +10,7 @@ import type {
   Branch,
   Source,
   ScrapeRun,
+  ScrapeProgress,
   Settings,
   AuditRecord,
   Webhook,
@@ -25,17 +26,29 @@ export interface QueueItem {
   sellerId: number | null;
   sellerName: string | null;
   sellerMaskedPhone: string | null;
+  consignador: string | null;
+  consignadorId: number | null;
+  lockedUntil: string | null;
+  lastContactedAt: string | null;
+  followUpAt: string | null;
   fipeDiscountPct: number | null;
   fipeDiscountCents: number | null;
   fipeMatchConfidence: number | null;
   daysListed: number;
   compatibleCustomersCount: number;
   listingsCount: number;
+  /** Preço da penúltima observação. `null` = nunca mudou desde a 1ª coleta. */
+  previousPriceCents: number | null;
+  /** Positivo subiu, negativo caiu, em centavos. */
+  priceChangeCents: number | null;
+  priceChangedAt: string | null;
+  priceDropCount: number;
   score: Score | null;
   listing: Pick<
     Listing,
     | "id"
     | "source"
+    | "url"
     | "normalizedTitle"
     | "brand"
     | "model"
@@ -52,6 +65,7 @@ export interface QueueItem {
     | "photos"
     | "sellerType"
     | "active"
+    | "deactivatedAt"
     | "pendingFields"
   >;
 }
@@ -85,6 +99,11 @@ export interface CustomerDetailResponse {
 export interface RequestListItem extends AcquisitionRequest {
   vehicle?: { brand: string | null; model: string | null; modelYear: number | null; priceCents: number | null };
   branchName?: string;
+  listingUrl?: string | null;
+  fipeDiscountPct?: number | null;
+  sellerMuted?: boolean;
+  sellerDoNotDisturb?: boolean;
+  sellerHasPhone?: boolean;
 }
 
 export interface BranchWithLoad extends Branch {
@@ -121,8 +140,12 @@ export interface ScrapeRequest {
   limit: number | null;
   requestedBy: string;
   requestedAt: string;
+  /** Quando o coletor pegou o pedido. `null` = ainda na fila. */
+  startedAt: string | null;
   processedAt: string | null;
   scrapeRunId: number | null;
+  /** Contadores que o coletor atualiza durante a execução. */
+  progress: ScrapeProgress | null;
 }
 
 export interface SourceWithLastRun extends Source {

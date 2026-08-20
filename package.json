@@ -7,7 +7,20 @@
   ],
   "scripts": {
     "dev": "npm run dev --workspace=apps/web",
+    "dev:api": "npm run dev --workspace=apps/api",
+    "dev:worker": "npm run worker --workspace=apps/api",
+    "db:migrate": "npm run migrate --workspace=apps/api",
+    "db:seed": "npm run seed --workspace=apps/api",
+    "db:purge-mocks": "npm run purge-mocks --workspace=apps/api",
+    "db:reset-veiculos": "npm run reset-veiculos --workspace=apps/api",
+    "db:reprocess": "npm run reprocess-matches --workspace=apps/api",
+    "db:reset-collected": "npm run reset-collected --workspace=apps/api",
+    "infra:up": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/dev-infra.ps1",
+    "dev:all": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/dev-all.ps1",
+    "collector:setup": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/setup-collector.ps1",
+    "dev:collector": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/collector-loop.ps1",
     "build": "npm run build --workspace=apps/web",
     "lint": "npm run lint --workspace=apps/web"
-  }
+  },
+  "packageManager": "yarn@1.22.22+sha512.a6b2f7906b721bba3d67d4aff083df04dad64c399707841b7acf00f6b133b7ac24255f2652fa22ae3534329dc6180534e98d17432037ff6fd140556e2bb3137e"
 }

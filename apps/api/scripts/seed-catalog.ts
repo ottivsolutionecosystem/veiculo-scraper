@@ -54,6 +54,25 @@ export const CITIES = [
 ];
 
 export const COLORS = ["BRANCO", "PRATA", "PRETO", "CINZA", "VERMELHO", "AZUL"];
+
+const COLOR_HEX: Record<string, string> = {
+  BRANCO: "e8e8e8",
+  PRATA: "b0b4b8",
+  PRETO: "2a2a2a",
+  CINZA: "7a7f85",
+  VERMELHO: "b42318",
+  AZUL: "1d4ed8",
+};
+
+/** SVG em data URI — o seed não baixa foto de rede (CLAUDE.md). */
+export function placeholderPhotos(brand: string, model: string, color: string, count: number): string[] {
+  const hex = COLOR_HEX[color] ?? "64748b";
+  const fg = color === "BRANCO" || color === "PRATA" ? "1e293b" : "ffffff";
+  return Array.from({ length: count }, (_, i) => {
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="640" height="400" viewBox="0 0 640 400"><rect width="640" height="400" fill="#${hex}"/><text x="320" y="190" text-anchor="middle" font-family="sans-serif" font-size="28" fill="#${fg}">${brand} ${model}</text><text x="320" y="230" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#${fg}" opacity=".8">${color} · foto ${i + 1}</text></svg>`;
+    return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
+  });
+}
 export const DISCARD_REASONS = [
   "Preço fora da faixa",
   "Vendedor sem resposta",

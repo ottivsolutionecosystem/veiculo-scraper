@@ -38,6 +38,7 @@ CREATE UNIQUE INDEX IF NOT EXISTS ux_fipe_precos_ano_mes
 -- job de import lê/substitui um mês inteiro de cada vez.
 CREATE INDEX IF NOT EXISTS ix_fipe_precos_mes ON fipe_precos (mes_referencia);
 
+ALTER TABLE veiculos DROP CONSTRAINT IF EXISTS fk_veiculos_fipe_ano;
 ALTER TABLE veiculos
     ADD CONSTRAINT fk_veiculos_fipe_ano FOREIGN KEY (fipe_ano_codigo) REFERENCES fipe_anos(codigo);
 

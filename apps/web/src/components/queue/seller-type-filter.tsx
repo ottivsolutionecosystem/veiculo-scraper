@@ -11,14 +11,14 @@ export function SellerTypeFilter() {
 
   function setSellerType(value: string) {
     const params = new URLSearchParams(searchParams.toString());
-    if (value === "all") params.delete("sellerType");
+    if (value === "all") params.set("sellerType", "all");
     else params.set("sellerType", value);
     router.push(`${pathname}?${params.toString()}`);
   }
 
   return (
     <Select value={searchParams.get("sellerType") ?? "all"} onValueChange={setSellerType}>
-      <SelectTrigger className="w-44">
+      <SelectTrigger className="w-full sm:w-44">
         <SelectValue />
       </SelectTrigger>
       <SelectContent>

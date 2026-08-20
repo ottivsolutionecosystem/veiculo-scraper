@@ -13,29 +13,65 @@ import { SavedFilters } from "@/components/search/saved-filters";
 
 const TRANSMISSIONS = ["MANUAL", "AUTOMATICO", "AUTOMATIZADO"];
 
+function fromParams(params: URLSearchParams) {
+  return {
+    brand: params.get("brand") ?? "",
+    model: params.get("model") ?? "",
+    yearMin: params.get("yearMin") ?? "",
+    yearMax: params.get("yearMax") ?? "",
+    priceMax: params.get("priceMaxCents") ? String(Number(params.get("priceMaxCents")) / 100) : "",
+    minFipeDiscountPct: params.get("minFipeDiscountPct") ?? "",
+    transmission: params.get("transmission") ?? "",
+    sellerType: params.get("sellerType") ?? "all",
+    includeInactive: params.get("includeInactive") === "1",
+    priceChanged: params.get("priceChanged") === "1",
+  };
+}
+
+type Draft = ReturnType<typeof fromParams>;
+
 export function SearchFiltersForm() {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
+  const [draft, setDraft] = React.useState<Draft>(() => fromParams(searchParams));
 
-  function setParam(key: string, value: string | null) {
-    const params = new URLSearchParams(searchParams.toString());
-    params.delete("cursor");
-    if (value) params.set(key, value);
-    else params.delete(key);
-    router.push(`${pathname}?${params.toString()}`);
+  React.useEffect(() => {
+    setDraft(fromParams(searchParams));
+  }, [searchParams]);
+
+  function patch<K extends keyof Draft>(key: K, value: Draft[K]) {
+    setDraft((atual) => ({ ...atual, [key]: value }));
+  }
+
+  function buscar(e: React.FormEvent) {
+    e.preventDefault();
+    const params = new URLSearchParams();
+    if (draft.brand) params.set("brand", draft.brand);
+    if (draft.model) params.set("model", draft.model);
+    if (draft.yearMin) params.set("yearMin", draft.yearMin);
+    if (draft.yearMax) params.set("yearMax", draft.yearMax);
+    if (draft.priceMax) params.set("priceMaxCents", String(Number(draft.priceMax) * 100));
+    if (draft.minFipeDiscountPct) params.set("minFipeDiscountPct", draft.minFipeDiscountPct);
+    if (draft.transmission) params.set("transmission", draft.transmission);
+    if (draft.sellerType && draft.sellerType !== "all") params.set("sellerType", draft.sellerType);
+    if (draft.includeInactive) params.set("includeInactive", "1");
+    if (draft.priceChanged) params.set("priceChanged", "1");
+    const qs = params.toString();
+    router.push(qs ? `${pathname}?${qs}` : pathname);
   }
 
   return (
-    <div className="space-y-4 rounded-lg border p-4">
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+    <form className="space-y-4 rounded-lg border p-4" onSubmit={buscar}>
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <div className="space-y-1">
           <Label>Marca</Label>
-          <Select value={searchParams.get("brand") ?? ""} onValueChange={(v) => setParam("brand", v || null)}>
+          <Select value={draft.brand || "all"} onValueChange={(v) => patch("brand", v === "all" ? "" : v)}>
             <SelectTrigger>
               <SelectValue placeholder="Todas" />
             </SelectTrigger>
             <SelectContent>
+              <SelectItem value="all">Todas</SelectItem>
               {BRANDS.map((b) => (
                 <SelectItem key={b} value={b}>
                   {b}
@@ -48,9 +84,9 @@ export function SearchFiltersForm() {
         <div className="space-y-1">
           <Label>Modelo</Label>
           <Input
-            defaultValue={searchParams.get("model") ?? ""}
+            value={draft.model}
             placeholder="ex: onix"
-            onBlur={(e) => setParam("model", e.target.value || null)}
+            onChange={(e) => patch("model", e.target.value)}
           />
         </div>
 
@@ -58,8 +94,8 @@ export function SearchFiltersForm() {
           <Label>Ano mínimo</Label>
           <Input
             type="number"
-            defaultValue={searchParams.get("yearMin") ?? ""}
-            onBlur={(e) => setParam("yearMin", e.target.value || null)}
+            value={draft.yearMin}
+            onChange={(e) => patch("yearMin", e.target.value)}
           />
         </div>
 
@@ -67,8 +103,8 @@ export function SearchFiltersForm() {
           <Label>Ano máximo</Label>
           <Input
             type="number"
-            defaultValue={searchParams.get("yearMax") ?? ""}
-            onBlur={(e) => setParam("yearMax", e.target.value || null)}
+            value={draft.yearMax}
+            onChange={(e) => patch("yearMax", e.target.value)}
           />
         </div>
 
@@ -76,8 +112,8 @@ export function SearchFiltersForm() {
           <Label>Preço máximo (R$)</Label>
           <Input
             type="number"
-            defaultValue={searchParams.get("priceMaxCents") ? Number(searchParams.get("priceMaxCents")) / 100 : ""}
-            onBlur={(e) => setParam("priceMaxCents", e.target.value ? String(Number(e.target.value) * 100) : null)}
+            value={draft.priceMax}
+            onChange={(e) => patch("priceMax", e.target.value)}
           />
         </div>
 
@@ -85,21 +121,19 @@ export function SearchFiltersForm() {
           <Label>Desconto FIPE mínimo (%)</Label>
           <Input
             type="number"
-            defaultValue={searchParams.get("minFipeDiscountPct") ?? ""}
-            onBlur={(e) => setParam("minFipeDiscountPct", e.target.value || null)}
+            value={draft.minFipeDiscountPct}
+            onChange={(e) => patch("minFipeDiscountPct", e.target.value)}
           />
         </div>
 
         <div className="space-y-1">
           <Label>Câmbio</Label>
-          <Select
-            value={searchParams.get("transmission") ?? ""}
-            onValueChange={(v) => setParam("transmission", v || null)}
-          >
+          <Select value={draft.transmission || "all"} onValueChange={(v) => patch("transmission", v === "all" ? "" : v)}>
             <SelectTrigger>
               <SelectValue placeholder="Todos" />
             </SelectTrigger>
             <SelectContent>
+              <SelectItem value="all">Todos</SelectItem>
               {TRANSMISSIONS.map((t) => (
                 <SelectItem key={t} value={t}>
                   {t}
@@ -111,36 +145,49 @@ export function SearchFiltersForm() {
 
         <div className="space-y-1">
           <Label>Tipo de anunciante</Label>
-          <Select
-            value={searchParams.get("sellerType") ?? ""}
-            onValueChange={(v) => setParam("sellerType", v || null)}
-          >
+          <Select value={draft.sellerType} onValueChange={(v) => patch("sellerType", v)}>
             <SelectTrigger>
-              <SelectValue placeholder="Particular e loja" />
+              <SelectValue placeholder="Particular" />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="individual">Particular</SelectItem>
               <SelectItem value="dealer">Loja</SelectItem>
+              <SelectItem value="all">Particular e loja</SelectItem>
             </SelectContent>
           </Select>
         </div>
 
-        <div className="flex items-end gap-2 pb-1.5">
-          <Checkbox
-            id="onlyActive"
-            checked={searchParams.get("onlyActive") === "1"}
-            onCheckedChange={(checked) => setParam("onlyActive", checked ? "1" : null)}
-          />
-          <Label htmlFor="onlyActive">Só anúncios ativos</Label>
+        <div className="flex flex-col justify-end gap-2 pb-1.5">
+          <div className="flex items-center gap-2">
+            <Checkbox
+              id="includeInactive"
+              checked={draft.includeInactive}
+              onCheckedChange={(checked) => patch("includeInactive", checked === true)}
+            />
+            <Label htmlFor="includeInactive">Incluir os que saíram do ar</Label>
+          </div>
+          <div className="flex items-center gap-2">
+            <Checkbox
+              id="priceChanged"
+              checked={draft.priceChanged}
+              onCheckedChange={(checked) => patch("priceChanged", checked === true)}
+            />
+            <Label htmlFor="priceChanged">Só quem mudou de preço</Label>
+          </div>
         </div>
       </div>
 
       <div className="flex flex-wrap items-center justify-between gap-2 border-t pt-3">
         <SavedFilters />
-        <Button variant="ghost" size="sm" onClick={() => router.push(pathname)}>
-          Limpar filtros
-        </Button>
+        <div className="flex gap-2">
+          <Button type="button" variant="ghost" size="sm" onClick={() => router.push(pathname)}>
+            Limpar filtros
+          </Button>
+          <Button type="submit" size="sm">
+            Buscar
+          </Button>
+        </div>
       </div>
-    </div>
+    </form>
   );
 }

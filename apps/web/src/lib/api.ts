@@ -1,17 +1,17 @@
 import type {
   AuditRecord,
-  Customer,
-  Interest,
+  Operator,
+  OpsOverview,
+  OpsRange,
   Settings,
   Webhook,
 } from "@veiculo/types";
 import { API_URL } from "./env";
+import { getStoredToken } from "./session";
 import type {
   Page,
   QueueItem,
   VehicleDetailResponse,
-  CustomerListItem,
-  CustomerDetailResponse,
   RequestListItem,
   BranchWithLoad,
   SellerListItem,
@@ -32,10 +32,19 @@ export class ApiError extends Error {
 }
 
 async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
+  const headers = new Headers(init?.headers);
+  if (init?.body && !headers.has("Content-Type")) {
+    headers.set("Content-Type", "application/json");
+  }
+  const token = getStoredToken();
+  if (token && !headers.has("Authorization")) {
+    headers.set("Authorization", `Bearer ${token}`);
+  }
   const res = await fetch(`${API_URL}${path}`, {
     ...init,
     cache: "no-store",
-    headers: { "Content-Type": "application/json", ...init?.headers },
+    credentials: "include",
+    headers,
   });
   if (!res.ok) {
     const body = await res.json().catch(() => ({ error: res.statusText }));
@@ -56,8 +65,50 @@ function qs(params: Record<string, string | number | boolean | undefined>): stri
 
 // ---- Fila do dia / Busca -----------------------------------------------
 
-export function getQueue(params: { cursor?: string; limit?: number; sellerType?: "individual" | "dealer" } = {}) {
+export type QueueScope = "untouched" | "mine" | "followup" | "price_drop" | "all" | "tagged";
+
+export interface QueueStats {
+  online: number;
+  untouched: number;
+  mine: number;
+  followup: number;
+  priceDrop: number;
+  tagged: number;
+  ranking: { operator: string; contactedToday: number; negotiating: number; inPipeline: number }[];
+}
+
+export function getQueue(
+  params: {
+    cursor?: string;
+    limit?: number;
+    sellerType?: "individual" | "dealer";
+    scope?: QueueScope;
+    q?: string;
+    brand?: string;
+    priceMaxCents?: number;
+    scoreBand?: "quente" | "boa" | "morna" | "fria";
+    source?: string;
+  } = {},
+) {
   return apiFetch<Page<QueueItem>>(`/api/queue${qs(params)}`);
+}
+
+export function getQueueStats(params: { sellerType?: "individual" | "dealer" } = {}) {
+  return apiFetch<QueueStats>(`/api/queue/stats${qs(params)}`);
+}
+
+export function claimVehicle(id: number) {
+  return apiFetch<{ vehicleId: number; requestId: number }>(`/api/vehicles/${id}/claim`, {
+    method: "POST",
+    body: JSON.stringify({}),
+  });
+}
+
+export function transferVehicle(id: number, toOperatorId: number) {
+  return apiFetch<void>(`/api/vehicles/${id}/transfer`, {
+    method: "POST",
+    body: JSON.stringify({ toOperatorId }),
+  });
 }
 
 export function searchVehicles(
@@ -72,7 +123,8 @@ export function searchVehicles(
     priceMaxCents?: number;
     minFipeDiscountPct?: number;
     transmission?: string;
-    onlyActive?: boolean;
+    includeInactive?: boolean;
+    priceChanged?: boolean;
     sellerType?: "individual" | "dealer";
   } = {},
 ) {
@@ -92,7 +144,10 @@ export function discardVehicle(id: number, reason: string, notes?: string) {
   });
 }
 
-export function postInteraction(id: number, body: { channel: "phone" | "whatsapp"; outcome?: string; durationSeconds?: number }) {
+export function postInteraction(
+  id: number,
+  body: { channel: "phone" | "whatsapp"; outcome?: string; durationSeconds?: number; operator?: string },
+) {
   return apiFetch<void>(`/api/vehicles/${id}/interactions`, { method: "POST", body: JSON.stringify(body) });
 }
 
@@ -103,8 +158,11 @@ export function confirmFipeMatch(id: number, fipeCode: string) {
   });
 }
 
-export function revealSellerContact(id: number) {
-  return apiFetch<{ phone: string }>(`/api/sellers/${id}/reveal-contact`, { method: "POST" });
+export function revealSellerContact(sellerId: number) {
+  return apiFetch<{ phone: string }>(`/api/sellers/${sellerId}/reveal-contact`, {
+    method: "POST",
+    body: JSON.stringify({}),
+  });
 }
 
 // ---- Discador ------------------------------------------------------------
@@ -113,43 +171,49 @@ export function getDialerQueue(params: { cursor?: string; limit?: number } = {})
   return apiFetch<Page<QueueItem>>(`/api/dialer/queue${qs(params)}`);
 }
 
-export function postCall(id: number, body: { outcome: string; durationSeconds?: number }) {
+export function postCall(id: number, body: { outcome: string; durationSeconds?: number; operator?: string }) {
   return apiFetch<void>(`/api/vehicles/${id}/calls`, { method: "POST", body: JSON.stringify(body) });
-}
-
-// ---- Clientes e interesses -------------------------------------------
-
-export function getCustomers(params: { cursor?: string; limit?: number } = {}) {
-  return apiFetch<Page<CustomerListItem>>(`/api/customers${qs(params)}`);
-}
-
-export function getCustomer(id: number) {
-  return apiFetch<CustomerDetailResponse>(`/api/customers/${id}`);
-}
-
-export function createCustomer(body: Omit<Customer, "id" | "createdAt">) {
-  return apiFetch<Customer>("/api/customers", { method: "POST", body: JSON.stringify(body) });
-}
-
-export function createInterest(customerId: number, body: Omit<Interest, "id" | "customerId">) {
-  return apiFetch<Interest>(`/api/customers/${customerId}/interests`, { method: "POST", body: JSON.stringify(body) });
 }
 
 // ---- Solicitações ----------------------------------------------------
 
-export function getRequests(params: { cursor?: string; limit?: number; state?: string; branchId?: number } = {}) {
+export function getRequests(params: {
+  cursor?: string;
+  limit?: number;
+  state?: string;
+  branchId?: number;
+  open?: boolean;
+} = {}) {
   return apiFetch<Page<RequestListItem>>(`/api/requests${qs(params)}`);
 }
 
-export function createRequest(body: { vehicleId: number; branchId: number; customerId?: number; proposedAt: string }) {
+export function createRequest(body: {
+  vehicleId: number;
+  branchId: number;
+  customerId?: number;
+  proposedAt?: string;
+}) {
   return apiFetch<RequestListItem>("/api/requests", { method: "POST", body: JSON.stringify(body) });
 }
 
 export function patchRequest(
   id: number,
-  body: Partial<{ state: string; checklist: Record<string, boolean>; lossReason: string; notes: string }>,
+  body: Partial<{
+    state: string;
+    checklist: Record<string, boolean>;
+    lossReason: string;
+    notes: string;
+    proposedAt: string;
+  }>,
 ) {
   return apiFetch<RequestListItem>(`/api/requests/${id}`, { method: "PATCH", body: JSON.stringify(body) });
+}
+
+export function postParecer(id: number, body: { consigned: boolean; reason?: string }) {
+  return apiFetch<RequestListItem>(`/api/requests/${id}/parecer`, {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
 }
 
 export function getBranches() {
@@ -212,4 +276,58 @@ export function getAudit(
   params: { cursor?: string; limit?: number; action?: string; author?: string; targetType?: string } = {},
 ) {
   return apiFetch<Page<AuditRecord>>(`/api/audit${qs(params)}`);
+}
+
+// ---- Operação (master) -------------------------------------------------
+
+export function getOpsOverview(
+  params: {
+    range?: OpsRange;
+    from?: string;
+    to?: string;
+    operatorId?: number;
+    sellerType?: "individual" | "dealer";
+  } = {},
+) {
+  return apiFetch<OpsOverview>(`/api/ops/overview${qs(params)}`);
+}
+
+// ---- Identidade / equipe -----------------------------------------------
+
+export function getAuthStatus() {
+  return apiFetch<{ needsSetup: boolean; masterLogin: string }>("/api/auth/status");
+}
+
+export function getMe() {
+  return apiFetch<{ operator: Operator }>("/api/auth/me");
+}
+
+export function login(body: { login: string; password: string }) {
+  return apiFetch<{ token: string; operator: Operator }>("/api/auth/login", {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
+}
+
+export function setupFirstOperator(body: { name: string; login: string; password: string }) {
+  return apiFetch<{ token: string; operator: Operator }>("/api/auth/setup", {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
+}
+
+export function logout() {
+  return apiFetch<void>("/api/auth/logout", { method: "POST", body: JSON.stringify({}) });
+}
+
+export function getOperators() {
+  return apiFetch<{ items: Operator[] }>("/api/operators");
+}
+
+export function createOperator(body: { name: string; login: string; password: string }) {
+  return apiFetch<Operator>("/api/operators", { method: "POST", body: JSON.stringify(body) });
+}
+
+export function patchOperator(id: number, body: { active: boolean }) {
+  return apiFetch<Operator>(`/api/operators/${id}`, { method: "PATCH", body: JSON.stringify(body) });
 }

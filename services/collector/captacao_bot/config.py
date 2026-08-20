@@ -40,8 +40,10 @@ class AdapterConfig:
     max_retries: int = 3
     timeout_s: float = 20.0
 
-    # Coleta para depois de N anúncios conhecidos e inalterados em sequência.
-    early_stop_n: int = 25
+    # Dias até reabrir a ficha de um anúncio que não deu sinal de mudança na
+    # listagem. Substituiu o early stop: quem limita o trabalho agora é a
+    # enumeração da listagem, não uma sequência de "conhecidos".
+    revisita_dias: int = 7
 
     # "01:00-06:00" ou None para qualquer horário.
     janela_coleta: str | None = None
@@ -73,7 +75,7 @@ FONTES: dict[str, AdapterConfig] = {
         base_legal="robots.txt permite; autorização solicitada por e-mail em <<data>>",
         base_url="https://www.shopcar.com.br",
         req_interval_ms=4000,
-        usar_sitemap=True,
+        usar_sitemap=False,
     ),
     # Só habilitar após homologação no portal de desenvolvedores (Sensedia).
     # Enquanto isso, permanece desligada — a página pública roda atrás de

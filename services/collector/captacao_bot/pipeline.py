@@ -38,7 +38,18 @@ def fingerprint(v: VeiculoNormalizado) -> str:
 
 def normalizar(bruto: AnuncioBruto) -> VeiculoNormalizado:
     titulo_limpo = N.limpar_titulo(bruto.titulo)
-    marca, modelo = N.extrair_marca_modelo(titulo_limpo)
+
+    # Campo próprio da fonte manda: "VW - VolksWagen" + "Amarok Highline ..."
+    # não tem ambiguidade. Só quando a fonte não publica isso é que o título
+    # é garimpado por regex.
+    marca = N.marca_canonica(bruto.marca_texto)
+    modelo = versao = None
+    if marca is None or not bruto.modelo_versao_texto:
+        marca_titulo, modelo_titulo = N.extrair_marca_modelo(titulo_limpo)
+        marca = marca or marca_titulo
+        modelo = modelo_titulo
+    if bruto.modelo_versao_texto:
+        modelo, versao = N.separar_modelo_versao(bruto.modelo_versao_texto, marca)
 
     # Ano pode estar no campo próprio ou embutido no título.
     ano_fab, ano_mod = N.extrair_anos(bruto.ano_texto)
@@ -58,7 +69,7 @@ def normalizar(bruto: AnuncioBruto) -> VeiculoNormalizado:
         titulo_normalizado=titulo_limpo,
         marca=marca,
         modelo=modelo,
-        versao=None,  # resolvido no match FIPE, não aqui
+        versao=versao,
         ano_fabricacao=ano_fab,
         ano_modelo=ano_mod,
         km=N.extrair_km(bruto.km_texto) or N.extrair_km(bruto.titulo),

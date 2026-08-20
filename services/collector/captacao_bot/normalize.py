@@ -40,9 +40,32 @@ MARCAS = {
     "PEUGEOT": "PEUGEOT", "CITROEN": "CITROEN", "CITROËN": "CITROEN",
     "MITSUBISHI": "MITSUBISHI", "KIA": "KIA", "CAOA": "CAOA CHERY",
     "CHERY": "CAOA CHERY", "BMW": "BMW", "MERCEDES": "MERCEDES-BENZ",
-    "AUDI": "AUDI", "VOLVO": "VOLVO", "LAND": "LAND ROVER", "RAM": "RAM",
+    "MERCEDES-BENZ": "MERCEDES-BENZ", "AUDI": "AUDI", "VOLVO": "VOLVO",
+    "LAND": "LAND ROVER", "RAM": "RAM", "MINI": "MINI", "SUZUKI": "SUZUKI",
+    "SUBARU": "SUBARU", "CHRYSLER": "CHRYSLER", "DODGE": "DODGE",
+    "BYD": "BYD", "GWM": "GWM", "IVECO": "IVECO", "JAC": "JAC",
+    "PORSCHE": "PORSCHE", "JAGUAR": "JAGUAR", "LEXUS": "LEXUS",
     "MOTORS": None,  # evita casar "SHOP CAR MOTORS"
 }
+
+# Marca escrita com mais de uma palavra pela fonte ("VW - VolksWagen",
+# "GM - Chevrolet"). Chave é o texto dobrado (sem acento, só A-Z0-9 e espaço),
+# então "Mercedes-Benz" e "MERCEDES BENZ" caem na mesma entrada.
+MARCAS_COMPOSTAS = {
+    "VW VOLKSWAGEN": "VOLKSWAGEN",
+    "GM CHEVROLET": "CHEVROLET",
+    "MERCEDES BENZ": "MERCEDES-BENZ",
+    "CAOA CHERY": "CAOA CHERY",
+    "LAND ROVER": "LAND ROVER",
+    "KIA MOTORS": "KIA",
+    "GREAT WALL": "GWM",
+}
+
+_NAO_ALFANUM_RE = re.compile(r"[^A-Z0-9]+")
+
+# Carroceria que a fonte cola no nome ("C3 Hatch Exclusive"): não é modelo nem
+# versão, e como token atrapalha o match FIPE.
+CARROCERIA = frozenset({"HATCH", "HATCHBACK", "HB", "PERUA", "PICAPE"})
 
 # Modelos comuns cuja marca é inequívoca — resolve título sem marca escrita.
 MODELO_PARA_MARCA = {
@@ -57,7 +80,17 @@ MODELO_PARA_MARCA = {
     "FASTBACK": "FIAT",
     "KA": "FORD", "RANGER": "FORD", "ECOSPORT": "FORD", "FIESTA": "FORD",
     "COROLLA": "TOYOTA", "HILUX": "TOYOTA", "YARIS": "TOYOTA",
-    "COROLLA CROSS": "TOYOTA", "ETIOS": "TOYOTA", "SW4": "TOYOTA",
+    "COROLLA CROSS": "TOYOTA", "YARIS CROSS": "TOYOTA",
+    "ETIOS": "TOYOTA", "SW4": "TOYOTA", "RAV4": "TOYOTA",
+    "ONIX PLUS": "CHEVROLET", "SPIN ACTIV": "CHEVROLET",
+    "C4 CACTUS": "CITROEN", "C4 LOUNGE": "CITROEN",
+    "TIGGO 5X": "CAOA CHERY", "TIGGO 7": "CAOA CHERY", "TIGGO 8": "CAOA CHERY",
+    "PAJERO SPORT": "MITSUBISHI", "L200 TRITON": "MITSUBISHI",
+    "ECLIPSE CROSS": "MITSUBISHI", "OUTLANDER SPORT": "MITSUBISHI",
+    "RANGE ROVER": "LAND ROVER", "SANTA FE": "HYUNDAI",
+    "HB20S": "HYUNDAI", "HB20X": "HYUNDAI",
+    "GRAND CHEROKEE": "JEEP", "GRAND SIENA": "FIAT",
+    "BRONCO SPORT": "FORD", "KA+": "FORD", "KA PLUS": "FORD",
     "CIVIC": "HONDA", "HR-V": "HONDA", "HRV": "HONDA", "FIT": "HONDA",
     "CITY": "HONDA", "WR-V": "HONDA",
     "HB20": "HYUNDAI", "CRETA": "HYUNDAI", "TUCSON": "HYUNDAI",
@@ -194,15 +227,80 @@ def _expandir_ano(dois_digitos: int) -> int | None:
     return ano if _ano_valido(ano) else None
 
 
+def marca_canonica(texto: str | None) -> str | None:
+    """"VW - VolksWagen" -> VOLKSWAGEN. "MERCEDES-BENZ" -> MERCEDES-BENZ.
+
+    A fonte publica a marca num campo próprio; usar esse campo em vez de
+    adivinhar pelo primeiro token do título é o que impede "VW Volkswagen
+    Amarok" de virar modelo=VOLKSWAGEN.
+    """
+    if not texto:
+        return None
+    dobrado = _NAO_ALFANUM_RE.sub(" ", sem_acento(texto).upper()).strip()
+    if not dobrado:
+        return None
+    if dobrado in MARCAS_COMPOSTAS:
+        return MARCAS_COMPOSTAS[dobrado]
+    tokens = dobrado.split()
+    if len(tokens) >= 2:
+        composta = " ".join(tokens[:2])
+        if composta in MARCAS_COMPOSTAS:
+            return MARCAS_COMPOSTAS[composta]
+    for token in tokens:
+        if MARCAS.get(token):
+            return MARCAS[token]
+    return None
+
+
+# Marcas cujo nome de modelo é letra + número ("A 200", "C 180", "GLA 200").
+# Fora delas, número depois do modelo é cilindrada ou potência, não nome.
+MARCAS_MODELO_COM_NUMERO = frozenset({"MERCEDES-BENZ"})
+
+
+def separar_modelo_versao(texto: str | None, marca: str | None = None) -> tuple[str | None, str | None]:
+    """"Amarok Highline 3.0TDi V6 24v 4x4 C.D." -> ("AMAROK", "HIGHLINE ...").
+
+    O segundo token entra no modelo em dois casos: dígito solto ("Arrizo 6",
+    "Mazda 3") e marca que nomeia modelo com número ("A 200"). Cilindrada
+    ("1.0") e válvulas ("16V") nunca entram — são especificação, e como modelo
+    fariam o veto do match FIPE derrubar o candidato certo.
+    """
+    if not texto:
+        return None, None
+    tokens = [t for t in _ESPACOS_RE.sub(" ", sem_acento(texto).upper()).split() if t]
+    tokens = [t for t in tokens if t not in CARROCERIA]
+    if not tokens:
+        return None, None
+
+    tamanho = 1
+    if len(tokens) >= 2:
+        dois = " ".join(tokens[:2])
+        if dois in MODELO_PARA_MARCA:
+            tamanho = 2
+    if tamanho == 1 and len(tokens) > 1 and tokens[1].isdigit():
+        if len(tokens[1]) == 1 or (marca in MARCAS_MODELO_COM_NUMERO and tokens[0].isalpha()):
+            tamanho = 2
+
+    modelo = " ".join(tokens[:tamanho])
+    versao = " ".join(tokens[tamanho:]) or None
+    return modelo, versao
+
+
 def extrair_marca_modelo(titulo_limpo: str) -> tuple[str | None, str | None]:
+    """Caminho de fallback: quando a fonte não publica marca em campo próprio,
+    acha a marca no título e o modelo logo depois dela."""
     tokens = titulo_limpo.split()
     marca = None
     idx_marca = -1
 
     for i, tok in enumerate(tokens):
-        if tok in MARCAS and MARCAS[tok]:
+        if MARCAS.get(tok):
             marca = MARCAS[tok]
             idx_marca = i
+            # "VW Volkswagen": os dois tokens são a mesma marca, o modelo só
+            # começa depois do último deles.
+            while idx_marca + 1 < len(tokens) and MARCAS.get(tokens[idx_marca + 1]) == marca:
+                idx_marca += 1
             break
 
     # Modelos compostos primeiro ("COROLLA CROSS" antes de "COROLLA").
@@ -215,7 +313,8 @@ def extrair_marca_modelo(titulo_limpo: str) -> tuple[str | None, str | None]:
                 return marca, candidato
 
     if marca and idx_marca + 1 < len(tokens):
-        return marca, tokens[idx_marca + 1]
+        modelo, _ = separar_modelo_versao(" ".join(tokens[idx_marca + 1 :]), marca)
+        return marca, modelo
     return marca, None
 
 

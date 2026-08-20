@@ -3,6 +3,7 @@ import cors from "@fastify/cors";
 import { ZodError } from "zod";
 
 import { env } from "./env.js";
+import { isMainModule } from "./lib/is-main.js";
 import { HttpError } from "./lib/http-errors.js";
 import { queueRoutes } from "./routes/queue.js";
 import { searchRoutes } from "./routes/search.js";
@@ -17,12 +18,16 @@ import { settingsRoutes } from "./routes/settings.js";
 import { auditRoutes } from "./routes/audit.js";
 import { branchRoutes } from "./routes/branches.js";
 import { webhookRoutes } from "./routes/webhooks.js";
+import { authRoutes } from "./routes/auth.js";
+import { operatorRoutes } from "./routes/operators.js";
+import { opsRoutes } from "./routes/ops.js";
 
 export function buildServer() {
-  const app = Fastify({ logger: true });
+  const app = Fastify({ logger: true, trustProxy: true });
 
   app.register(cors, {
     origin: env.webOrigin,
+    credentials: true,
   });
 
   app.setErrorHandler((err, _req, reply) => {
@@ -42,6 +47,9 @@ export function buildServer() {
     reply.status(500).send({ error: "Erro interno." });
   });
 
+  app.register(authRoutes);
+  app.register(operatorRoutes);
+  app.register(opsRoutes);
   app.register(queueRoutes);
   app.register(searchRoutes);
   app.register(vehicleRoutes);
@@ -61,7 +69,7 @@ export function buildServer() {
   return app;
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) {
+if (isMainModule(import.meta.url)) {
   const app = buildServer();
   app.listen({ port: env.port, host: "0.0.0.0" }).catch((err) => {
     app.log.error(err);

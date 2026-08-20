@@ -6,7 +6,9 @@ import { Loader2 } from "lucide-react";
 
 import type { Page, QueueItem } from "@/lib/api-types";
 import type { SearchFilters } from "@/lib/search";
-import { getQueue, searchVehicles } from "@/lib/api";
+import type { QueueListFilters } from "@/lib/queue-filters";
+import { getQueue, searchVehicles, type QueueScope } from "@/lib/api";
+import { useOperator } from "@/lib/operator";
 import { QueueCard } from "@/components/queue/queue-card";
 
 const ROW_HEIGHT = 132;
@@ -21,12 +23,19 @@ export function QueueView({
   source,
   filters,
   sellerType,
+  scope,
+  listFilters,
+  fill = false,
 }: {
   initial: Page<QueueItem>;
   source: "queue" | "search";
   filters?: SearchFilters;
   sellerType?: "individual" | "dealer";
+  scope?: QueueScope;
+  listFilters?: QueueListFilters;
+  fill?: boolean;
 }) {
+  const { operatorId } = useOperator();
   const [items, setItems] = React.useState(initial.items);
   const [cursor, setCursor] = React.useState(initial.nextCursor);
   const [loading, setLoading] = React.useState(false);
@@ -37,10 +46,28 @@ export function QueueView({
     setCursor(initial.nextCursor);
   }, [initial]);
 
+  const listKey = JSON.stringify(listFilters ?? {});
+
+  React.useEffect(() => {
+    if (source !== "queue" || !operatorId) return;
+    let cancelled = false;
+    void getQueue({ limit: 40, sellerType, scope, ...listFilters }).then((page) => {
+      if (cancelled) return;
+      setItems(page.items);
+      setCursor(page.nextCursor);
+    });
+    return () => {
+      cancelled = true;
+    };
+    // listKey serializa os filtros; listFilters entra pelo spread acima
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [source, scope, operatorId, sellerType, listKey]);
+
   const virtualizer = useVirtualizer({
     count: items.length,
     getScrollElement: () => parentRef.current,
-    estimateSize: () => ROW_HEIGHT + ROW_GAP,
+    estimateSize: () =>
+      (typeof window !== "undefined" && window.innerWidth < 640 ? 260 : ROW_HEIGHT) + ROW_GAP,
     overscan: 8,
   });
 
@@ -50,7 +77,7 @@ export function QueueView({
     try {
       const page =
         source === "queue"
-          ? await getQueue({ cursor, limit: 40, sellerType })
+          ? await getQueue({ cursor, limit: 40, sellerType, scope, ...listFilters })
           : await searchVehicles({ ...filters, cursor, limit: 30 });
       setItems((prev) => [...prev, ...page.items]);
       setCursor(page.nextCursor);
@@ -67,7 +94,11 @@ export function QueueView({
   }
 
   return (
-    <div ref={parentRef} onScroll={onScroll} className="h-[calc(100vh-11rem)] overflow-y-auto">
+    <div
+      ref={parentRef}
+      onScroll={onScroll}
+      className={fill ? "h-full min-h-0 overflow-y-auto" : "max-h-[70dvh] min-h-[16rem] overflow-y-auto"}
+    >
       <div className="relative w-full" style={{ height: virtualizer.getTotalSize() }}>
         {virtualizer.getVirtualItems().map((virtualRow) => {
           const item = items[virtualRow.index]!;
@@ -79,7 +110,7 @@ export function QueueView({
               className="absolute left-0 top-0 w-full"
               style={{ transform: `translateY(${virtualRow.start}px)`, paddingBottom: ROW_GAP }}
             >
-              <QueueCard item={item} />
+              <QueueCard item={item} mode={source === "search" ? "stock" : "queue"} />
             </div>
           );
         })}

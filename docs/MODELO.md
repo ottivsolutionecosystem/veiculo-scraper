@@ -38,6 +38,25 @@ anúncio principal mudasse.
   mesma lógica do `ix_anuncios_ativos` do coletor: a maioria das leituras
   quer só veículo em trabalho.
 
+### `operadores`
+Identidade do consignador. Login no banco; a UI não aceita nome digitado.
+
+| Coluna | Tipo | Nota |
+|---|---|---|
+| `id` | bigserial PK | |
+| `nome` | text | exibição na fila |
+| `login` | text unique | usuário de entrada, minúsculo |
+| `senha_hash` | text | scrypt; senha nunca em log |
+| `ativo` | boolean | só entra se o master deixou ativo |
+| `papel` | text | `master` (só `guilherme.sanches`) ou `consignador` |
+| `criado_em` | timestamptz | |
+
+Só o master cadastra e liga/desliga acesso. Self-signup não existe.
+
+`veiculos.consignador_id` aponta para cá. `consignador` (text) continua
+como nome para o card. Depois do primeiro contato, só o dono liga ou
+transfere.
+
 ### `anuncio_veiculo`
 N:N conforme SPEC. Na prática um anúncio some para um veículo só, mas o
 fluxo de revisão de dedupe (ambíguo, fase futura) pode reatribuir — por

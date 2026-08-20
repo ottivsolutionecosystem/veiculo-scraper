@@ -1,0 +1,33 @@
+# Infra local de desenvolvimento (Windows/Linux com Docker).
+# Produção na VPS: docker-compose.prod.yml — ver docs/DEPLOY.md.
+services:
+  postgres:
+    image: postgres:16
+    container_name: veiculo-pg
+    environment:
+      POSTGRES_USER: root
+      POSTGRES_PASSWORD: devpassword
+      POSTGRES_DB: veiculo_scraper_dev
+    ports:
+      - "5432:5432"
+    volumes:
+      - veiculo_pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U root -d veiculo_scraper_dev"]
+      interval: 3s
+      timeout: 5s
+      retries: 20
+
+  redis:
+    image: redis:7
+    container_name: veiculo-redis
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 3s
+      timeout: 5s
+      retries: 20
+
+volumes:
+  veiculo_pg_data:

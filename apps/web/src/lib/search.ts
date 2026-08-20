@@ -7,7 +7,9 @@ export interface SearchFilters {
   priceMaxCents?: number;
   minFipeDiscountPct?: number;
   transmission?: string;
-  onlyActive?: boolean;
+  /** Busca mostra só anúncio no ar por padrão; ligar traz o histórico. */
+  includeInactive?: boolean;
+  priceChanged?: boolean;
   sellerType?: "individual" | "dealer";
 }
 
@@ -32,7 +34,8 @@ export function parseSearchFilters(params: Record<string, string | string[] | un
     priceMaxCents: num("priceMaxCents"),
     minFipeDiscountPct: num("minFipeDiscountPct"),
     transmission: get("transmission") || undefined,
-    onlyActive: get("onlyActive") === "1",
-    sellerType: sellerType === "individual" || sellerType === "dealer" ? sellerType : undefined,
+    includeInactive: get("includeInactive") === "1",
+    priceChanged: get("priceChanged") === "1",
+    sellerType: sellerType === "dealer" ? "dealer" : sellerType === "individual" ? "individual" : undefined,
   };
 }

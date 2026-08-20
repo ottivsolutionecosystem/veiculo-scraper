@@ -72,6 +72,7 @@ export interface Listing {
   firstSeenAt: string; // primeira_vista_em
   lastSeenAt: string; // ultima_vista_em
   active: boolean; // ativo
+  deactivatedAt: string | null; // desativado_em — quando saiu do ar. Nunca deletamos.
 }
 
 export interface PriceHistoryPoint {
@@ -93,7 +94,25 @@ export interface ScrapeRun {
   unchanged: number;
   needsReview: number;
   errors: number;
-  endedBy: string; // "fim" | "early stop (n conhecidos)" | "circuito aberto" | ...
+  endedBy: string; // "fim" | "limite" | "circuito aberto" | "robots.txt" | ...
+  sellerTypeFilter: "individual" | "dealer" | null; // tipo_anunciante_filtro
+  deactivated: number; // desativados — saíram do ar nesta varredura
+  priceChanges: number; // precos_alterados
+  skippedByFilter: number; // ignorados_filtro — ficha contradisse a listagem
+}
+
+/** Progresso de uma coleta em andamento (`execucoes_solicitadas.progresso`).
+ * O coletor grava, a tela Fontes lê. Não é RPC: a fronteira é o Postgres. */
+export interface ScrapeProgress {
+  onlineCount: number; // no_ar — anúncios que a listagem mostra agora
+  pages: number; // paginas de listagem já lidas
+  requests: number;
+  new: number;
+  updated: number;
+  priceChanges: number;
+  unchanged: number;
+  deactivated: number;
+  errors: number;
 }
 
 // ---------------------------------------------------------------------------
@@ -157,6 +176,11 @@ export interface Vehicle {
   priceHistory: PriceHistoryPoint[];
   daysListed: number;
   sellerId: number | null;
+  consignador?: string | null; // nome do dono (exibição)
+  consignadorId?: number | null; // identidade do dono
+  lockedUntil?: string | null;
+  lastContactedAt?: string | null;
+  followUpAt?: string | null;
   compatibleCustomersCount: number; // etiqueta "N clientes procurando"
 }
 
@@ -213,6 +237,9 @@ export type CallOutcome =
   | "thinking"
   | "negotiating"
   | "agreed_to_bring"
+  | "accepted_consign"
+  | "wants_cash"
+  | "unrealistic_price"
   | "wrong_number";
 
 export interface Interaction {
@@ -302,12 +329,13 @@ export interface AcquisitionRequest {
   customerId: number | null;
   branchId: number;
   owner: string; // responsável
-  proposedAt: string; // data_hora_proposta
+  proposedAt: string | null; // visita à loja — obrigatória só em Agendado
   state: AcquisitionRequestState;
   lossReason: string | null;
   notes: string | null;
   checklist: IntakeChecklist;
   createdAt: string;
+  lockedUntil?: string | null; // 2h até Agendado; depois, a visita
 }
 
 export interface Branch {
@@ -351,7 +379,23 @@ export type AuditAction =
   | "discard"
   | "change_weight"
   | "mute_seller"
-  | "delete_contact";
+  | "delete_contact"
+  | "claim"
+  | "transfer"
+  | "create_operator"
+  | "authorize_operator"
+  | "parecer";
+
+/** Consignador autenticado. O nome no card vem daqui, não de texto livre. */
+export type OperatorRole = "master" | "consignador";
+
+export interface Operator {
+  id: number;
+  name: string;
+  login: string;
+  role: OperatorRole;
+  active: boolean;
+}
 
 export interface AuditRecord {
   id: number;
@@ -371,3 +415,101 @@ export interface Webhook {
   lastDeliveryAt: string | null;
   lastDeliveryStatus: number | null;
 }
+
+// ---------------------------------------------------------------------------
+// Dashboard de operação (master) — agregados, nunca telefone
+// ---------------------------------------------------------------------------
+
+export type OpsRange = "today" | "7d" | "30d" | "month";
+
+export interface OpsKpi {
+  value: number;
+  previous: number | null;
+  /** count = inteiro; rate = 0–1; pct = pontos percentuais; cents = dinheiro; hours = duração. */
+  unit: "count" | "rate" | "pct" | "cents" | "hours";
+  formula: string;
+}
+
+export interface OpsDailyPoint {
+  day: string; // YYYY-MM-DD
+  consigned: number;
+  returned: number;
+  claims: number;
+}
+
+export interface OpsFunnelStage {
+  key: string;
+  label: string;
+  count: number;
+}
+
+export interface OpsReasonSlice {
+  reason: string;
+  count: number;
+}
+
+export interface OpsOperatorRow {
+  operatorId: number;
+  name: string;
+  login: string;
+  active: boolean;
+  claims: number;
+  consigned: number;
+  returned: number;
+  conversion: number | null;
+  closeRate: number | null;
+  open: number;
+  overdue: number;
+  avgHoursToParecer: number | null;
+  visits: number;
+}
+
+export interface OpsDealRow {
+  requestId: number;
+  vehicleId: number;
+  title: string;
+  owner: string;
+  ownerId: number | null;
+  state: string;
+  deadline: string | null;
+  visitAt: string | null;
+}
+
+export interface OpsCollection {
+  lastRunAt: string | null;
+  source: string | null;
+  novos: number;
+  erros: number;
+  fipePending: number;
+  newListingsPeriod: number;
+}
+
+export interface OpsOverview {
+  from: string;
+  to: string;
+  range: OpsRange;
+  kpis: {
+    stockTotal: OpsKpi;
+    consignedPeriod: OpsKpi;
+    returnedPeriod: OpsKpi;
+    conversion: OpsKpi;
+    pipelineOpen: OpsKpi;
+    overdue: OpsKpi;
+    claims: OpsKpi;
+    closeRate: OpsKpi;
+    avgTicketCents: OpsKpi;
+    avgFipeDiscountPct: OpsKpi;
+    visits: OpsKpi;
+    online: OpsKpi;
+  };
+  funnel: OpsFunnelStage[];
+  daily: OpsDailyPoint[];
+  ranking: OpsOperatorRow[];
+  returnReasons: OpsReasonSlice[];
+  kanbanNow: OpsFunnelStage[];
+  stockBrands: OpsReasonSlice[];
+  overdueItems: OpsDealRow[];
+  upcomingVisits: OpsDealRow[];
+  collection: OpsCollection;
+}
+

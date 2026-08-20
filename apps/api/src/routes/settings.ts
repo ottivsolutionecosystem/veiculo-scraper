@@ -2,6 +2,7 @@ import type { FastifyInstance } from "fastify";
 import { z } from "zod";
 
 import { pool } from "../db.js";
+import { requireMaster } from "../lib/current-operator.js";
 import { mapSettings } from "../lib/serialize.js";
 
 const weightSchema = z.object({ key: z.string(), label: z.string(), weight: z.number() });
@@ -29,6 +30,7 @@ export async function settingsRoutes(app: FastifyInstance) {
   });
 
   app.put("/api/settings", async (req, reply) => {
+    await requireMaster(req);
     const body = settingsBody.parse(req.body);
     const { rows: currentRows } = await pool.query("SELECT versao, pesos FROM configuracoes ORDER BY versao DESC LIMIT 1");
     const nextVersion = (currentRows[0]?.versao ?? 0) + 1;

@@ -35,6 +35,7 @@ tabela nova (`docs/MODELO.md`), `[W]` calculado pelo worker e persistido
 | Status | Quando | O que a UI faz |
 |---|---|---|
 | 400 | payload não passa no `zod` | erro inline no campo, formulário não envia |
+| 401 | sem sessão ou sessão inválida | redireciona para `/entrar` |
 | 403 | ação bloqueada por regra de produto (ex: ligar `webmotors`/`olx`) | mensagem fixa explicando a regra, sem retry |
 | 404 | recurso não existe | tela de "não encontrado" (`not-found.tsx`, já existe na Fase 1) |
 | 409 | conflito de estado (ex: solicitação duplicada em aberto) | toast explicando o conflito, não abre formulário vazio |
@@ -45,7 +46,7 @@ tabela nova (`docs/MODELO.md`), `[W]` calculado pelo worker e persistido
 
 | Método | Rota | Params | Body |
 |---|---|---|---|
-| GET | `/api/queue` | `cursor?`, `limit?`, `estado?[]`, `sellerType?` | — |
+| GET | `/api/queue` | `cursor?`, `limit?`, `sellerType?`, `scope?`, `q?`, `brand?`, `priceMaxCents?`, `scoreBand?`, `source?` | — |
 | POST | `/api/vehicles/:id/interactions` | — | `{ channel, outcome?, durationSeconds? }` |
 | POST | `/api/vehicles/:id/discard` | — | `{ reason: string, notes?: string }` |
 | POST | `/api/sellers/:id/reveal-contact` | — | — |
@@ -274,6 +275,49 @@ payload).
 |---|---|---|
 | GET | `/api/audit` | `cursor?`, `limit?`, `action?`, `author?`, `targetType?`, `from?`, `to?` |
 
-Fonte: `auditoria` [N], ordenado por `criado_em DESC`. Só as três ações da
-seção 15.11 aparecem aqui (ver `MODELO.md`); não é um log genérico de toda
-mutação do sistema.
+Fonte: `auditoria` [N], ordenado por `criado_em DESC`.
+
+## 12. Identidade e equipe (`/entrar`, `/equipe`)
+
+| Método | Rota | Body |
+|---|---|---|
+| GET | `/api/auth/status` | — `{ needsSetup, masterLogin }` |
+| POST | `/api/auth/setup` | `{ name, login, password }` — só `guilherme.sanches`, e só se ainda não há master |
+| POST | `/api/auth/login` | `{ login, password }` → `{ token, operator }` |
+| POST | `/api/auth/logout` | — |
+| GET | `/api/auth/me` | — |
+| GET | `/api/operators` | — qualquer consignador logado (lista para transferir) |
+| POST | `/api/operators` | `{ name, login, password }` — **403 se não for o master** |
+| PATCH | `/api/operators/:id` | `{ active }` — **403 se não for o master** |
+| POST | `/api/vehicles/:id/claim` | sessão obrigatória |
+| POST | `/api/vehicles/:id/transfer` | `{ toOperatorId }` |
+
+Só `guilherme.sanches` autoriza quem entra. Sem cadastro na Equipe, login
+devolve 401. `ativo = false` também impede a entrada.
+
+Carro com `ultimo_contato_em` fica com o `consignador_id` até transferir,
+descartar ou fechar. Outra pessoa recebe 409 se tentar ligar.
+
+## 13. Operação (`/operacao`)
+
+Só o master. Agregados da consignação — nunca telefone.
+
+| Método | Rota | Params |
+|---|---|---|
+| GET | `/api/ops/overview` | `range?` (`today`\|`7d`\|`30d`\|`month`, padrão `7d`), `from?`, `to?` (`YYYY-MM-DD` em Brasília), `operatorId?`, `sellerType?` |
+| GET | `/api/ops/overdue` | `cursor?`, `limit?`, `operatorId?`, `sellerType?` |
+| GET | `/api/ops/visits` | `cursor?`, `limit?`, `operatorId?`, `sellerType?` |
+
+`overview` devolve `OpsOverview` (`packages/types/domain.ts`). Listas extras
+são keyset (`deadline, id` / `data_hora_proposta, id`) — sem `OFFSET`.
+
+Fórmulas no payload (`kpis.*.formula`):
+- estoque = `veiculos.estado = 'acquired'` (saldo agora, sem `previous`)
+- consignou / devolveu = `auditoria.acao = 'parecer'` no período
+- conversão = consignou ÷ (consignou + devolveu)
+- fechamento = consignou ÷ claims
+- prazo vencido = abertas com `travado_ate` (Proposta) ou visita (Agendado) ≤ agora
+- ranking junta `auditoria.autor` = `operadores.login`; abertos/vencidos por `veiculos.consignador_id`
+
+Snapshots (estoque, fila, vencidos) não têm variação vs período anterior —
+não há histórico diário desses saldos. Eventos do período têm `previous`.

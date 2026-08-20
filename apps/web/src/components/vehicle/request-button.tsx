@@ -57,15 +57,14 @@ export function RequestButton({ vehicleId, branches }: { vehicleId: number; bran
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <Button onClick={() => setOpen(true)}>
-        <Send /> Solicitar na loja
+      <Button variant="navy" onClick={() => setOpen(true)}>
+        <Send /> Levar para a loja
       </Button>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Solicitar veículo na loja</DialogTitle>
+          <DialogTitle>Levar para consignação na loja</DialogTitle>
           <DialogDescription>
-            Gera a mensagem pronta para o vendedor com modelo, horário e endereço da unidade
-            (seção 11 do SPEC).
+            Entra no pipeline: unidade, horário combinado e o carro some da fila de ligação.
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-3">
@@ -95,7 +94,7 @@ export function RequestButton({ vehicleId, branches }: { vehicleId: number; bran
             Cancelar
           </Button>
           <Button disabled={!branchId || sending} onClick={send}>
-            {sending && <Loader2 className="animate-spin" />} Enviar solicitação
+            {sending && <Loader2 className="animate-spin" />} Mandar para o pipeline
           </Button>
         </DialogFooter>
       </DialogContent>

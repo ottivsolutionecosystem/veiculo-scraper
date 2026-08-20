@@ -1,19 +1,35 @@
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
 
-import { pool, withTransaction, refreshFilaDoDia } from "../db.js";
+import { pool, withTransaction, refreshFilaDoDia, refreshFilaDoDiaAsync } from "../db.js";
 import { mapVehicleDetail, mapSeller, mapListing, maskPhone, mapInterestMatch } from "../lib/serialize.js";
-import { NotFoundError, ValidationError } from "../lib/http-errors.js";
+import { NotFoundError, ValidationError, ConflictError } from "../lib/http-errors.js";
 import { assertHasDiscardReason } from "../lib/regras-descarte.js";
+import { canClaim, canTransfer, followUpAt, lockUntil } from "../lib/consignacao.js";
+import { lockFromRow, VEHICLE_LOCK_SQL } from "../lib/vehicle-lock.js";
+import { requireOperator } from "../lib/current-operator.js";
+import { isMaster } from "../lib/roles.js";
+import { recordCall } from "../jobs/record-call.js";
 
 const discardBody = z.object({ reason: z.string(), notes: z.string().optional() });
+const callOutcome = z.enum([
+  "no_answer",
+  "not_interested",
+  "thinking",
+  "negotiating",
+  "agreed_to_bring",
+  "accepted_consign",
+  "wants_cash",
+  "unrealistic_price",
+  "wrong_number",
+]);
 const interactionBody = z.object({
   channel: z.enum(["phone", "whatsapp"]),
-  outcome: z
-    .enum(["no_answer", "not_interested", "thinking", "negotiating", "agreed_to_bring", "wrong_number"])
-    .optional(),
+  outcome: callOutcome.optional(),
   durationSeconds: z.number().optional(),
+  operator: z.string().optional(),
 });
+const transferBody = z.object({ toOperatorId: z.number().int().positive() });
 const fipeConfirmBody = z.object({ fipeCode: z.string() });
 
 /** GET/POST /api/vehicles/:id/* — Ficha do veículo (docs/API.md seção 3)
@@ -96,6 +112,7 @@ export async function vehicleRoutes(app: FastifyInstance) {
   });
 
   app.post("/api/vehicles/:id/discard", async (req, reply) => {
+    const actor = await requireOperator(req);
     const id = Number((req.params as { id: string }).id);
     const body = discardBody.parse(req.body);
     try {
@@ -104,17 +121,33 @@ export async function vehicleRoutes(app: FastifyInstance) {
       throw new ValidationError((err as Error).message);
     }
 
+    const { rows } = await pool.query(VEHICLE_LOCK_SQL, [id]);
+    if (!rows[0]) throw new NotFoundError("Veículo não encontrado.");
+    const agora = new Date();
+    if (!canClaim(agora, lockFromRow(rows[0]), actor.id) && !isMaster(actor)) {
+      throw new ConflictError(
+        `Em contato com ${rows[0].consignador ?? "outro consignador"}. Só quem está com o carro descarta.`,
+      );
+    }
+
     await withTransaction(async (client) => {
       const { rowCount } = await client.query(
-        "UPDATE veiculos SET estado = 'discarded', motivo_descarte = $2, atualizado_em = now() WHERE id = $1",
+        "UPDATE veiculos SET estado = 'discarded', motivo_descarte = $2, consignador = NULL, consignador_id = NULL, travado_ate = NULL, follow_up_em = NULL, atualizado_em = now() WHERE id = $1",
         [id, body.reason],
       );
       if (rowCount === 0) throw new NotFoundError("Veículo não encontrado.");
       await client.query(
-        "INSERT INTO estados_veiculo (veiculo_id, estado, motivo, autor) VALUES ($1, 'discarded', $2, 'api')",
+        `UPDATE solicitacoes_captacao
+            SET estado = 'declined', motivo_perda = $2, atualizado_em = now()
+          WHERE veiculo_id = $1 AND estado NOT IN ('closed', 'declined', 'no_show')`,
         [id, body.reason],
       );
-      await client.query("INSERT INTO auditoria (acao, autor, alvo_tipo, alvo_id, detalhe) VALUES ('discard', 'api', 'vehicle', $1, $2)", [
+      await client.query(
+        "INSERT INTO estados_veiculo (veiculo_id, estado, motivo, autor) VALUES ($1, 'discarded', $2, $3)",
+        [id, body.reason, actor.login],
+      );
+      await client.query("INSERT INTO auditoria (acao, autor, alvo_tipo, alvo_id, detalhe) VALUES ('discard', $1, 'vehicle', $2, $3)", [
+        actor.login,
         String(id),
         body.reason,
       ]);
@@ -124,18 +157,144 @@ export async function vehicleRoutes(app: FastifyInstance) {
     reply.status(204).send();
   });
 
+  app.post("/api/vehicles/:id/claim", async (req, reply) => {
+    const actor = await requireOperator(req);
+    const id = Number((req.params as { id: string }).id);
+    let requestId = 0;
+
+    await withTransaction(async (client) => {
+      const { rows } = await client.query(`${VEHICLE_LOCK_SQL} FOR UPDATE`, [id]);
+      if (!rows[0]) throw new NotFoundError("Veículo não encontrado.");
+      if (rows[0].estado === "acquired") {
+        throw new ConflictError("Este carro já está no estoque consignado.");
+      }
+      const agora = new Date();
+      if (!canClaim(agora, lockFromRow(rows[0]), actor.id)) {
+        throw new ConflictError(
+          `Em contato com ${rows[0].consignador ?? "outro consignador"}. Peça a transferência se não for seguir.`,
+        );
+      }
+
+      const { rows: openRows } = await client.query(
+        `SELECT id FROM solicitacoes_captacao
+          WHERE veiculo_id = $1 AND estado NOT IN ('closed', 'declined', 'no_show')
+          LIMIT 1`,
+        [id],
+      );
+      if (openRows[0]) {
+        requestId = Number(openRows[0].id);
+        if (Number(rows[0].consignador_id) === actor.id) return;
+        throw new ConflictError("Já existe uma tratativa em aberto para este veículo.");
+      }
+
+      const { rows: unitRows } = await client.query("SELECT id FROM unidades ORDER BY id ASC LIMIT 1");
+      if (!unitRows[0]) throw new ValidationError("Cadastre uma unidade antes de consignar.");
+
+      await client.query(
+        `UPDATE veiculos
+            SET consignador = $2, consignador_id = $3, travado_ate = $4, estado = 'requested', atualizado_em = now()
+          WHERE id = $1`,
+        [id, actor.name, actor.id, lockUntil(agora)],
+      );
+
+      const { rows: inserted } = await client.query(
+        `INSERT INTO solicitacoes_captacao (veiculo_id, vendedor_id, unidade_id, responsavel, data_hora_proposta, estado)
+         VALUES ($1,$2,$3,$4,NULL,'requested') RETURNING id`,
+        [id, rows[0].vendedor_id ?? null, unitRows[0].id, actor.login],
+      );
+      requestId = Number(inserted[0]!.id);
+
+      await client.query(
+        `INSERT INTO auditoria (acao, autor, alvo_tipo, alvo_id, detalhe)
+         VALUES ('claim', $1, 'vehicle', $2, $3)`,
+        [actor.login, String(id), actor.name],
+      );
+    });
+
+    await refreshFilaDoDiaAsync();
+    reply.send({ vehicleId: id, requestId });
+  });
+
+  app.post("/api/vehicles/:id/transfer", async (req, reply) => {
+    const actor = await requireOperator(req);
+    const id = Number((req.params as { id: string }).id);
+    const body = transferBody.parse(req.body);
+    const { rows } = await pool.query(
+      "SELECT consignador, consignador_id FROM veiculos WHERE id = $1",
+      [id],
+    );
+    if (!rows[0]) throw new NotFoundError("Veículo não encontrado.");
+    const ownerId = rows[0].consignador_id === null ? null : Number(rows[0].consignador_id);
+    if (!canTransfer(ownerId, actor.id, body.toOperatorId, isMaster(actor))) {
+      throw new ConflictError("Só quem está com o carro pode transferir para outra pessoa.");
+    }
+    const { rows: dest } = await pool.query(
+      "SELECT id, nome, login FROM operadores WHERE id = $1 AND ativo = true",
+      [body.toOperatorId],
+    );
+    if (!dest[0]) throw new NotFoundError("Consignador de destino não encontrado.");
+    const agora = new Date();
+    await withTransaction(async (client) => {
+      await client.query(
+        `UPDATE veiculos
+            SET consignador = $2,
+                consignador_id = $3,
+                travado_ate = $4,
+                follow_up_em = $5,
+                atualizado_em = now()
+          WHERE id = $1`,
+        [id, dest[0].nome, Number(dest[0].id), lockUntil(agora), followUpAt(agora, 0)],
+      );
+      await client.query(
+        `UPDATE solicitacoes_captacao
+            SET responsavel = $2, atualizado_em = now()
+          WHERE veiculo_id = $1 AND estado NOT IN ('closed', 'declined', 'no_show')`,
+        [id, dest[0].login ?? dest[0].nome],
+      );
+      await client.query(
+        `INSERT INTO auditoria (acao, autor, alvo_tipo, alvo_id, detalhe)
+         VALUES ('transfer', $1, 'vehicle', $2, $3)`,
+        [actor.login, String(id), `${actor.name} → ${dest[0].nome}`],
+      );
+    });
+    refreshFilaDoDia();
+    reply.status(204).send();
+  });
+
   app.post("/api/vehicles/:id/interactions", async (req, reply) => {
+    const actor = await requireOperator(req);
     const id = Number((req.params as { id: string }).id);
     const body = interactionBody.parse(req.body);
 
-    const { rows } = await pool.query("SELECT vendedor_id FROM veiculos WHERE id = $1", [id]);
+    const { rows } = await pool.query(VEHICLE_LOCK_SQL, [id]);
     if (!rows[0]) throw new NotFoundError("Veículo não encontrado.");
+    const agora = new Date();
+    if (!canClaim(agora, lockFromRow(rows[0]), actor.id) && !isMaster(actor)) {
+      throw new ConflictError(
+        `Em contato com ${rows[0].consignador ?? "outro consignador"}. Peça a transferência se não for seguir.`,
+      );
+    }
 
-    await pool.query(
-      `INSERT INTO interacoes (veiculo_id, vendedor_id, canal, resultado, duracao_segundos, autor)
-       VALUES ($1, $2, $3, $4, $5, 'api')`,
-      [id, rows[0].vendedor_id, body.channel, body.outcome ?? null, body.durationSeconds ?? null],
-    );
+    if (body.outcome) {
+      await withTransaction(async (client) => {
+        await recordCall(client, {
+          vehicleId: id,
+          sellerId: rows[0].vendedor_id === null ? null : Number(rows[0].vendedor_id),
+          outcome: body.outcome!,
+          operator: actor.name,
+          operatorId: actor.id,
+          channel: body.channel,
+          durationSeconds: body.durationSeconds,
+        });
+      });
+      refreshFilaDoDia();
+    } else {
+      await pool.query(
+        `INSERT INTO interacoes (veiculo_id, vendedor_id, canal, resultado, duracao_segundos, autor)
+         VALUES ($1, $2, $3, $4, $5, $6)`,
+        [id, rows[0].vendedor_id, body.channel, null, body.durationSeconds ?? null, actor.name],
+      );
+    }
     reply.status(201).send();
   });
 

@@ -3,13 +3,13 @@ import { describe, expect, it } from "vitest";
 import { calculateScore, type ScoreCalcInput } from "./score.js";
 
 const WEIGHTS: ScoreCalcInput["weights"] = [
-  { key: "fipe_discount", weight: 0.28 },
-  { key: "days_listed", weight: 0.12 },
-  { key: "price_drops", weight: 0.1 },
-  { key: "model_liquidity", weight: 0.1 },
-  { key: "km_vs_average", weight: 0.1 },
-  { key: "completeness", weight: 0.08 },
-  { key: "internal_demand", weight: 0.22 },
+  { key: "fipe_discount", weight: 0.42 },
+  { key: "days_listed", weight: 0.18 },
+  { key: "price_drops", weight: 0.22 },
+  { key: "model_liquidity", weight: 0.04 },
+  { key: "km_vs_average", weight: 0.08 },
+  { key: "completeness", weight: 0.06 },
+  { key: "internal_demand", weight: 0 },
 ];
 const THRESHOLDS = { hot: 80, good: 60, warm: 40 };
 
@@ -80,10 +80,10 @@ describe("calculateScore", () => {
     expect(riscoExtremo.total).toBeGreaterThanOrEqual(0);
   });
 
-  it("demanda interna é o componente que mais pesa entre os que dependem só de 1 fator (peso 0.22)", () => {
+  it("demanda interna com peso zero não altera o total — consignação não ranqueia por comprador", () => {
     const comDemanda = calculateScore(baseInput({ compatibleCustomers: 3 }));
     const semDemanda = calculateScore(baseInput({ compatibleCustomers: 0 }));
-    expect(comDemanda.total - semDemanda.total).toBeCloseTo(22, 0);
+    expect(comDemanda.total).toBe(semDemanda.total);
   });
 
   it("cada componente tem um valor bruto explícito — nunca só a cor (seção 9)", () => {
@@ -103,6 +103,7 @@ describe("calculateScore", () => {
         completenessPct: 100,
         fipeDiscountPct: 40,
         daysListed: 90,
+        priceDropsCount: 4,
         compatibleCustomers: 3,
         kmVsAveragePct: -60,
       }),

@@ -18,5 +18,12 @@
     }
   },
   "include": ["src/**/*.ts", "scripts/**/*.ts"],
-  "exclude": ["node_modules", "dist"]
+  "exclude": [
+    "node_modules",
+    "dist",
+    "scripts/_inspect.ts",
+    "scripts/_inspect2.ts",
+    "scripts/_inspect3.ts",
+    "scripts/promote-orphans.ts"
+  ]
 }

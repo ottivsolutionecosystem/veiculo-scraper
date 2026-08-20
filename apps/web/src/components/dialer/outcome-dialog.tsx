@@ -11,18 +11,37 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { CALL_OUTCOME_LABELS } from "@/lib/labels";
+import { cn } from "@/lib/utils";
 
-const OUTCOMES: CallOutcome[] = [
-  "no_answer",
-  "not_interested",
-  "thinking",
-  "negotiating",
-  "agreed_to_bring",
-  "wrong_number",
-];
+const POSITIVE: CallOutcome[] = ["accepted_consign", "negotiating", "thinking"];
+const NEUTRAL: CallOutcome[] = ["no_answer"];
+const EXIT: CallOutcome[] = ["not_interested", "wants_cash", "unrealistic_price", "wrong_number"];
 
-/** Modal de resultado obrigatório após cada ligação (seção 12 do SPEC). Não
- * há botão de fechar sem escolher — só o `onChoose`. */
+function OutcomeButton({
+  outcome,
+  emphasis,
+  onChoose,
+}: {
+  outcome: CallOutcome;
+  emphasis: "positive" | "neutral" | "exit";
+  onChoose: (outcome: CallOutcome) => void;
+}) {
+  return (
+    <Button
+      variant={emphasis === "exit" ? "outline" : emphasis === "positive" && outcome === "accepted_consign" ? "default" : "outline"}
+      className={cn(
+        "h-auto justify-center whitespace-normal py-3 text-center",
+        outcome === "accepted_consign" && "col-span-2 rounded-xl auttus-gradient border-0 text-white hover:opacity-95",
+        emphasis === "exit" && "text-navy/70",
+      )}
+      onClick={() => onChoose(outcome)}
+    >
+      {CALL_OUTCOME_LABELS[outcome]}
+    </Button>
+  );
+}
+
+/** Resultado obrigatório da ligação de consignação. */
 export function OutcomeDialog({
   open,
   onChoose,
@@ -39,13 +58,17 @@ export function OutcomeDialog({
       >
         <DialogHeader>
           <DialogTitle>Resultado da ligação</DialogTitle>
-          <DialogDescription>Obrigatório antes de seguir para o próximo veículo.</DialogDescription>
+          <DialogDescription>Obrigatório — tira o carro da fila ou agenda o follow-up.</DialogDescription>
         </DialogHeader>
         <div className="grid grid-cols-2 gap-2">
-          {OUTCOMES.map((outcome) => (
-            <Button key={outcome} variant="outline" onClick={() => onChoose(outcome)}>
-              {CALL_OUTCOME_LABELS[outcome]}
-            </Button>
+          {POSITIVE.map((outcome) => (
+            <OutcomeButton key={outcome} outcome={outcome} emphasis="positive" onChoose={onChoose} />
+          ))}
+          {NEUTRAL.map((outcome) => (
+            <OutcomeButton key={outcome} outcome={outcome} emphasis="neutral" onChoose={onChoose} />
+          ))}
+          {EXIT.map((outcome) => (
+            <OutcomeButton key={outcome} outcome={outcome} emphasis="exit" onChoose={onChoose} />
           ))}
         </div>
       </DialogContent>

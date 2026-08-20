@@ -15,6 +15,17 @@ from typing import Any
 
 
 @dataclass
+class CardListagem:
+    """Uma linha da página de busca. Preço vem daqui para decidir se vale
+    gastar requisição na ficha — listagem é barata, ficha não."""
+
+    url: str
+    id_externo: str
+    preco_texto: str | None = None
+    tipo_anunciante: str | None = None
+
+
+@dataclass
 class AnuncioBruto:
     fonte: str
     id_externo: str
@@ -31,6 +42,12 @@ class AnuncioBruto:
     vendedor_nome: str | None = None
     vendedor_telefone: str | None = None
     vendedor_tipo: str | None = None  # "particular" | "loja" | None (não detectado)
+    # Quando a fonte publica modelo/versão separados do ruído comercial
+    # (Shopcar: "MARCA - Categoria - Modelo Versão"), o adapter preenche isto
+    # e o pipeline não precisa adivinhar por regex.
+    marca_texto: str | None = None
+    modelo_versao_texto: str | None = None
+    categoria: str | None = None
     raw: dict[str, Any] = field(default_factory=dict)
     coletado_em: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
 

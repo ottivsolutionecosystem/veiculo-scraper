@@ -1,26 +1,37 @@
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
 
-import { pool, refreshFilaDoDia } from "../db.js";
+import { pool, withTransaction, refreshFilaDoDia } from "../db.js";
 import { mapQueueRow } from "../lib/serialize.js";
 import { decodeCursor, encodeCursor, parseLimit } from "../lib/pagination.js";
-import { NotFoundError, ValidationError } from "../lib/http-errors.js";
+import { ConflictError, NotFoundError, ValidationError } from "../lib/http-errors.js";
+import { canClaim } from "../lib/consignacao.js";
+import { lockFromRow, VEHICLE_LOCK_SQL } from "../lib/vehicle-lock.js";
+import { requireOperator } from "../lib/current-operator.js";
+import { recordCall } from "../jobs/record-call.js";
 
-const querySchema = z.object({ cursor: z.string().optional(), limit: z.string().optional() });
+const querySchema = z.object({
+  cursor: z.string().optional(),
+  limit: z.string().optional(),
+  operator: z.string().optional(),
+});
 const callBody = z.object({
-  outcome: z.enum(["no_answer", "not_interested", "thinking", "negotiating", "agreed_to_bring", "wrong_number"]),
+  outcome: z.enum([
+    "no_answer",
+    "not_interested",
+    "thinking",
+    "negotiating",
+    "agreed_to_bring",
+    "accepted_consign",
+    "wants_cash",
+    "unrealistic_price",
+    "wrong_number",
+  ]),
   durationSeconds: z.number().optional(),
+  operator: z.string().optional(),
 });
 
-const OUTCOME_TO_STATE: Record<string, string | undefined> = {
-  agreed_to_bring: "negotiating",
-  not_interested: "discarded",
-  wrong_number: "discarded",
-};
-
-/** GET/POST /api/dialer/* — Discador (docs/API.md seção 4). Cooldown de
- * 24h por vendedor (configuracoes.cooldown_vendedor_horas) e "não
- * perturbe"/mutado excluem o vendedor da fila. */
+/** GET/POST /api/dialer/* — modo discagem da fila de consignação. */
 export async function dialerRoutes(app: FastifyInstance) {
   app.get("/api/dialer/queue", async (req, reply) => {
     const q = querySchema.parse(req.query);
@@ -43,17 +54,19 @@ export async function dialerRoutes(app: FastifyInstance) {
     const { rows } = await pool.query(
       `SELECT f.*, vd.nome AS vendedor_nome, cv.telefone_e164 AS vendedor_telefone_e164
          FROM fila_do_dia f
-         JOIN vendedores vd ON vd.id = f.vendedor_id
+         LEFT JOIN vendedores vd ON vd.id = f.vendedor_id
          LEFT JOIN contatos_vendedor cv ON cv.vendedor_id = vd.id
-        WHERE f.estado IN ('new', 'interested')
-          AND vd.mutado = false AND vd.nao_perturbe = false
+        WHERE f.ativo
+          AND f.estado NOT IN ('discarded', 'lost')
+          AND f.ultimo_contato_em IS NULL
+          AND (vd.id IS NULL OR (vd.mutado = false AND vd.nao_perturbe = false))
           AND NOT EXISTS (
             SELECT 1 FROM interacoes i
-             WHERE i.vendedor_id = f.vendedor_id
+             WHERE i.vendedor_id IS NOT NULL AND i.vendedor_id = f.vendedor_id
                AND i.criado_em > now() - ($1 || ' hours')::interval
           )
           ${cursorClause}
-        ORDER BY f.veiculo_id ASC
+        ORDER BY f.score_total DESC NULLS LAST, f.veiculo_id ASC
         LIMIT $${values.length}`,
       values,
     );
@@ -65,25 +78,32 @@ export async function dialerRoutes(app: FastifyInstance) {
   });
 
   app.post("/api/vehicles/:id/calls", async (req, reply) => {
+    const actor = await requireOperator(req);
     const id = Number((req.params as { id: string }).id);
     const body = callBody.parse(req.body);
     if (!body.outcome) throw new ValidationError("Resultado da ligação é obrigatório.");
 
-    const { rows } = await pool.query("SELECT vendedor_id FROM veiculos WHERE id = $1", [id]);
+    const { rows } = await pool.query(VEHICLE_LOCK_SQL, [id]);
     if (!rows[0]) throw new NotFoundError("Veículo não encontrado.");
-
-    await pool.query(
-      `INSERT INTO interacoes (veiculo_id, vendedor_id, canal, resultado, duracao_segundos, autor)
-       VALUES ($1, $2, 'phone', $3, $4, 'api')`,
-      [id, rows[0].vendedor_id, body.outcome, body.durationSeconds ?? null],
-    );
-
-    const newState = OUTCOME_TO_STATE[body.outcome];
-    if (newState) {
-      await pool.query("UPDATE veiculos SET estado = $2, atualizado_em = now() WHERE id = $1", [id, newState]);
-      refreshFilaDoDia();
+    const agora = new Date();
+    if (!canClaim(agora, lockFromRow(rows[0]), actor.id)) {
+      throw new ConflictError(
+        `Em contato com ${rows[0].consignador ?? "outro consignador"}. Peça a transferência se não for seguir.`,
+      );
     }
 
+    await withTransaction(async (client) => {
+      await recordCall(client, {
+        vehicleId: id,
+        sellerId: rows[0].vendedor_id === null ? null : Number(rows[0].vendedor_id),
+        outcome: body.outcome,
+        operator: actor.name,
+        operatorId: actor.id,
+        channel: "phone",
+        durationSeconds: body.durationSeconds,
+      });
+    });
+    refreshFilaDoDia();
     reply.status(201).send();
   });
 }

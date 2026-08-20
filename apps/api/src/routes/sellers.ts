@@ -4,7 +4,9 @@ import { z } from "zod";
 import { pool } from "../db.js";
 import { decodeCursor, encodeCursor, parseLimit } from "../lib/pagination.js";
 import { mapSeller, mapListing, maskPhone } from "../lib/serialize.js";
-import { NotFoundError } from "../lib/http-errors.js";
+import { ConflictError, NotFoundError } from "../lib/http-errors.js";
+import { requireOperator } from "../lib/current-operator.js";
+import { CONTACT_BLOCK_MESSAGE, contactBlockReason } from "../lib/contato.js";
 
 const listQuery = z.object({ cursor: z.string().optional(), limit: z.string().optional() });
 const patchBody = z.object({ muted: z.boolean().optional(), doNotDisturb: z.boolean().optional() });
@@ -67,6 +69,7 @@ export async function sellerRoutes(app: FastifyInstance) {
   });
 
   app.patch("/api/sellers/:id", async (req, reply) => {
+    const actor = await requireOperator(req);
     const id = Number((req.params as { id: string }).id);
     const body = patchBody.parse(req.body);
     const { rows } = await pool.query(
@@ -80,8 +83,8 @@ export async function sellerRoutes(app: FastifyInstance) {
     if (!rows[0]) throw new NotFoundError("Vendedor não encontrado.");
     if (body.muted !== undefined) {
       await pool.query(
-        "INSERT INTO auditoria (acao, autor, alvo_tipo, alvo_id, detalhe) VALUES ('mute_seller', 'api', 'seller', $1, $2)",
-        [String(id), body.muted ? "Vendedor mutado" : "Vendedor desmutado"],
+        "INSERT INTO auditoria (acao, autor, alvo_tipo, alvo_id, detalhe) VALUES ('mute_seller', $1, 'seller', $2, $3)",
+        [actor.login, String(id), body.muted ? "Vendedor mutado" : "Vendedor desmutado"],
       );
     }
     const { rows: refreshed } = await pool.query(`${SELLER_SELECT} WHERE vd.id = $1`, [id]);
@@ -89,13 +92,26 @@ export async function sellerRoutes(app: FastifyInstance) {
   });
 
   app.post("/api/sellers/:id/reveal-contact", async (req, reply) => {
+    const actor = await requireOperator(req);
     const id = Number((req.params as { id: string }).id);
-    const { rows } = await pool.query("SELECT telefone_e164 FROM contatos_vendedor WHERE vendedor_id = $1", [id]);
-    if (!rows[0]) throw new NotFoundError("Contato não encontrado (pode ter expirado por TTL).");
-    await pool.query(
-      "INSERT INTO auditoria (acao, autor, alvo_tipo, alvo_id, detalhe) VALUES ('reveal_contact', 'api', 'seller', $1, 'Contato revelado via API')",
-      [String(id)],
+    const { rows: sellerRows } = await pool.query(
+      `SELECT vd.mutado, vd.nao_perturbe, cv.telefone_e164
+         FROM vendedores vd
+         LEFT JOIN contatos_vendedor cv ON cv.vendedor_id = vd.id
+        WHERE vd.id = $1`,
+      [id],
     );
-    reply.send({ phone: rows[0].telefone_e164 });
+    if (!sellerRows[0]) throw new NotFoundError("Vendedor não encontrado.");
+    const block = contactBlockReason({
+      muted: Boolean(sellerRows[0].mutado),
+      doNotDisturb: Boolean(sellerRows[0].nao_perturbe),
+      hasPhone: Boolean(sellerRows[0].telefone_e164),
+    });
+    if (block) throw new ConflictError(CONTACT_BLOCK_MESSAGE[block]);
+    await pool.query(
+      "INSERT INTO auditoria (acao, autor, alvo_tipo, alvo_id, detalhe) VALUES ('reveal_contact', $1, 'seller', $2, 'Contato revelado')",
+      [actor.login, String(id)],
+    );
+    reply.send({ phone: sellerRows[0].telefone_e164 });
   });
 }

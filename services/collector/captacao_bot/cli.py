@@ -107,7 +107,10 @@ def cmd_pedidos(args) -> None:
     """Processa pedidos de coleta sob demanda gravados pelo botão da tela
     Fontes (tabela execucoes_solicitadas — migration 0012). O botão não
     chama o coletor, só grava a linha; isto aqui é quem lê (fronteira
-    TS/Python é o Postgres, SPEC seção 5, sem RPC)."""
+    TS/Python é o Postgres, SPEC seção 5, sem RPC).
+
+    O progresso volta pela mesma tabela enquanto a coleta anda, para o botão
+    não ficar mudo por duas horas."""
     adapter = _adapter(args.fonte)
     storage = _postgres_storage()
     pendentes = storage.pedidos_pendentes(args.fonte)
@@ -118,12 +121,29 @@ def cmd_pedidos(args) -> None:
     with PoliteClient(adapter.cfg) as client:
         runner = Runner(adapter, client, storage)
         for pedido in pendentes:
-            resultado = runner.coletar(
-                limite=pedido["limite"], tipo_anunciante=pedido["tipo_anunciante_filtro"]
-            )
-            storage.marcar_pedido_processado(pedido["id"], resultado.scrape_run_id)
-            print(f"pedido #{pedido['id']} (tipo_anunciante={pedido['tipo_anunciante_filtro'] or 'ambos'}): "
-                  f"{resultado.resumo()}")
+            tipo = {
+                "individual": "particular",
+                "dealer": "loja",
+            }.get(pedido["tipo_anunciante_filtro"] or "", pedido["tipo_anunciante_filtro"])
+            storage.marcar_pedido_iniciado(pedido["id"])
+            try:
+                resultado = runner.coletar(
+                    limite=pedido["limite"],
+                    tipo_anunciante=tipo,
+                    ao_progredir=lambda res, pid=pedido["id"]: storage.atualizar_progresso(
+                        pid, res.progresso()
+                    ),
+                )
+                storage.marcar_pedido_processado(pedido["id"], resultado.scrape_run_id)
+                print(
+                    f"pedido #{pedido['id']} (tipo_anunciante={tipo or 'ambos'}): "
+                    f"{resultado.resumo()}"
+                )
+            except Exception:
+                # Sem isso o loop recomeça a listagem do zero e o Shopcar
+                # leva mais duas horas. O anúncio já gravado continua lá.
+                storage.marcar_pedido_processado(pedido["id"], None)
+                raise
 
 
 def main() -> None:

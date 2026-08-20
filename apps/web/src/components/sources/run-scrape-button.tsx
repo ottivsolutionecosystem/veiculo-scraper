@@ -1,31 +1,26 @@
 "use client";
 
 import * as React from "react";
-import { useRouter } from "next/navigation";
 import { Play, Loader2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import type { ScrapeRequest } from "@/lib/api-types";
 import { triggerScrapeRun, ApiError } from "@/lib/api";
-import { formatDateTime } from "@/lib/format";
-
-const SELLER_TYPE_LABELS: Record<"individual" | "dealer", string> = {
-  individual: "Particular",
-  dealer: "Loja",
-};
+import { ScrapeProgress } from "@/components/sources/scrape-progress";
 
 export function RunScrapeButton({
   source,
   locked,
   pendingRequest,
+  onRefresh,
 }: {
   source: string;
   locked: boolean;
   pendingRequest: ScrapeRequest | null;
+  onRefresh?: () => void;
 }) {
-  const router = useRouter();
-  const [sellerType, setSellerType] = React.useState<string>("");
+  const [sellerType, setSellerType] = React.useState<string>("individual");
   const [running, setRunning] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
 
@@ -34,12 +29,7 @@ export function RunScrapeButton({
   }
 
   if (pendingRequest) {
-    return (
-      <p className="text-xs text-muted-foreground">
-        Pedido pendente ({pendingRequest.sellerType ? SELLER_TYPE_LABELS[pendingRequest.sellerType] : "ambos"}) desde{" "}
-        {formatDateTime(pendingRequest.requestedAt)} — aguardando o coletor rodar.
-      </p>
-    );
+    return <ScrapeProgress request={pendingRequest} onRefresh={onRefresh} />;
   }
 
   async function run() {
@@ -49,7 +39,7 @@ export function RunScrapeButton({
       await triggerScrapeRun(source, {
         sellerType: sellerType === "individual" || sellerType === "dealer" ? sellerType : undefined,
       });
-      router.refresh();
+      onRefresh?.();
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Falha ao pedir a coleta.");
     } finally {
@@ -60,15 +50,16 @@ export function RunScrapeButton({
   return (
     <div className="flex flex-wrap items-center gap-2">
       <Select value={sellerType} onValueChange={setSellerType}>
-        <SelectTrigger className="w-40">
-          <SelectValue placeholder="Particular e loja" />
+        <SelectTrigger className="w-44">
+          <SelectValue placeholder="Só particular" />
         </SelectTrigger>
         <SelectContent>
           <SelectItem value="individual">Só particular</SelectItem>
           <SelectItem value="dealer">Só loja</SelectItem>
+          <SelectItem value="all">Particular e loja</SelectItem>
         </SelectContent>
       </Select>
-      <Button size="sm" variant="outline" onClick={run} disabled={running}>
+      <Button size="sm" variant="outline" className="min-h-11" onClick={run} disabled={running}>
         {running ? <Loader2 className="animate-spin" /> : <Play />} Rodar coleta agora
       </Button>
       {error && <p className="w-full text-xs text-destructive">{error}</p>}

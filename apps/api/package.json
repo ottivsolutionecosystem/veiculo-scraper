@@ -6,9 +6,15 @@
   "scripts": {
     "dev": "tsx watch src/server.ts",
     "worker": "tsx watch src/worker.ts",
+    "worker:start": "node dist/src/worker.js",
+    "migrate": "tsx scripts/migrate.ts",
     "seed": "tsx scripts/seed.ts",
+    "purge-mocks": "tsx scripts/purge-mocks.ts",
+    "reset-veiculos": "tsx scripts/reset-veiculos.ts",
+    "reprocess-matches": "tsx scripts/reprocess-matches.ts",
+    "reset-collected": "tsx scripts/reset-collected.ts",
     "build": "tsc -p tsconfig.json",
-    "start": "node dist/server.js",
+    "start": "node dist/src/server.js",
     "test": "vitest run",
     "typecheck": "tsc --noEmit"
   },

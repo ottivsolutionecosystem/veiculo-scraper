@@ -2,10 +2,9 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { Phone, MessageCircle, ThumbsUp, XCircle, Send, Eye, Loader2 } from "lucide-react";
+import { Handshake, XCircle, Send, Loader2, MoreHorizontal, ExternalLink, ArrowRightLeft } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
   Dialog,
   DialogContent,
@@ -14,9 +13,17 @@ import {
   DialogDescription,
   DialogFooter,
 } from "@/components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { discardVehicle, postInteraction, revealSellerContact } from "@/lib/api";
+import { ApiError, claimVehicle, discardVehicle } from "@/lib/api";
+import { useOperator } from "@/lib/operator";
+import { TransferDialog } from "@/components/queue/transfer-dialog";
 
 const DISCARD_REASONS = [
   "Preço fora da faixa",
@@ -27,43 +34,84 @@ const DISCARD_REASONS = [
   "Duplicidade confirmada",
 ];
 
-/** Ações rápidas de um veículo (Fila do dia, Busca, Discador) — chamam a
- * API real (seção 12 do SPEC). */
-export function VehicleActions({ vehicleId, maskedPhone }: { vehicleId: number; maskedPhone: string }) {
+export interface VehicleActionListing {
+  brand: string | null;
+  model: string | null;
+  modelYear: number | null;
+  priceCents: number | null;
+  url?: string | null;
+}
+
+/** Ações da fila: Consignar assume o carro e abre o kanban. */
+export function VehicleActions({
+  vehicleId,
+  listing,
+  consignador,
+  consignadorId,
+  lockedUntil,
+  mode = "queue",
+}: {
+  vehicleId: number;
+  sellerId?: number | null;
+  maskedPhone?: string;
+  listing?: VehicleActionListing;
+  fipeDiscountPct?: number | null;
+  consignador?: string | null;
+  consignadorId?: number | null;
+  lockedUntil?: string | null;
+  lastContactedAt?: string | null;
+  mode?: "queue" | "stock" | "detail";
+}) {
   const router = useRouter();
-  const [phone, setPhone] = React.useState<string | null>(null);
-  const [revealing, setRevealing] = React.useState(false);
-  const [interested, setInterested] = React.useState(false);
-  const [savingInterest, setSavingInterest] = React.useState(false);
+  const { operatorId, isMaster } = useOperator();
+  const [busy, setBusy] = React.useState(false);
+  const [error, setError] = React.useState<string | null>(null);
   const [discarded, setDiscarded] = React.useState(false);
   const [discardOpen, setDiscardOpen] = React.useState(false);
   const [discarding, setDiscarding] = React.useState(false);
-  const [reason, setReason] = React.useState<string>("");
+  const [reason, setReason] = React.useState("");
   const [notes, setNotes] = React.useState("");
+  const [transferOpen, setTransferOpen] = React.useState(false);
+
+  const now = Date.now();
+  const lockValid = Boolean(lockedUntil && new Date(lockedUntil).getTime() > now);
+  const heldByOther = Boolean(consignadorId) && consignadorId !== operatorId && lockValid;
+  const mine = Boolean(operatorId && consignadorId === operatorId);
+  const canReassign = mine || (isMaster && Boolean(consignadorId));
+  const inStock = mode === "stock";
 
   if (discarded) {
     return <span className="text-xs text-muted-foreground">Descartado: {reason}</span>;
   }
 
-  async function reveal() {
-    setRevealing(true);
-    try {
-      const { phone: revealed } = await revealSellerContact(vehicleId);
-      setPhone(revealed);
-    } catch {
-      setPhone(null);
-    } finally {
-      setRevealing(false);
+  function openListing() {
+    const url = listing?.url;
+    if (url) {
+      window.open(url, "_blank", "noreferrer");
+      return;
     }
+    router.push(`/veiculos/${vehicleId}`);
   }
 
-  async function markInterest() {
-    setSavingInterest(true);
+  async function consignar() {
+    if (!operatorId) {
+      setError("Entre com seu usuário para assumir o carro.");
+      return;
+    }
+    if (heldByOther) {
+      setError(`Em tratativa com ${consignador}. Peça a transferência se não for seguir.`);
+      return;
+    }
+    setError(null);
+    setBusy(true);
     try {
-      await postInteraction(vehicleId, { channel: "phone", outcome: "negotiating" });
-      setInterested(true);
+      await claimVehicle(vehicleId);
+      router.push("/solicitacoes");
+      router.refresh();
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Não foi possível assumir este carro.");
     } finally {
-      setSavingInterest(false);
+      setBusy(false);
     }
   }
 
@@ -80,45 +128,66 @@ export function VehicleActions({ vehicleId, maskedPhone }: { vehicleId: number; 
   }
 
   return (
-    <div className="flex flex-wrap items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
-      <Popover>
-        <PopoverTrigger asChild>
-          <Button size="sm" variant="outline">
-            <Phone />
-            Ligar
+    <div className="flex w-full shrink-0 flex-col items-stretch gap-1 sm:w-auto sm:items-end" onClick={(e) => e.stopPropagation()}>
+      <div className="flex items-center justify-end gap-1.5">
+        {!inStock && (
+          <Button size="sm" className="min-h-11 flex-1 rounded-full px-4 sm:flex-none" onClick={() => void consignar()} disabled={busy || heldByOther}>
+            {busy ? <Loader2 className="animate-spin" /> : <Handshake />}
+            Consignar
           </Button>
-        </PopoverTrigger>
-        <PopoverContent className="w-64 text-sm">
-          <p className="mb-2 font-medium">{phone ?? maskedPhone}</p>
-          {!phone ? (
-            <Button size="sm" variant="secondary" onClick={reveal} disabled={revealing}>
-              {revealing ? <Loader2 className="animate-spin" /> : <Eye />} Revelar (gera auditoria)
+        )}
+        <Button size="sm" variant="outline" className="min-h-11 rounded-full px-3" onClick={openListing}>
+          <ExternalLink />
+          Anúncio
+        </Button>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button size="icon" variant="ghost" className="h-8 w-8 rounded-full" aria-label="Mais ações">
+              <MoreHorizontal />
             </Button>
-          ) : (
-            <a href={`tel:${phone}`} className="text-primary underline">
-              Discar agora
-            </a>
-          )}
-        </PopoverContent>
-      </Popover>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem asChild>
+              <a href={`/veiculos/${vehicleId}`}>
+                <Send className="mr-2 h-4 w-4" />
+                Ficha
+              </a>
+            </DropdownMenuItem>
+            {canReassign && (
+              <DropdownMenuItem onClick={() => setTransferOpen(true)}>
+                <ArrowRightLeft className="mr-2 h-4 w-4" />
+                Passar para outra pessoa
+              </DropdownMenuItem>
+            )}
+            {!inStock && !heldByOther && (
+              <DropdownMenuItem className="text-destructive" onClick={() => setDiscardOpen(true)}>
+                <XCircle className="mr-2 h-4 w-4" />
+                Descartar
+              </DropdownMenuItem>
+            )}
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
+      {heldByOther && (
+        <p className="text-xs text-muted-foreground">Em tratativa com {consignador}</p>
+      )}
+      {error && <p className="text-xs text-destructive">{error}</p>}
 
-      <Button size="sm" variant="outline" asChild>
-        <a href={`https://wa.me/${(phone ?? "").replace(/\D/g, "")}`} target="_blank" rel="noreferrer">
-          <MessageCircle />
-          WhatsApp
-        </a>
-      </Button>
-
-      <Button size="sm" variant={interested ? "default" : "outline"} onClick={markInterest} disabled={savingInterest || interested}>
-        {savingInterest ? <Loader2 className="animate-spin" /> : <ThumbsUp />}
-        {interested ? "Interessado" : "Interesse"}
-      </Button>
+      {operatorId ? (
+        <TransferDialog
+          open={transferOpen}
+          onOpenChange={setTransferOpen}
+          vehicleId={vehicleId}
+          currentOperatorId={operatorId}
+          onTransferred={() => router.refresh()}
+        />
+      ) : null}
 
       <Dialog open={discardOpen} onOpenChange={setDiscardOpen}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Descartar veículo</DialogTitle>
-            <DialogDescription>Todo descarte exige motivo (seção 7.2 do SPEC).</DialogDescription>
+            <DialogDescription>Some da fila. Use o parecer no kanban se a tratativa não fechou.</DialogDescription>
           </DialogHeader>
           <div className="space-y-3">
             <Select value={reason} onValueChange={setReason}>
@@ -139,23 +208,12 @@ export function VehicleActions({ vehicleId, maskedPhone }: { vehicleId: number; 
             <Button variant="outline" onClick={() => setDiscardOpen(false)}>
               Cancelar
             </Button>
-            <Button variant="destructive" disabled={!reason || discarding} onClick={confirmDiscard}>
+            <Button variant="destructive" disabled={!reason || discarding} onClick={() => void confirmDiscard()}>
               {discarding && <Loader2 className="animate-spin" />} Confirmar descarte
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
-      <Button size="sm" variant="ghost" onClick={() => setDiscardOpen(true)}>
-        <XCircle />
-        Descartar
-      </Button>
-
-      <Button size="sm" variant="ghost" asChild>
-        <a href={`/veiculos/${vehicleId}`}>
-          <Send />
-          Solicitar
-        </a>
-      </Button>
     </div>
   );
 }

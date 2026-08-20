@@ -5,6 +5,7 @@ import { pool } from "../db.js";
 import { decodeCursor, encodeCursor, parseLimit } from "../lib/pagination.js";
 import { mapSource, mapScrapeRun, mapScrapeRequest, unmapSellerType } from "../lib/serialize.js";
 import { ForbiddenError, NotFoundError, ConflictError } from "../lib/http-errors.js";
+import { requireMaster } from "../lib/current-operator.js";
 
 const patchBody = z.object({ active: z.boolean() });
 const runsQuery = z.object({ cursor: z.string().optional(), limit: z.string().optional() });
@@ -64,6 +65,7 @@ export async function sourceRoutes(app: FastifyInstance) {
   });
 
   app.patch("/api/sources/:source", async (req, reply) => {
+    await requireMaster(req);
     const source = (req.params as { source: string }).source;
     const body = patchBody.parse(req.body);
     if (!SELF_SERVICE_SOURCES.has(source)) {
@@ -80,6 +82,7 @@ export async function sourceRoutes(app: FastifyInstance) {
   // pedido em execucoes_solicitadas — o coletor Python é quem lê essa
   // tabela quando roda (fronteira TS/Python é o Postgres, SPEC seção 5).
   app.post("/api/sources/:source/run", async (req, reply) => {
+    const actor = await requireMaster(req);
     const source = (req.params as { source: string }).source;
     const body = runBody.parse(req.body);
     if (!SELF_SERVICE_SOURCES.has(source)) {
@@ -100,7 +103,7 @@ export async function sourceRoutes(app: FastifyInstance) {
     const { rows } = await pool.query(
       `INSERT INTO execucoes_solicitadas (fonte, tipo_anunciante_filtro, limite, solicitado_por)
        VALUES ($1, $2, $3, $4) RETURNING *`,
-      [source, unmapSellerType(body.sellerType), body.limit ?? null, "api"],
+      [source, unmapSellerType(body.sellerType), body.limit ?? null, actor.login],
     );
     reply.status(202).send(mapScrapeRequest(rows[0]!));
   });

@@ -16,18 +16,18 @@ const querySchema = z.object({
   priceMaxCents: z.coerce.number().optional(),
   minFipeDiscountPct: z.coerce.number().optional(),
   transmission: z.string().optional(),
-  onlyActive: z.coerce.boolean().optional(),
+  includeInactive: z.coerce.boolean().optional(),
+  priceChanged: z.coerce.boolean().optional(),
   sellerType: z.enum(["individual", "dealer"]).optional(),
 });
 
-/** GET /api/vehicles/search — Busca (docs/API.md seção 2). Mesma origem
- * de /api/queue (fila_do_dia), sem o filtro implícito de estado. */
+/** GET /api/vehicles/search — estoque consignado (o que de fato entrou). */
 export async function searchRoutes(app: FastifyInstance) {
   app.get("/api/vehicles/search", async (req, reply) => {
     const q = querySchema.parse(req.query);
     const limit = parseLimit(q.limit);
 
-    const conditions: string[] = [];
+    const conditions: string[] = ["f.estado = 'acquired'"];
     const values: unknown[] = [];
     function push(sql: string, value: unknown) {
       values.push(value);
@@ -42,31 +42,40 @@ export async function searchRoutes(app: FastifyInstance) {
     if (q.priceMaxCents !== undefined) push("f.preco <= ?", q.priceMaxCents);
     if (q.minFipeDiscountPct !== undefined) push("f.desconto_fipe_pct >= ?", q.minFipeDiscountPct);
     if (q.transmission) push("f.cambio = ?", q.transmission);
-    if (q.onlyActive) conditions.push("f.ativo = true");
+    if (q.priceChanged) conditions.push("f.preco_variacao IS NOT NULL AND f.preco_variacao <> 0");
     if (q.sellerType) push("f.tipo_anunciante = ?", unmapSellerType(q.sellerType));
+    if (!q.includeInactive) conditions.push("f.ativo");
 
     const cursorParts = decodeCursor(q.cursor);
     if (cursorParts) {
-      const [id] = cursorParts as [number];
-      values.push(id);
-      conditions.push(`f.veiculo_id > $${values.length}`);
+      const [score, id] = cursorParts as [number, number];
+      values.push(score, id);
+      conditions.push(`(
+        COALESCE(f.score_total, -1) < $${values.length - 1}
+        OR (COALESCE(f.score_total, -1) = $${values.length - 1} AND f.veiculo_id > $${values.length})
+      )`);
     }
     values.push(limit);
 
-    const where = conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
+    const where = `WHERE ${conditions.join(" AND ")}`;
     const { rows } = await pool.query(
-      `SELECT f.*, vd.nome AS vendedor_nome, cv.telefone_e164 AS vendedor_telefone_e164
+      `SELECT f.*, vd.nome AS vendedor_nome, cv.telefone_e164 AS vendedor_telefone_e164, a.url AS anuncio_url
          FROM fila_do_dia f
          LEFT JOIN vendedores vd ON vd.id = f.vendedor_id
          LEFT JOIN contatos_vendedor cv ON cv.vendedor_id = vd.id
+         LEFT JOIN anuncios a ON a.id = f.anuncio_id
          ${where}
-        ORDER BY f.veiculo_id ASC LIMIT $${values.length}`,
+        ORDER BY COALESCE(f.score_total, -1) DESC, f.veiculo_id ASC
+        LIMIT $${values.length}`,
       values,
     );
 
     const items = rows.map(mapQueueRow);
     const last = rows[rows.length - 1];
-    const nextCursor = rows.length === limit && last ? encodeCursor([Number(last.veiculo_id)]) : null;
+    const nextCursor =
+      rows.length === limit && last
+        ? encodeCursor([Number(last.score_total ?? -1), Number(last.veiculo_id)])
+        : null;
 
     reply.send({ items, nextCursor });
   });

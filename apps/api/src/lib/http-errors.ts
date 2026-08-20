@@ -26,6 +26,12 @@ export class ValidationError extends HttpError {
   }
 }
 
+export class UnauthorizedError extends HttpError {
+  constructor(message = "Entre com seu usuário para continuar.") {
+    super(401, message);
+  }
+}
+
 export class ForbiddenError extends HttpError {
   constructor(message: string) {
     super(403, message);

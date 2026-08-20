@@ -35,7 +35,7 @@ export async function calculateScoreForVehicle(client: PoolClient, veiculoId: nu
     modelLiquidityScore: null, // sem histórico de liquidez calculado ainda — usa neutro (lib/score.ts)
     kmVsAveragePct: null, // curva de km por ano fica pra cálculo específico, fora do escopo desta chamada
     completenessPct,
-    compatibleCustomers: Number(vehicle.clientes ?? 0),
+    compatibleCustomers: 0, // consignação: comprador interno não ranqueia
     riskFlags: [],
     weights: cfg.pesos,
     bandThresholds: cfg.faixas,

@@ -7,6 +7,12 @@
 
 const num = (v: unknown): number | null => (v === null || v === undefined ? null : Number(v));
 
+function iso(v: unknown): string | null {
+  if (v === null || v === undefined) return null;
+  if (v instanceof Date) return v.toISOString();
+  return String(v);
+}
+
 const SELLER_TYPE_MAP: Record<string, "individual" | "dealer"> = {
   particular: "individual",
   loja: "dealer",
@@ -32,12 +38,23 @@ export function mapQueueRow(row: Record<string, unknown>) {
     sellerId: num(row.vendedor_id),
     sellerName: row.vendedor_nome ?? null,
     sellerMaskedPhone: row.vendedor_telefone_e164 !== undefined ? maskPhone(row.vendedor_telefone_e164 as string | null) : null,
+    consignador: (row.consignador as string | null) ?? null,
+    consignadorId: num(row.consignador_id),
+    lockedUntil: (row.travado_ate as string | null) ?? null,
+    lastContactedAt: (row.ultimo_contato_em as string | null) ?? null,
+    followUpAt: (row.follow_up_em as string | null) ?? null,
     fipeDiscountPct: num(row.desconto_fipe_pct),
     fipeDiscountCents: num(row.desconto_fipe_reais),
     fipeMatchConfidence: num(row.fipe_confianca),
     daysListed: num(row.dias_no_ar),
     compatibleCustomersCount: num(row.clientes_compativeis),
     listingsCount: num(row.total_fontes),
+    // Pré-calculados na fila_do_dia (migration 0013): a tela mostra "caiu
+    // R$ 3.000" sem subquery em tempo de request.
+    previousPriceCents: num(row.preco_anterior),
+    priceChangeCents: num(row.preco_variacao),
+    priceChangedAt: row.preco_mudou_em ?? null,
+    priceDropCount: num(row.quedas_de_preco) ?? 0,
     score:
       row.score_total === null
         ? null
@@ -51,6 +68,7 @@ export function mapQueueRow(row: Record<string, unknown>) {
     listing: {
       id: num(row.anuncio_id),
       source: row.fonte,
+      url: (row.anuncio_url as string | null) ?? (row.url as string | null) ?? "",
       normalizedTitle: row.titulo_normalizado,
       brand: row.marca,
       model: row.modelo,
@@ -67,6 +85,7 @@ export function mapQueueRow(row: Record<string, unknown>) {
       photos: row.fotos,
       sellerType: sellerType(row.tipo_anunciante),
       active: row.ativo,
+      deactivatedAt: row.desativado_em ?? null,
       pendingFields: row.pendencias,
     },
   };
@@ -100,6 +119,7 @@ export function mapListing(row: Record<string, unknown>) {
     firstSeenAt: row.primeira_vista_em,
     lastSeenAt: row.ultima_vista_em,
     active: row.ativo,
+    deactivatedAt: row.desativado_em ?? null,
   };
 }
 
@@ -146,6 +166,11 @@ export function mapVehicleDetail(
     priceHistory: priceHistory.map(mapPriceHistoryPoint),
     daysListed: extra.daysListed,
     sellerId: num(vehicle.vendedor_id),
+    consignador: (vehicle.consignador as string | null) ?? null,
+    consignadorId: num(vehicle.consignador_id),
+    lockedUntil: (vehicle.travado_ate as string | null) ?? null,
+    lastContactedAt: (vehicle.ultimo_contato_em as string | null) ?? null,
+    followUpAt: (vehicle.follow_up_em as string | null) ?? null,
     compatibleCustomersCount: extra.compatibleCustomersCount,
   };
 }
@@ -266,12 +291,25 @@ export function mapRequest(row: Record<string, unknown>) {
     customerId: num(row.cliente_id),
     branchId: num(row.unidade_id),
     owner: row.responsavel,
-    proposedAt: row.data_hora_proposta,
+    proposedAt: iso(row.data_hora_proposta),
+    lockedUntil: iso(row.travado_ate),
     state: row.estado,
     lossReason: row.motivo_perda,
     notes: row.observacoes,
-    checklist: mapChecklist(row.checklist as Record<string, boolean> | null),
-    createdAt: row.criado_em,
+    checklist: mapChecklist(row.checklist as Record<string, boolean> | null) ?? {
+      document: false,
+      spareKey: false,
+      manual: false,
+      inspection: false,
+      standardPhotos: false,
+      appraisal: false,
+    },
+    createdAt: iso(row.criado_em),
+    listingUrl: (row.anuncio_url as string | null) ?? null,
+    fipeDiscountPct: num(row.desconto_fipe_pct),
+    sellerMuted: Boolean(row.vendedor_mutado),
+    sellerDoNotDisturb: Boolean(row.vendedor_nao_perturbe),
+    sellerHasPhone: Boolean(row.tem_telefone),
     vehicle:
       row.marca !== undefined
         ? { brand: row.marca, model: row.modelo, modelYear: row.ano_modelo, priceCents: num(row.preco) }
@@ -306,8 +344,27 @@ export function mapScrapeRequest(row: Record<string, unknown>) {
     limit: num(row.limite),
     requestedBy: row.solicitado_por,
     requestedAt: row.solicitado_em,
+    startedAt: row.iniciado_em ?? null,
     processedAt: row.processado_em ?? null,
     scrapeRunId: row.scrape_run_id === null || row.scrape_run_id === undefined ? null : num(row.scrape_run_id),
+    progress: mapScrapeProgress(row.progresso as Record<string, unknown> | null),
+  };
+}
+
+/** `execucoes_solicitadas.progresso`: o coletor grava enquanto roda. Vazio
+ * (`{}`) significa "pegou o pedido e ainda não reportou". */
+function mapScrapeProgress(raw: Record<string, unknown> | null | undefined) {
+  if (!raw || Object.keys(raw).length === 0) return null;
+  return {
+    onlineCount: num(raw.no_ar) ?? 0,
+    pages: num(raw.paginas) ?? 0,
+    requests: num(raw.requisicoes) ?? 0,
+    new: num(raw.novos) ?? 0,
+    updated: num(raw.atualizados) ?? 0,
+    priceChanges: num(raw.precos_alterados) ?? 0,
+    unchanged: num(raw.inalterados) ?? 0,
+    deactivated: num(raw.desativados) ?? 0,
+    errors: num(raw.erros) ?? 0,
   };
 }
 
@@ -332,6 +389,10 @@ export function mapScrapeRun(row: Record<string, unknown>) {
     needsReview: num(row.revisao),
     errors: num(row.erros),
     endedBy: row.encerrado_por,
+    sellerTypeFilter: sellerType(row.tipo_anunciante_filtro),
+    deactivated: num(row.desativados) ?? 0,
+    priceChanges: num(row.precos_alterados) ?? 0,
+    skippedByFilter: num(row.ignorados_filtro) ?? 0,
   };
 }
 
