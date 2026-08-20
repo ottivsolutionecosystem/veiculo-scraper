@@ -11,6 +11,7 @@
     "dev:worker": "npm run worker --workspace=apps/api",
     "db:migrate": "npm run migrate --workspace=apps/api",
     "db:seed": "npm run seed --workspace=apps/api",
+    "db:seed-admin": "npm run seed:admin --workspace=apps/api",
     "db:purge-mocks": "npm run purge-mocks --workspace=apps/api",
     "db:reset-veiculos": "npm run reset-veiculos --workspace=apps/api",
     "db:reprocess": "npm run reprocess-matches --workspace=apps/api",
