@@ -21,10 +21,12 @@ cada aplicação, use a raiz do repositório como **Build Path** e configure
 | work | `deploy/nixpacks/work.toml` | `bash deploy/start-work.sh` | nenhuma |
 | web | `deploy/nixpacks/web.toml` | `node apps/web/server.js` | `3000` |
 
-O serviço `work` contém o worker BullMQ e o coletor Python. Ele precisa de
-`DATABASE_URL`, `REDIS_URL`, `SESSION_SECRET`, `BOT_CONTACT_URL` e
-`BOT_CONTACT_EMAIL`. O `api` precisa de `DATABASE_URL`, `REDIS_URL`,
-`SESSION_SECRET` e `WEB_ORIGIN`. O `web` precisa de `API_URL=http://api:3001`.
+O serviço `work` contém o worker BullMQ e o coletor Python. O Nixpacks
+instala o Python pelo apt (não pelo Nix) e as deps do coletor em
+`/app/.venv`. Ele precisa de `DATABASE_URL`, `REDIS_URL`, `SESSION_SECRET`,
+`BOT_CONTACT_URL` e `BOT_CONTACT_EMAIL`. O `api` precisa de `DATABASE_URL`,
+`REDIS_URL`, `SESSION_SECRET` e `WEB_ORIGIN`. O `web` precisa de
+`API_URL=http://api:3001`.
 
 Crie também Postgres e Redis no mesmo projeto/rede compartilhada, ou aponte
 essas variáveis para serviços já existentes. Os hostnames `api`, `postgres` e

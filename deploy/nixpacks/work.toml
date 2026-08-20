@@ -1,16 +1,22 @@
 # Serviço de processamento: worker BullMQ + coletor Python.
 # Dokploy: raiz do projeto = raiz do repositório.
 # Configure NIXPACKS_CONFIG_FILE=deploy/nixpacks/work.toml.
+#
+# Python vem do apt, não do Nix: python312 + python312Packages.pip não
+# formam um interpretador com `python3 -m pip`, e o store do Nix é
+# somente leitura. O venv em /app/.venv recebe as deps do coletor.
 
 providers = ["node"]
 
 [phases.setup]
-nixPkgs = ["nodejs_20", "python312", "python312Packages.pip"]
+nixPkgs = ["nodejs_20"]
+aptPkgs = ["python3", "python3-pip", "python3-venv"]
 
 [phases.install]
 cmds = [
   "npm ci",
-  "python3 -m pip install --no-cache-dir -r services/collector/requirements.prod.txt",
+  "python3 -m venv /app/.venv",
+  "/app/.venv/bin/pip install --no-cache-dir -r services/collector/requirements.prod.txt",
 ]
 
 [phases.build]
