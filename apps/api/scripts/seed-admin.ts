@@ -1,9 +1,7 @@
 /**
  * Cria ou atualiza o operador bootstrap (login/senha via env).
  * Uso: npm run seed:admin --workspace=apps/api
- *      SEED_ADMIN_LOGIN=admin SEED_ADMIN_PASSWORD=123456 npm run seed:admin --workspace=apps/api
- *
- * A tela de login exige senha com no mínimo 6 caracteres (auth.ts).
+ *      SEED_ADMIN_LOGIN=admin SEED_ADMIN_PASSWORD=outra npm run seed:admin --workspace=apps/api
  */
 import { Pool } from "pg";
 
@@ -11,17 +9,11 @@ import { env } from "../src/env.js";
 import { hashPassword } from "../src/lib/password.js";
 
 const LOGIN = (process.env.SEED_ADMIN_LOGIN ?? "admin").trim().toLowerCase();
-const PASSWORD = process.env.SEED_ADMIN_PASSWORD ?? "123";
+const PASSWORD = process.env.SEED_ADMIN_PASSWORD ?? "12345678";
 const NAME = process.env.SEED_ADMIN_NAME ?? "Administrador";
 const ROLE = process.env.SEED_ADMIN_ROLE ?? "master";
 
 async function main() {
-  if (PASSWORD.length < 6) {
-    console.warn(
-      "Aviso: senha com menos de 6 caracteres não funciona no login da UI. Use SEED_ADMIN_PASSWORD=123456 ou similar.",
-    );
-  }
-
   const pool = new Pool({ connectionString: env.databaseUrl });
   const senhaHash = await hashPassword(PASSWORD);
 
