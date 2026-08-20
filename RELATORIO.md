@@ -1,16 +1,19 @@
-# RELATORIO — Nixpacks work (pip)
+# RELATORIO — web Nixpacks (server.js)
 
 ## Feito
-- Build `work` no Dokploy falhava: `python3 -m pip` → No module named pip.
-- Python do serviço `work` passou a vir do apt (`python3`, `python3-pip`,
-  `python3-venv`); deps do coletor vão para `/app/.venv`.
-- `start-work.sh` usa esse venv via `PYTHON_BIN` quando ele existe.
+- Start do `web` no Dokploy falhava: `Cannot find module '/app/apps/web/server.js'`.
+- Com `output: standalone` no monorepo, o Next gera
+  `apps/web/.next/standalone/apps/web/server.js` — não `apps/web/server.js`.
+- `deploy/start-web.sh` sobe esse arquivo e, se faltar, copia `.next/static`
+  e `public` para dentro do standalone (o Next não inclui esses assets).
+- `web.toml` agora usa o script; o Dockerfile também copia `public`.
 
 ## Decidido por mim e por quê
-- Não insistir em `python312Packages.pip` no Nix: o pacote não entra no
-  site-packages do `python312`, e o store é somente leitura.
-- venv em vez de `pip install --break-system-packages`: isolamento e
-  PEP 668 no Ubuntu do Nixpacks.
+- Espelhar o `api` (`start-*.sh`) em vez de um `node ...` solto no toml:
+  o caminho do standalone depende do `outputFileTracingRoot`.
+- Copiar static/public no build e de novo no start só se ainda não
+  estiverem lá: Dokploy às vezes sobrescreve o comando de start.
 
 ## Pendente de decisão sua
-- Redeploy do serviço `work` no Dokploy com este commit.
+- Redeploy do serviço `web`. Se o Start Command estiver fixo no painel
+  do Dokploy, troque para `sh deploy/start-web.sh`.

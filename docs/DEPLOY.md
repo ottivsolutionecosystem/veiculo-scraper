@@ -19,7 +19,7 @@ cada aplicação, use a raiz do repositório como **Build Path** e configure
 |---|---|---|---|
 | api | `deploy/nixpacks/api.toml` | `sh deploy/start-api.sh` | `3001` |
 | work | `deploy/nixpacks/work.toml` | `bash deploy/start-work.sh` | nenhuma |
-| web | `deploy/nixpacks/web.toml` | `node apps/web/server.js` | `3000` |
+| web | `deploy/nixpacks/web.toml` | `sh deploy/start-web.sh` | `3000` |
 
 O serviço `work` contém o worker BullMQ e o coletor Python. O Nixpacks
 instala o Python pelo apt (não pelo Nix) e as deps do coletor em

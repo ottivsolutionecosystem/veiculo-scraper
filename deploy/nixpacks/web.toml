@@ -8,7 +8,11 @@ nixPkgs = ["nodejs_20"]
 cmds = ["npm ci"]
 
 [phases.build]
-cmds = ["npm run build --workspace=apps/web"]
+cmds = [
+  "npm run build --workspace=apps/web",
+  "cp -a apps/web/.next/static apps/web/.next/standalone/apps/web/.next/static",
+  "cp -a apps/web/public apps/web/.next/standalone/apps/web/public",
+]
 
 [start]
-cmd = "node apps/web/server.js"
+cmd = "sh deploy/start-web.sh"
