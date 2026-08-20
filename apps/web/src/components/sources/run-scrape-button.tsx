@@ -18,7 +18,7 @@ export function RunScrapeButton({
   source: string;
   locked: boolean;
   pendingRequest: ScrapeRequest | null;
-  onRefresh?: () => void;
+  onRefresh?: () => void | Promise<unknown>;
 }) {
   const [sellerType, setSellerType] = React.useState<string>("individual");
   const [running, setRunning] = React.useState(false);
@@ -39,7 +39,7 @@ export function RunScrapeButton({
       await triggerScrapeRun(source, {
         sellerType: sellerType === "individual" || sellerType === "dealer" ? sellerType : undefined,
       });
-      onRefresh?.();
+      await onRefresh?.();
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Falha ao pedir a coleta.");
     } finally {

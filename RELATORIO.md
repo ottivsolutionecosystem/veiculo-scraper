@@ -1,15 +1,20 @@
-# RELATORIO — seed admin pelo console
+# RELATORIO — loading honesto da coleta + work resiliente
 
 ## Feito
-- Script `apps/api/scripts/seed-admin.ts`: cria ou atualiza operador `admin`
-  (papel `master` por padrão), senha padrão `12345678` via hash scrypt.
-- Comandos: `npm run db:seed-admin` (raiz) ou
-  `npm run seed:admin --workspace=apps/api`.
+- UI Fontes: `queued` / `stale` (coletor parado) / `started` (listando) /
+  `running` (barra). Some o “Nunca executada” enquanto há pedido na fila.
+- API: `pendingRequest.phase` (derivado; teste em scrape-status.test.ts).
+- `start-work.sh`: coletor e worker com loop próprio; um cair não mata o outro.
+- Loop do coletor com log FATAL e pulso em `/tmp/collector-ok`; healthcheck
+  no Compose (`collector-health`).
+- docs/DEPLOY.md e docs/API.md atualizados.
 
 ## Decidido por mim e por quê
-- Idempotente: se `admin` já existe, atualiza senha/nome/papel e reativa.
-- Senha padrão `12345678` (8 caracteres, válida no login da UI).
+- 90s sem `iniciado_em` = coletor parado (loop é 15s; folga de boot).
+- Não mexi em `services/collector` (território fechado). Progresso na
+  enumeração continua só no fim da listagem; a fase `started` cobre isso.
 
 ## Pendente de decisão sua
-- Rodar no Dokploy (container api) com `DATABASE_URL` definida.
-- Rotacionar senha após bootstrap se usar valor simples em produção.
+- No Dokploy: serviço `work` Running com `BOT_CONTACT_*` e o mesmo
+  `DATABASE_URL` da api. Redeploy depois deste commit.
+- O pedido das 14:16 segue na fila — não clique de novo.

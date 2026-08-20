@@ -21,12 +21,22 @@ cada aplicação, use a raiz do repositório como **Build Path** e configure
 | work | `deploy/nixpacks/work.toml` | `bash deploy/start-work.sh` | nenhuma |
 | web | `deploy/nixpacks/web.toml` | `sh deploy/start-web.sh` | `3000` |
 
-O serviço `work` contém o worker BullMQ e o coletor Python. O Nixpacks
+O serviço `work` é obrigatório para a raspagem. Sem ele o painel sobe, o
+botão grava o pedido, e a tela fica em “Coletor parado”. O Nixpacks
 instala o Python pelo apt (não pelo Nix) e as deps do coletor em
 `/app/.venv`. Ele precisa de `DATABASE_URL`, `REDIS_URL`, `SESSION_SECRET`,
-`BOT_CONTACT_URL` e `BOT_CONTACT_EMAIL`. O `api` precisa de `DATABASE_URL`,
+`BOT_CONTACT_URL` e `BOT_CONTACT_EMAIL` **nesse serviço**. O `api` precisa de `DATABASE_URL`,
 `REDIS_URL`, `SESSION_SECRET` e `WEB_ORIGIN`. O `web` precisa de
 `API_URL=http://api:3001`.
+
+Se o coletor cair, o worker BullMQ **continua**. No log do `work` procure:
+
+- `work: coletor iniciando` e `coletor: ciclo pedidos shopcar` — saudável
+- `FATAL: defina BOT_CONTACT_URL` — variáveis no serviço errado
+- `coletor saiu rc=` — o loop tenta de novo em 15s; o worker não cai junto
+- `pedido #… [shopcar]` — pegou a fila
+
+Pedido já gravado não precisa de outro clique (409 se empilhar).
 
 Crie também Postgres e Redis no mesmo projeto/rede compartilhada, ou aponte
 essas variáveis para serviços já existentes. Os hostnames `api`, `postgres` e

@@ -146,6 +146,8 @@ export interface ScrapeRequest {
   scrapeRunId: number | null;
   /** Contadores que o coletor atualiza durante a execução. */
   progress: ScrapeProgress | null;
+  /** Derivado no GET: queued / stale (coletor parado) / started / running. */
+  phase?: "queued" | "stale" | "started" | "running";
 }
 
 export interface SourceWithLastRun extends Source {

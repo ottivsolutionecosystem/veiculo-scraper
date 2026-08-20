@@ -28,7 +28,7 @@ export function SourcesBoard() {
   const [error, setError] = React.useState<string | null>(null);
 
   const reload = React.useCallback(() => {
-    void getSources()
+    return getSources()
       .then((next) => {
         setSources(next);
         setError(null);
@@ -58,8 +58,10 @@ export function SourcesBoard() {
   return (
     <div className="space-y-4 p-4 sm:p-6">
       <p className="text-sm text-muted-foreground">
-        {sources.length} fontes configuradas. O botão abaixo só grava o pedido; quem raspa é o coletor Python
-        (`npm run dev:collector`). <code className="rounded bg-muted px-1">webmotors</code> e{" "}
+        {sources.length} fontes configuradas. O botão só grava o pedido no Postgres; quem raspa é o
+        serviço <code className="rounded bg-muted px-1">work</code> (VPS) ou{" "}
+        <code className="rounded bg-muted px-1">npm run dev:collector</code> (local).{" "}
+        <code className="rounded bg-muted px-1">webmotors</code> e{" "}
         <code className="rounded bg-muted px-1">olx</code> nascem desligadas — não são ligadas por aqui.
       </p>
 
@@ -84,7 +86,18 @@ export function SourcesBoard() {
                   <Badge variant="outline">{ACCESS_LEVEL_LABELS[source.accessLevel]}</Badge>
                   <p className="text-xs text-muted-foreground">{source.legalBasis}</p>
                   {source.cursor && <p className="text-xs">Cursor: {source.cursor}</p>}
-                  {source.lastRun ? (
+                  {source.pendingRequest ? (
+                    source.lastRun ? (
+                      <div className="border-t pt-2 text-xs text-muted-foreground">
+                        <p>
+                          Última execução concluída: {formatDateTime(source.lastRun.finishedAt)}
+                          {source.lastRun.sellerTypeFilter
+                            ? ` (${SELLER_TYPE_LABELS[source.lastRun.sellerTypeFilter]})`
+                            : ""}
+                        </p>
+                      </div>
+                    ) : null
+                  ) : source.lastRun ? (
                     <div className="border-t pt-2 text-xs text-muted-foreground">
                       <p>
                         Última execução: {formatDateTime(source.lastRun.finishedAt)}

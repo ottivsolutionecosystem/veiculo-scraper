@@ -5,6 +5,8 @@
  * JSON à mão a partir de `row.*` fora daqui.
  */
 
+import { scrapePhase } from "./scrape-status.js";
+
 const num = (v: unknown): number | null => (v === null || v === undefined ? null : Number(v));
 
 function iso(v: unknown): string | null {
@@ -337,17 +339,25 @@ export function mapSource(row: Record<string, unknown>) {
 
 /** Linha de `execucoes_solicitadas` (docs/MODELO.md — Fase 4). */
 export function mapScrapeRequest(row: Record<string, unknown>) {
+  const progress = mapScrapeProgress(row.progresso as Record<string, unknown> | null);
+  const requestedAt = iso(row.solicitado_em);
+  const startedAt = iso(row.iniciado_em);
   return {
     id: num(row.id),
     source: row.fonte,
     sellerType: sellerType(row.tipo_anunciante_filtro),
     limit: num(row.limite),
     requestedBy: row.solicitado_por,
-    requestedAt: row.solicitado_em,
-    startedAt: row.iniciado_em ?? null,
-    processedAt: row.processado_em ?? null,
+    requestedAt,
+    startedAt,
+    processedAt: iso(row.processado_em),
     scrapeRunId: row.scrape_run_id === null || row.scrape_run_id === undefined ? null : num(row.scrape_run_id),
-    progress: mapScrapeProgress(row.progresso as Record<string, unknown> | null),
+    progress,
+    phase: scrapePhase({
+      requestedAt,
+      startedAt,
+      hasProgress: progress !== null,
+    }),
   };
 }
 

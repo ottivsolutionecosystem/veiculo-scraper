@@ -229,7 +229,10 @@ filtro ano/combustível), não recalculados na hora do GET.
 
 `GET /api/sources`: `Source` [E] (`fontes`) + última linha de
 `scrape_runs` [E] por fonte + `pendingRequest` (última linha não
-processada de `execucoes_solicitadas` [N], Fase 4).
+processada de `execucoes_solicitadas` [N], Fase 4). `pendingRequest.phase`
+é derivado, não coluna: `queued` (pedido fresco), `stale` (passou de 90s
+sem `iniciado_em` — coletor/work parado), `started` (coletor pegou, ainda
+sem `progresso`), `running` (tem contadores).
 
 `PATCH`: 403 se `source` não for `shopcar` — `webmotors` e `olx` não têm
 self-service de ligar por API (CLAUDE.md: "não ligue por conta própria");
