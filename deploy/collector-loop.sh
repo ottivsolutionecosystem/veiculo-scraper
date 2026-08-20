@@ -11,6 +11,6 @@ if [ -z "${DATABASE_URL:-}" ]; then
 fi
 echo "coletor em loop (pedidos shopcar a cada 15s)"
 while true; do
-  python -m captacao_bot.cli pedidos --fonte shopcar || echo "pedido falhou; nova tentativa em 15s" >&2
+  "${PYTHON_BIN:-python3}" -m captacao_bot.cli pedidos --fonte shopcar || echo "pedido falhou; nova tentativa em 15s" >&2
   sleep 15
 done

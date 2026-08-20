@@ -2,15 +2,15 @@
 # Dokploy: raiz do projeto = raiz do repositório.
 # Configure NIXPACKS_CONFIG_FILE=deploy/nixpacks/work.toml.
 
-providers = ["node", "python"]
+providers = ["node"]
 
 [phases.setup]
-nixPkgs = ["nodejs_20"]
+nixPkgs = ["nodejs_20", "python312", "python312Packages.pip"]
 
 [phases.install]
 cmds = [
   "npm ci",
-  "pip install --no-cache-dir -r services/collector/requirements.prod.txt",
+  "python3 -m pip install --no-cache-dir -r services/collector/requirements.prod.txt",
 ]
 
 [phases.build]
