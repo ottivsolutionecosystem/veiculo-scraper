@@ -1,0 +1,14 @@
+# Dokploy: raiz do projeto = raiz do repositório.
+# Configure NIXPACKS_CONFIG_FILE=deploy/nixpacks/web.toml.
+
+[phases.setup]
+nixPkgs = ["nodejs_20"]
+
+[phases.install]
+cmds = ["npm ci"]
+
+[phases.build]
+cmds = ["npm run build --workspace=apps/web"]
+
+[start]
+cmd = "node apps/web/server.js"
