@@ -13,6 +13,7 @@
     "purge-mocks": "tsx scripts/purge-mocks.ts",
     "reset-veiculos": "tsx scripts/reset-veiculos.ts",
     "reprocess-matches": "tsx scripts/reprocess-matches.ts",
+    "bootstrap-normalize": "tsx scripts/bootstrap-normalize.ts",
     "reset-collected": "tsx scripts/reset-collected.ts",
     "build": "tsc -p tsconfig.json",
     "start": "node dist/src/server.js",

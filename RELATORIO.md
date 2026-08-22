@@ -1,14 +1,14 @@
-# RELATORIO — COLLECTOR_ENABLED no work
+# RELATORIO — worker BullMQ + bootstrap normalize
 
 ## Feito
-- `start-work.sh`: coletor opcional via `COLLECTOR_ENABLED=false` ou omitido se
-  `BOT_CONTACT_*` ausentes (collector separado no Dokploy).
-- `work.env.example` e `docs/DEPLOY.md` atualizados.
+- `worker.ts`: `maxRetriesPerRequest: null` (BullMQ/ioredis), logs de ingest e falhas.
+- `bootstrap-normalize.ts`: promove 1618 anúncios órfãos sem depender do Redis.
+- `work.env.example`: nota sobre formato `REDIS_URL` no Dokploy.
 
 ## Decidido por mim e por quê
-- Padrão sem `COLLECTOR_ENABLED`: só sobe coletor se `BOT_CONTACT_*` existem —
-  evita loop FATAL quando o collector é outro serviço.
+- 1618 `anuncios` sem `anuncio_veiculo` = ingest/normalize não rodou; PG 18 não é causa.
+- Script de bootstrap para destravar produção; fix do worker evita repetir.
 
 ## Pendente de decisão sua
-- No Dokploy work: `COLLECTOR_ENABLED=false` e redeploy. Logs do collector
-  separado devem mostrar `coletor: ciclo pedidos shopcar`.
+- Redeploy do `work` e ver log `ingest: N normalize(s) enfileirado(s)`.
+- Ou no container api/work: `npm run bootstrap-normalize --workspace=apps/api`.

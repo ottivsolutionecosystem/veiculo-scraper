@@ -19,7 +19,20 @@ import { generateThumbnails } from "./jobs/thumbs.js";
  * o nome existe na fila só por paridade com o SPEC, e o processor delega
  * pro mesmo código.
  */
-const connection: ConnectionOptions = { url: env.redisUrl } as unknown as ConnectionOptions;
+// BullMQ usa comandos bloqueantes — maxRetriesPerRequest precisa ser null no ioredis.
+const connection: ConnectionOptions = {
+  url: env.redisUrl,
+  maxRetriesPerRequest: null,
+} as unknown as ConnectionOptions;
+
+function wireWorkerLogs(worker: Worker, nome: string) {
+  worker.on("failed", (job, err) => {
+    console.error(`worker ${nome} job ${job?.id ?? "?"} falhou:`, err);
+  });
+  worker.on("error", (err) => {
+    console.error(`worker ${nome} erro de conexão/redis:`, err);
+  });
+}
 
 // BullMQ usa ":" como separador interno de chave Redis — nomes de fila não
 // podem conter ":". "match:fipe"/"match:interesse" (nomenclatura do SPEC,
@@ -153,17 +166,15 @@ export function startWorkers() {
       if (rows.length > 0 || priceRows.length > 0 || dirtyRows[0]?.precisa) {
         await refreshFilaDoDiaAsync();
       }
+      if (rows.length > 0) {
+        console.log(`ingest: ${rows.length} normalize(s) enfileirado(s)`);
+      }
       return { enqueued: rows.length, rematch: priceRows.length };
     },
     { connection },
   );
 
-  // fila_do_dia é materializada — refresh a cada 10 min (db/migrations/0011).
-  // Descarte e resultado de ligação também disparam refresh direto (db.ts).
-  void queues.refreshFila.add("refresh", {}, { repeat: { every: 10 * 60 * 1000 }, removeOnComplete: true });
-  void queues.ingest.add("scan", {}, { repeat: { every: 15_000 }, removeOnComplete: true });
-
-  return [
+  const workers = [
     normalizeWorker,
     matchFipeWorker,
     scoreWorker,
@@ -174,6 +185,16 @@ export function startWorkers() {
     refreshFilaWorker,
     ingestWorker,
   ];
+  for (const w of workers) {
+    wireWorkerLogs(w, w.name);
+  }
+
+  // fila_do_dia é materializada — refresh a cada 10 min (db/migrations/0011).
+  // Descarte e resultado de ligação também disparam refresh direto (db.ts).
+  void queues.refreshFila.add("refresh", {}, { repeat: { every: 10 * 60 * 1000 }, removeOnComplete: true });
+  void queues.ingest.add("scan", {}, { repeat: { every: 15_000 }, removeOnComplete: true });
+
+  return workers;
 }
 
 if (isMainModule(import.meta.url)) {
