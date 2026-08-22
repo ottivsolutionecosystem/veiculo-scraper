@@ -1,0 +1,24 @@
+# Coletor Python — ciclo de pedidos shopcar no Postgres.
+# Dokploy: raiz do projeto = raiz do repositório.
+# Configure NIXPACKS_CONFIG_FILE=deploy/nixpacks/collector.toml.
+#
+# Python vem do apt, não do Nix: python312 + python312Packages.pip não
+# formam um interpretador com `python3 -m pip`, e o store do Nix é
+# somente leitura. O venv em /app/.venv recebe as deps do coletor.
+
+providers = []
+
+[variables]
+PYTHONUNBUFFERED = "1"
+
+[phases.setup]
+aptPkgs = ["python3", "python3-pip", "python3-venv"]
+
+[phases.install]
+cmds = [
+  "python3 -m venv /app/.venv",
+  "/app/.venv/bin/pip install --no-cache-dir -r services/collector/requirements.prod.txt",
+]
+
+[start]
+cmd = "bash deploy/start-collector.sh"

@@ -15,19 +15,22 @@ Crie um projeto no Dokploy e conecte os três serviços ao mesmo repositório. E
 cada aplicação, use a raiz do repositório como **Build Path** e configure
 `NIXPACKS_CONFIG_FILE` com o arquivo correspondente:
 
-| Serviço | Configuração | Start | Porta |
-|---|---|---|---|
-| api | `deploy/nixpacks/api.toml` | `sh deploy/start-api.sh` | `3001` |
-| work | `deploy/nixpacks/work.toml` | `bash deploy/start-work.sh` | nenhuma |
-| web | `deploy/nixpacks/web.toml` | `sh deploy/start-web.sh` | `3000` |
+| Serviço | Configuração | Variáveis (exemplo) | Start | Porta |
+|---|---|---|---|---|
+| api | `deploy/nixpacks/api.toml` | `deploy/nixpacks/api.env.example` | `sh deploy/start-api.sh` | `3001` |
+| work | `deploy/nixpacks/work.toml` | `deploy/nixpacks/work.env.example` | `bash deploy/start-work.sh` | nenhuma |
+| collector | `deploy/nixpacks/collector.toml` | `deploy/nixpacks/collector.env.example` | `bash deploy/start-collector.sh` | nenhuma |
+| web | `deploy/nixpacks/web.toml` | `deploy/nixpacks/web.env.example` | `sh deploy/start-web.sh` | `3000` |
 
-O serviço `work` é obrigatório para a raspagem. Sem ele o painel sobe, o
-botão grava o pedido, e a tela fica em “Coletor parado”. O Nixpacks
-instala o Python pelo apt (não pelo Nix) e as deps do coletor em
-`/app/.venv`. Ele precisa de `DATABASE_URL`, `REDIS_URL`, `SESSION_SECRET`,
-`BOT_CONTACT_URL` e `BOT_CONTACT_EMAIL` **nesse serviço**. O `api` precisa de `DATABASE_URL`,
-`REDIS_URL`, `SESSION_SECRET` e `WEB_ORIGIN`. O `web` precisa de
-`API_URL=http://api:3001`.
+Para a raspagem, use **ou** o serviço `work` (worker BullMQ + coletor no mesmo
+processo) **ou** o `work` só com worker e o `collector` separado. Sem coletor
+rodando, o painel sobe, o botão grava o pedido, e a tela fica em “Coletor
+parado”. O Nixpacks instala o Python pelo apt (não pelo Nix) e as deps do
+coletor em `/app/.venv`. O `collector` precisa de `DATABASE_URL`,
+`BOT_CONTACT_URL` e `BOT_CONTACT_EMAIL`. O `work` precisa de `DATABASE_URL`,
+`REDIS_URL`, `SESSION_SECRET`, `BOT_CONTACT_URL` e `BOT_CONTACT_EMAIL` (se o
+coletor roda nele). O `api` precisa de `DATABASE_URL`, `REDIS_URL`,
+`SESSION_SECRET` e `WEB_ORIGIN`. O `web` precisa de `API_URL=http://api:3001`.
 
 Se o coletor cair, o worker BullMQ **continua**. No log do `work` procure:
 
