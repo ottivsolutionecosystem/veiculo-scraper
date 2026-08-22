@@ -1,12 +1,14 @@
-# RELATORIO — env.example por serviço Nixpacks
+# RELATORIO — COLLECTOR_ENABLED no work
 
 ## Feito
-- `deploy/nixpacks/*.env.example` para api, work, web e collector.
-- `docs/DEPLOY.md`: coluna de variáveis na tabela Dokploy.
+- `start-work.sh`: coletor opcional via `COLLECTOR_ENABLED=false` ou omitido se
+  `BOT_CONTACT_*` ausentes (collector separado no Dokploy).
+- `work.env.example` e `docs/DEPLOY.md` atualizados.
 
 ## Decidido por mim e por quê
-- `work` repete obrigatórias da api (worker importa `env.ts`) + `BOT_CONTACT_*`
-  do coletor no mesmo processo.
+- Padrão sem `COLLECTOR_ENABLED`: só sobe coletor se `BOT_CONTACT_*` existem —
+  evita loop FATAL quando o collector é outro serviço.
 
 ## Pendente de decisão sua
-- Copiar `work.env.example` no Dokploy e ajustar hostnames/senhas da sua rede.
+- No Dokploy work: `COLLECTOR_ENABLED=false` e redeploy. Logs do collector
+  separado devem mostrar `coletor: ciclo pedidos shopcar`.

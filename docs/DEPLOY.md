@@ -23,14 +23,17 @@ cada aplicação, use a raiz do repositório como **Build Path** e configure
 | web | `deploy/nixpacks/web.toml` | `deploy/nixpacks/web.env.example` | `sh deploy/start-web.sh` | `3000` |
 
 Para a raspagem, use **ou** o serviço `work` (worker BullMQ + coletor no mesmo
-processo) **ou** o `work` só com worker e o `collector` separado. Sem coletor
-rodando, o painel sobe, o botão grava o pedido, e a tela fica em “Coletor
+processo) **ou** o `work` só com worker e o `collector` separado. No `work` com
+collector separado, defina `COLLECTOR_ENABLED=false` — sem isso o script ainda
+tenta subir o coletor e repete FATAL no log. Sem coletor rodando em algum
+serviço, o painel sobe, o botão grava o pedido, e a tela fica em “Coletor
 parado”. O Nixpacks instala o Python pelo apt (não pelo Nix) e as deps do
 coletor em `/app/.venv`. O `collector` precisa de `DATABASE_URL`,
 `BOT_CONTACT_URL` e `BOT_CONTACT_EMAIL`. O `work` precisa de `DATABASE_URL`,
-`REDIS_URL`, `SESSION_SECRET`, `BOT_CONTACT_URL` e `BOT_CONTACT_EMAIL` (se o
-coletor roda nele). O `api` precisa de `DATABASE_URL`, `REDIS_URL`,
-`SESSION_SECRET` e `WEB_ORIGIN`. O `web` precisa de `API_URL=http://api:3001`.
+`REDIS_URL`, `SESSION_SECRET` e `WEB_ORIGIN`; para coletor junto, `BOT_CONTACT_*`
+(ou `COLLECTOR_ENABLED=false` se o collector é outro serviço). O `api` precisa
+de `DATABASE_URL`, `REDIS_URL`, `SESSION_SECRET` e `WEB_ORIGIN`. O `web` precisa
+de `API_URL=http://api:3001`.
 
 Se o coletor cair, o worker BullMQ **continua**. No log do `work` procure:
 
