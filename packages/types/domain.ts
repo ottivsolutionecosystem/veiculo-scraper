@@ -113,6 +113,8 @@ export interface ScrapeProgress {
   unchanged: number;
   deactivated: number;
   errors: number;
+  /** listagem = paginando a busca; fichas = abrindo anúncio. */
+  stage?: "listing" | "detailing";
 }
 
 // ---------------------------------------------------------------------------

@@ -1,14 +1,17 @@
-# RELATORIO — worker BullMQ + bootstrap normalize
+# RELATORIO — progresso ao vivo na aba Fontes
 
 ## Feito
-- `worker.ts`: `maxRetriesPerRequest: null` (BullMQ/ioredis), logs de ingest e falhas.
-- `bootstrap-normalize.ts`: promove 1618 anúncios órfãos sem depender do Redis.
-- `work.env.example`: nota sobre formato `REDIS_URL` no Dokploy.
+- Coletor publica `progresso` a cada página da listagem (`fase=listagem`)
+  e a cada 5 fichas (`fase=fichas`).
+- Fontes mostra anúncios achados, páginas, requisições, erros, novos e
+  atualizados enquanto raspa — não espera o fim da enumeração.
 
 ## Decidido por mim e por quê
-- 1618 `anuncios` sem `anuncio_veiculo` = ingest/normalize não rodou; PG 18 não é causa.
-- Script de bootstrap para destravar produção; fix do worker evita repetir.
+- Pedido explícito para mexer no coletor. Só `_enumerar` / `_detalhar`
+  e o JSON `fase`; sem mudar seletor nem ritmo.
+- Commit no `progresso` a cada página (~4s) é barato e é o que a UI lê.
 
 ## Pendente de decisão sua
-- Redeploy do `work` e ver log `ingest: N normalize(s) enfileirado(s)`.
-- Ou no container api/work: `npm run bootstrap-normalize --workspace=apps/api`.
+- Redeploy do serviço **work** (imagem do coletor) para valer na VPS.
+- Pedido antigo na fila: se ainda estiver rodando, só a próxima coleta
+  ganha o progresso página a página.

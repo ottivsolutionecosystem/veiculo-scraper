@@ -55,6 +55,8 @@ class ResultadoColeta:
     desativados: int = 0
     anuncios_no_ar: int = 0
     paginas_listagem: int = 0
+    # "listagem" | "fichas" — a tela Fontes troca o texto da barra.
+    fase: str = "listagem"
     tipo_anunciante_filtro: str | None = None
     encerrado_por: str = "fim"
     iniciado_em: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
@@ -84,6 +86,7 @@ class ResultadoColeta:
             "inalterados": self.inalterados,
             "desativados": self.desativados,
             "erros": self.erros,
+            "fase": self.fase,
         }
 
 
@@ -108,8 +111,11 @@ class Runner:
             return res
 
         try:
-            cards, enumeracao_completa = self._enumerar(res, tipo_anunciante)
+            cards, enumeracao_completa = self._enumerar(
+                res, tipo_anunciante, ao_progredir
+            )
             res.anuncios_no_ar = len(cards)
+            res.fase = "fichas"
             self._notificar(res, ao_progredir)
 
             self._detalhar(res, cards, limite, tipo_anunciante, ao_progredir)
@@ -154,16 +160,22 @@ class Runner:
             log.warning("%s: falha ao publicar progresso: %s", self.cfg.fonte, exc)
 
     def _enumerar(
-        self, res: ResultadoColeta, tipo_anunciante: str | None
+        self,
+        res: ResultadoColeta,
+        tipo_anunciante: str | None,
+        ao_progredir: Callable[[ResultadoColeta], None] | None = None,
     ) -> tuple[list[CardListagem], bool]:
         """Fase 1. Devolve os cards no ar e se a enumeração chegou ao fim —
         varredura de fora do ar só é segura quando chegou."""
+        res.fase = "listagem"
         if self.cfg.usar_sitemap:
             urls = list(urls_de_sitemap(self.client, self.cfg.base_url, res))
             if urls:
                 cards = [
                     CardListagem(url=u, id_externo=self.adapter.id_externo(u)) for u in urls
                 ]
+                res.anuncios_no_ar = len(cards)
+                self._notificar(res, ao_progredir)
                 # Sitemap não é filtrado por tipo de anunciante: sem varredura.
                 return cards, tipo_anunciante is None
             log.info("%s: sem sitemap utilizável, caindo para listagem", self.cfg.fonte)
@@ -179,6 +191,7 @@ class Runner:
                 res.requisicoes += 1
                 if not resposta.ok or resposta.html is None:
                     res.erros += 1
+                    self._notificar(res, ao_progredir)
                     completa = False
                     break
                 res.paginas_listagem += 1
@@ -194,6 +207,8 @@ class Runner:
                         continue
                     vistos.add(card.id_externo)
                     cards.append(card)
+                res.anuncios_no_ar = len(cards)
+                self._notificar(res, ao_progredir)
                 pagina = self.adapter.proxima_pagina(resposta.html, pagina)
 
         return cards, completa
@@ -220,6 +235,8 @@ class Runner:
             if estado is not None and not self._precisa_abrir(estado, card, agora, revisita):
                 res.inalterados += 1
                 self.storage.marcar_visto(self.cfg.fonte, card.url)
+                if indice % 5 == 0:
+                    self._notificar(res, ao_progredir)
                 continue
 
             resposta = self.client.get(
@@ -284,7 +301,7 @@ class Runner:
                 if salvo.preco_mudou:
                     res.precos_alterados += 1
 
-            if indice % 10 == 0:
+            if indice % 5 == 0:
                 self._notificar(res, ao_progredir)
 
     def _precisa_abrir(

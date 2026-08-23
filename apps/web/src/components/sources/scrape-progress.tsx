@@ -80,24 +80,25 @@ export function ScrapeProgress({ request, onRefresh }: { request: ScrapeRequest;
           <Loader2 className="h-3 w-3 animate-spin" />
           Coletando {filtro}… listando anúncios no ar
         </p>
-        <p className="text-xs text-muted-foreground">
-          O coletor já pegou o pedido. A barra de contagem aparece depois da listagem.
-        </p>
+        <p className="text-xs text-muted-foreground">Primeira página ainda não voltou. Atualiza a cada 3s.</p>
       </div>
     );
   }
 
   const processados = p.new + p.updated + p.unchanged;
+  const listando = p.stage === "listing" || (p.stage !== "detailing" && processados === 0 && p.pages > 0);
   const total = p.onlineCount > 0 ? p.onlineCount : processados;
-  const pct = total > 0 ? Math.min(100, Math.round((processados / total) * 100)) : 0;
+  const pct = listando ? 0 : total > 0 ? Math.min(100, Math.round((processados / total) * 100)) : 0;
 
   return (
     <div className="space-y-1.5">
       <p className="flex items-center gap-2 text-xs font-medium">
         <Loader2 className="h-3 w-3 animate-spin" />
-        Coletando {filtro}… {processados} de {p.onlineCount} anúncios no ar
+        {listando
+          ? `Listando ${filtro}… ${p.onlineCount} anúncios em ${p.pages} páginas`
+          : `Abrindo fichas (${filtro})… ${processados} de ${p.onlineCount} anúncios no ar`}
       </p>
-      <Progress value={pct} />
+      <Progress value={pct} className={listando ? "animate-pulse" : undefined} />
       <p className="text-xs text-muted-foreground">
         {p.new} novos · {p.updated} atualizados · {p.priceChanges} mudaram de preço · {p.unchanged} sem mudança ·{" "}
         {p.deactivated} saíram do ar

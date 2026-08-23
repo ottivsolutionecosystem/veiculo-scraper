@@ -375,6 +375,7 @@ function mapScrapeProgress(raw: Record<string, unknown> | null | undefined) {
     unchanged: num(raw.inalterados) ?? 0,
     deactivated: num(raw.desativados) ?? 0,
     errors: num(raw.erros) ?? 0,
+    stage: raw.fase === "fichas" ? "detailing" : raw.fase === "listagem" ? "listing" : undefined,
   };
 }
 

@@ -232,7 +232,8 @@ filtro ano/combustível), não recalculados na hora do GET.
 processada de `execucoes_solicitadas` [N], Fase 4). `pendingRequest.phase`
 é derivado, não coluna: `queued` (pedido fresco), `stale` (passou de 90s
 sem `iniciado_em` — coletor/work parado), `started` (coletor pegou, ainda
-sem `progresso`), `running` (tem contadores).
+sem `progresso`), `running` (tem contadores). `progress.stage` vem de
+`progresso.fase`: `listing` a cada página da busca, `detailing` nas fichas.
 
 `PATCH`: 403 se `source` não for `shopcar` — `webmotors` e `olx` não têm
 self-service de ligar por API (CLAUDE.md: "não ligue por conta própria");
