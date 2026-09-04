@@ -6,6 +6,7 @@ import { SlidersHorizontal, X } from "lucide-react";
 
 import { BRANDS, SOURCES } from "@/lib/catalog";
 import { SCORE_BAND_LABELS, sourceLabel } from "@/lib/labels";
+import { useChromeVisibility } from "@/components/layout/chrome-visibility";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
@@ -108,9 +109,15 @@ export function QueueFilters() {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
+  const { lockChrome } = useChromeVisibility();
   const [q, setQ] = React.useState(searchParams.get("q") ?? "");
   const [priceMax, setPriceMax] = React.useState(searchParams.get("priceMax") ?? "");
   const [open, setOpen] = React.useState(false);
+
+  React.useEffect(() => {
+    lockChrome("queue-filters", open);
+    return () => lockChrome("queue-filters", false);
+  }, [open, lockChrome]);
 
   React.useEffect(() => {
     setQ(searchParams.get("q") ?? "");
@@ -177,7 +184,7 @@ export function QueueFilters() {
       </div>
 
       <div className="md:hidden">
-        <Button type="button" variant="outline" className="w-full" onClick={() => setOpen(true)}>
+        <Button type="button" variant="outline" className="min-w-[7rem]" onClick={() => setOpen(true)}>
           <SlidersHorizontal />
           Filtros{activeCount > 0 ? ` (${activeCount})` : ""}
         </Button>

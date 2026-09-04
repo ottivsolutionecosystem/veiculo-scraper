@@ -1,15 +1,18 @@
-# RELATORIO — app responsivo e PWA
+# RELATORIO — chrome mobile da fila
 
 ## Feito
-- Casco mobile: barra inferior (Fila / Kanban / Estoque) + menu hamburger
-  para administração. Desktop segue com sidebar.
-- Área segura, botões e inputs em 44px no toque.
-- Filtros da fila em folha no telefone. Tabelas viram cards.
-- PWA: manifest, ícones, service worker, banner de instalar.
+- No telefone, a faixa de cima da fila ficou curta: chips no lugar
+  dos 3 cards, particular/loja e Filtros na mesma linha, texto de
+  ajuda some.
+- Ao descer a lista, topbar e filtros somem; ao subir (ou no topo),
+  voltam. Barra de baixo não mexe. Desktop igual.
+- Scroll escutado na lista virtualizada (é ela que rola, não a
+  página). Menu e folha de filtros travam o hide.
 
 ## Decidido por mim e por quê
-- SW nativo (sem next-pwa). Network-first nas páginas, cache-first em
-  `/_next/static`. Não cacheia `/api`.
+- Enxugar e esconder. Só hide deixava os cards grandes no começo.
+- `grid-template-rows` no collapse: a lista ganha a altura, não fica
+  buraco. Safe area fica quando a topbar some (notch).
 
 ## Pendente de decisão sua
-- Redeploy do **web**. Instalar no celular via HTTPS.
+- Nada. Redeploy do web para o celular pegar.

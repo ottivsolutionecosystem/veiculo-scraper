@@ -29,6 +29,10 @@ export function CoverageBar({
   const scope = searchParams.get("scope") ?? "untouched";
 
   useEffect(() => {
+    setStats(initial);
+  }, [initial]);
+
+  useEffect(() => {
     void getQueueStats({ sellerType }).then(setStats);
   }, [operatorId, sellerType]);
 
@@ -39,8 +43,28 @@ export function CoverageBar({
   }
 
   return (
-    <div className="space-y-3">
-      <div className="grid grid-cols-3 gap-2">
+    <div className="space-y-2 md:space-y-3">
+      <div className="flex gap-1.5 md:hidden">
+        {METRICS.map((metric) => {
+          const active = scope === metric.value;
+          return (
+            <button
+              key={metric.value}
+              type="button"
+              onClick={() => go(metric.value)}
+              className={cn(
+                "min-h-11 flex-1 rounded-full border px-2 py-1 text-center",
+                active ? "border-primary bg-primary/10 text-navy" : "border-navy/10 bg-card text-navy/70",
+              )}
+            >
+              <span className="block text-[10px] font-medium text-muted-foreground">{metric.label}</span>
+              <span className="text-sm font-semibold tabular-nums">{stats[metric.key]}</span>
+            </button>
+          );
+        })}
+      </div>
+
+      <div className="hidden grid-cols-3 gap-2 md:grid">
         {METRICS.map((metric) => {
           const active = scope === metric.value;
           return (
@@ -76,10 +100,12 @@ export function CoverageBar({
             {stats.online} no ar — ver todos os livres
           </button>
         ) : (
-          <p className="text-xs text-muted-foreground">Livres no mercado. O que você assumiu está no kanban.</p>
+          <p className="hidden text-xs text-muted-foreground md:block">
+            Livres no mercado. O que você assumiu está no kanban.
+          </p>
         )}
         {isMaster && stats.ranking.length > 0 && (
-          <p className="text-xs text-muted-foreground">
+          <p className="hidden text-xs text-muted-foreground md:block">
             Time hoje:{" "}
             {stats.ranking.map((r, i) => (
               <span key={r.operator}>

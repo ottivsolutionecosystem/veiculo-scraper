@@ -13,6 +13,8 @@ import { QueueView } from "@/components/queue/queue-view";
 import { SellerTypeFilter } from "@/components/queue/seller-type-filter";
 import { QueueFilters } from "@/components/queue/queue-filters";
 import { CoverageBar } from "@/components/queue/coverage-bar";
+import { useChromeVisibility } from "@/components/layout/chrome-visibility";
+import { cn } from "@/lib/utils";
 
 const SCOPES: QueueScope[] = ["untouched", "mine", "followup", "price_drop", "all", "tagged"];
 
@@ -55,6 +57,7 @@ function asSellerType(raw: string | null): "individual" | "dealer" | undefined {
 
 export function QueueBoard() {
   const { ready, operator } = useAuth();
+  const { hidden } = useChromeVisibility();
   const searchParams = useSearchParams();
   const sellerType = asSellerType(searchParams.get("sellerType"));
   const scope = asScope(searchParams.get("scope"));
@@ -95,15 +98,30 @@ export function QueueBoard() {
 
   return (
     <div className="flex h-full min-h-0 flex-col">
-      <div className="shrink-0 space-y-3 border-b border-navy/5 bg-card/40 px-3 py-3 sm:space-y-4 sm:px-6 sm:py-5">
-        <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end sm:justify-between">
-          <p className="text-sm text-muted-foreground">
-            Ordenado por score, com quem ainda não foi contatado na frente no empate. Consignar manda para o kanban.
-          </p>
-          <SellerTypeFilter />
+      <div
+        className={cn(
+          "grid shrink-0 transition-[grid-template-rows] duration-200 ease-out motion-reduce:transition-none md:!grid-rows-[1fr]",
+          hidden ? "max-md:grid-rows-[0fr]" : "grid-rows-[1fr]",
+        )}
+      >
+        <div className={cn("overflow-hidden", hidden && "max-md:pointer-events-none")}>
+          <div className="space-y-2 border-b border-navy/5 bg-card/40 px-3 py-2 sm:space-y-4 sm:px-6 sm:py-5">
+            <div className="hidden flex-col gap-3 md:flex sm:flex-row sm:flex-wrap sm:items-end sm:justify-between">
+              <p className="text-sm text-muted-foreground">
+                Ordenado por score, com quem ainda não foi contatado na frente no empate. Consignar manda
+                para o kanban.
+              </p>
+              <SellerTypeFilter />
+            </div>
+            {stats && <CoverageBar initial={stats} sellerType={sellerType} />}
+            <div className="flex items-center gap-2 md:block">
+              <div className="min-w-0 flex-1 md:hidden">
+                <SellerTypeFilter />
+              </div>
+              <QueueFilters />
+            </div>
+          </div>
         </div>
-        {stats && <CoverageBar initial={stats} sellerType={sellerType} />}
-        <QueueFilters />
       </div>
 
       {loading && !page ? (

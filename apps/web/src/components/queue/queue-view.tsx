@@ -9,6 +9,7 @@ import type { SearchFilters } from "@/lib/search";
 import type { QueueListFilters } from "@/lib/queue-filters";
 import { getQueue, searchVehicles, type QueueScope } from "@/lib/api";
 import { useOperator } from "@/lib/operator";
+import { useChromeVisibility } from "@/components/layout/chrome-visibility";
 import { QueueCard } from "@/components/queue/queue-card";
 
 const ROW_HEIGHT = 132;
@@ -36,6 +37,7 @@ export function QueueView({
   fill?: boolean;
 }) {
   const { operatorId } = useOperator();
+  const { onScrollFrame } = useChromeVisibility();
   const [items, setItems] = React.useState(initial.items);
   const [cursor, setCursor] = React.useState(initial.nextCursor);
   const [loading, setLoading] = React.useState(false);
@@ -88,6 +90,7 @@ export function QueueView({
 
   function onScroll(e: React.UIEvent<HTMLDivElement>) {
     const el = e.currentTarget;
+    onScrollFrame(el);
     if (el.scrollHeight - el.scrollTop - el.clientHeight < ROW_HEIGHT * 4) {
       void loadMore();
     }

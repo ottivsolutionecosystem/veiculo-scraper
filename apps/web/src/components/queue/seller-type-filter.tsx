@@ -4,7 +4,7 @@ import { useRouter, usePathname, useSearchParams } from "next/navigation";
 
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 
-export function SellerTypeFilter() {
+export function SellerTypeFilter({ className }: { className?: string }) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -18,7 +18,7 @@ export function SellerTypeFilter() {
 
   return (
     <Select value={searchParams.get("sellerType") ?? "all"} onValueChange={setSellerType}>
-      <SelectTrigger className="w-full sm:w-44">
+      <SelectTrigger className={className ?? "w-full sm:w-44"}>
         <SelectValue />
       </SelectTrigger>
       <SelectContent>
