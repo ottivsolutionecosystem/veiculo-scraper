@@ -8,7 +8,6 @@ import { Menu } from "lucide-react";
 import { AuttusWordmark } from "@/components/brand/auttus-mark";
 import { BackToList } from "@/components/layout/back-to-list";
 import { useChromeVisibility } from "@/components/layout/chrome-visibility";
-import { ChromeCollapse } from "@/components/layout/chrome-collapse";
 import { OperatorBar } from "@/components/queue/operator-bar";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet";
@@ -76,49 +75,51 @@ export function Topbar() {
   }, [open, lockChrome]);
 
   return (
-    <ChromeCollapse>
-        <header className="flex min-h-14 items-center gap-2 border-b bg-card/80 px-3 py-1.5 pt-[max(0.375rem,env(safe-area-inset-top))] backdrop-blur-md sm:gap-3 sm:px-6">
-          <Sheet open={open} onOpenChange={setOpen}>
-            <SheetTrigger asChild>
-              <Button variant="ghost" size="icon" className="md:hidden">
-                <Menu className="h-5 w-5" />
-                <span className="sr-only">Abrir menu</span>
-              </Button>
-            </SheetTrigger>
-            <SheetContent
-              side="left"
-              className="w-[min(20rem,100vw)] border-0 bg-navy p-0 pb-[env(safe-area-inset-bottom)] pt-[env(safe-area-inset-top)] text-white [&>button]:right-3 [&>button]:top-[calc(env(safe-area-inset-top)+0.5rem)] [&>button]:text-white"
-            >
-              <SheetTitle className="sr-only">Navegação</SheetTitle>
-              <div className="auttus-gradient h-[3px] w-full" />
-              <div className="flex h-[4.25rem] items-center px-5">
-                <AuttusWordmark onDark />
-              </div>
-              <nav className="flex max-h-[calc(100dvh-5rem-env(safe-area-inset-top)-env(safe-area-inset-bottom))] flex-col gap-6 overflow-y-auto p-3">
-                {groups.map((g) => (
-                  <MobileNav key={g.title} group={g} pathname={pathname} onNavigate={() => setOpen(false)} />
-                ))}
-              </nav>
-            </SheetContent>
-          </Sheet>
-
-          <div className="min-w-0 flex-1">
-            {pathname.startsWith("/veiculos/") ? (
-              <div className="flex items-center gap-1">
-                <BackToList />
-                <h2 className="hidden truncate text-sm font-semibold text-navy sm:block">Ficha do veículo</h2>
-              </div>
-            ) : (
-              <>
-                <p className="truncate text-[11px] font-medium uppercase tracking-[0.12em] text-muted-foreground">
-                  {group?.title ?? "Operação"}
-                </p>
-                <h2 className="truncate text-sm font-semibold text-navy">{current?.label ?? ""}</h2>
-              </>
-            )}
+    <header className="flex min-h-14 shrink-0 items-center gap-2 border-b bg-card/80 px-3 py-1.5 backdrop-blur-md sm:gap-3 sm:px-6">
+      <Sheet open={open} onOpenChange={setOpen}>
+        <SheetTrigger asChild>
+          <Button variant="ghost" size="icon" className="md:hidden">
+            <Menu className="h-5 w-5" />
+            <span className="sr-only">Abrir menu</span>
+          </Button>
+        </SheetTrigger>
+        <SheetContent
+          side="left"
+          className={cn(
+            "flex w-[min(20rem,100vw)] flex-col border-0 bg-navy px-0 py-0 text-white",
+            "[&>button]:right-3 [&>button]:top-[calc(var(--safe-top)+0.25rem)] [&>button]:text-white",
+          )}
+        >
+          <SheetTitle className="sr-only">Navegação</SheetTitle>
+          <div className="shrink-0 bg-navy" style={{ height: "var(--safe-top)" }} aria-hidden />
+          <div className="auttus-gradient h-[3px] w-full shrink-0" />
+          <div className="flex h-[4.25rem] shrink-0 items-center px-5">
+            <AuttusWordmark onDark />
           </div>
-          <OperatorBar compact />
-        </header>
-    </ChromeCollapse>
+          <nav className="flex min-h-0 flex-1 flex-col gap-6 overflow-y-auto p-3 pb-[var(--safe-bottom)]">
+            {groups.map((g) => (
+              <MobileNav key={g.title} group={g} pathname={pathname} onNavigate={() => setOpen(false)} />
+            ))}
+          </nav>
+        </SheetContent>
+      </Sheet>
+
+      <div className="min-w-0 flex-1">
+        {pathname.startsWith("/veiculos/") ? (
+          <div className="flex items-center gap-1">
+            <BackToList />
+            <h2 className="hidden truncate text-sm font-semibold text-navy sm:block">Ficha do veículo</h2>
+          </div>
+        ) : (
+          <>
+            <p className="truncate text-[11px] font-medium uppercase tracking-[0.12em] text-muted-foreground">
+              {group?.title ?? "Operação"}
+            </p>
+            <h2 className="truncate text-sm font-semibold text-navy">{current?.label ?? ""}</h2>
+          </>
+        )}
+      </div>
+      <OperatorBar compact />
+    </header>
   );
 }

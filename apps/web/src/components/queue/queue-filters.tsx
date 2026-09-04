@@ -199,7 +199,7 @@ export function QueueFilters() {
         <Sheet open={open} onOpenChange={setOpen}>
           <SheetContent
             side="bottom"
-            className="overflow-y-auto pb-[env(safe-area-inset-bottom)]"
+            className="overflow-y-auto pb-[var(--safe-bottom)]"
             style={{ maxHeight: viewportHeight ? Math.round(viewportHeight * 0.85) : "85dvh" }}
           >
             <SheetHeader>

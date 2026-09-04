@@ -44,6 +44,9 @@
     --boa: 142 65% 38%;
     --morna: 40 90% 45%;
     --fria: 215 16% 55%;
+
+    --safe-top: env(safe-area-inset-top, 0px);
+    --safe-bottom: env(safe-area-inset-bottom, 0px);
   }
 
   .dark {
@@ -90,6 +93,14 @@
     @apply min-h-dvh overflow-x-hidden bg-background text-foreground antialiased;
     overscroll-behavior: none;
     -webkit-tap-highlight-color: transparent;
+  }
+
+  /* No telefone, se o PWA não reportar safe-area, ainda sobra 3rem para o relógio. */
+  @media (max-width: 767px) {
+    :root {
+      --safe-top: max(3rem, env(safe-area-inset-top, 3rem));
+      --safe-bottom: max(0.5rem, env(safe-area-inset-bottom, 0px));
+    }
   }
 
   input,

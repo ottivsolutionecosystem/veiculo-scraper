@@ -1,17 +1,17 @@
-# RELATORIO — PWA: safe area, scroll e teclado
+# RELATORIO — PWA: safe area de verdade
 
 ## Feito
-- Menu lateral respeita o notch: logo e X abaixo da barra do sistema.
-- Hide do chrome no scroll agora é corte seco (sem animar altura). A
-  lista virtualizada não remede no meio do dedo.
-- Teclado trava o hide. Folha de filtros usa a altura do
-  visualViewport. Input/textarea sobem para o centro no foco.
-- Sheet mais curto, fade na troca de rota, pílula na barra de baixo,
-  toque com scale leve.
+- O ajuste anterior não resolvia: `p-0` e `env()` zerado deixavam o
+  X embaixo do relógio; o hide por `h-0` ainda travava a lista.
+- Faixa navy fixa no topo (`--safe-top`, mínimo 3rem no telefone).
+  Menu usa a mesma faixa + spacer interno, não padding que o Tailwind
+  anula.
+- Hide no scroll saiu. Teclado: tirei `resizes-content` e o
+  `scrollIntoView` que brigavam com o iOS.
 
 ## Decidido por mim e por quê
-- `interactiveWidget: resizes-content` para o PWA encolher o layout
-  com o teclado, em vez de empurrar solto.
+- Sem env() o PWA reporta 0. `max(3rem, env())` segura o notch.
+- Chrome compacto já cabe; esconder a barra não vale o tranco.
 
 ## Pendente de decisão sua
-- Nada. Redeploy do web.
+- Redeploy do web. Sem isso o celular continua no build antigo.
