@@ -1,12 +1,15 @@
-# RELATORIO — ícone PWA fundo branco
+# RELATORIO — revisão da estrutura mobile/PWA
 
 ## Feito
-- Ícones de instalar (192, 512, maskable) e apple-icon agora têm
-  fundo branco, marca centralizada. O preto vinha do flatten do FIV.
+- Revisto casco (chrome, fila, ícones). Dois furos corrigidos:
+  filtros da fila eram o mesmo elemento no desktop e no sheet;
+  favicon ainda era o FIV transparente (aba preta).
+- PWA 192/512/maskable e apple-icon: branco, marca no centro.
+  Fonte da arte continua em `/brand/logo-mark.png`.
 
 ## Decidido por mim e por quê
-- O PNG da marca já era transparente. Colei no branco com folga
-  (~72%; maskable 58%) para o recorte do Android/iOS não comer a A.
+- O resto está coerente: scroll da lista esconde o chrome, tipo de
+  anúncio saiu da fila, Operação ainda fatia, SW não cacheia ícone.
 
 ## Pendente de decisão sua
-- Nada. Redeploy do web para o celular pegar o ícone.
+- Nada. Redeploy do web.

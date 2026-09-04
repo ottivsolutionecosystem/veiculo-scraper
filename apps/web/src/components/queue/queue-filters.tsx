@@ -153,16 +153,14 @@ export function QueueFilters() {
     go({ q: null, brand: null, priceMax: null, scoreBand: null, source: null });
   }
 
-  const fields = (
-    <FilterFields
-      priceMax={priceMax}
-      brand={searchParams.get("brand") ?? ""}
-      scoreBand={searchParams.get("scoreBand") ?? ""}
-      source={searchParams.get("source") ?? ""}
-      onPriceMax={setPriceMax}
-      onGo={go}
-    />
-  );
+  const fieldProps = {
+    priceMax,
+    brand: searchParams.get("brand") ?? "",
+    scoreBand: searchParams.get("scoreBand") ?? "",
+    source: searchParams.get("source") ?? "",
+    onPriceMax: setPriceMax,
+    onGo: go,
+  };
 
   return (
     <>
@@ -174,7 +172,7 @@ export function QueueFilters() {
           aria-label="Nome do veículo"
           className="lg:w-48"
         />
-        {fields}
+        <FilterFields {...fieldProps} />
         {anyActive > 0 && (
           <Button type="button" variant="ghost" size="sm" onClick={limparTudo}>
             <X className="h-4 w-4" />
@@ -202,7 +200,7 @@ export function QueueFilters() {
               <SheetTitle>Filtros da fila</SheetTitle>
             </SheetHeader>
             <div className="mt-4 space-y-3">
-              {fields}
+              <FilterFields {...fieldProps} />
               {sheetActive > 0 && (
                 <Button type="button" variant="ghost" className="w-full" onClick={limparSheet}>
                   <X className="h-4 w-4" />
