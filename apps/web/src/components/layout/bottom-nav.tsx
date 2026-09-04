@@ -24,6 +24,11 @@ export function BottomNav() {
       className="fixed inset-x-0 bottom-0 z-30 border-0 shadow-none md:hidden"
       style={{ backgroundColor: "#F7F4F2", paddingBottom: "var(--safe-bottom)" }}
     >
+      {/* A lista some por baixo da barra em vez de ser cortada na reta. */}
+      <span
+        aria-hidden
+        className="pointer-events-none absolute inset-x-0 bottom-full h-5 bg-gradient-to-t from-[#F7F4F2] to-transparent"
+      />
       <ul className="relative grid grid-cols-3">
         <span
           aria-hidden
