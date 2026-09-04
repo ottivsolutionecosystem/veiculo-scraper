@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { Download, X } from "lucide-react";
+import { X } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 
@@ -53,7 +53,8 @@ export function InstallBanner() {
   return (
     <div className="fixed inset-x-0 z-40 mx-auto max-w-lg px-3 md:bottom-4 md:px-0 max-md:bottom-[calc(4.25rem+env(safe-area-inset-bottom))]">
       <div className="flex items-start gap-3 rounded-xl border bg-card p-3 shadow-card">
-        <Download className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+        {/* eslint-disable-next-line @next/next/no-img-element -- ícone estático do PWA */}
+        <img src="/icons/icon-192.png" alt="" className="mt-0.5 h-10 w-10 shrink-0 rounded-lg" />
         <p className="min-w-0 flex-1 text-sm">
           {iosHint
             ? "No Safari: Compartilhar → Adicionar à Tela de Início."

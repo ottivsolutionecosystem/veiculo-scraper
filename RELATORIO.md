@@ -1,14 +1,14 @@
-# RELATORIO — busca na barra da fila
+# RELATORIO — ícone PWA do FIV
 
 ## Feito
-- Nome do veículo saiu da folha de Filtros e foi para a barra, no
-  lugar de Particular/loja.
-- Tipo de anúncio saiu da fila. A lista sempre mistura particular e
-  loja. Em Operação o filtro continua.
+- Favicon volta a ser o FIV oficial (`icon.png`). O “A” laranja gerado
+  saiu.
+- Ícones de instalação: 192, 512 e 512 maskable a partir do mesmo
+  FIV, fundo preto. Banner de instalar mostra essa marca.
 
 ## Decidido por mim e por quê
-- Particular/loja na fila era um seletor a mais sem ganho no dia a
-  dia. Quem precisa fatiar isso ainda faz na Operação.
+- Arquivo estático em `/icons`, não ImageResponse. O celular baixa o
+  PNG da marca, não um desenho.
 
 ## Pendente de decisão sua
-- Nada. Redeploy do web para o celular pegar.
+- Nada. Redeploy do web para o celular pegar o ícone.
