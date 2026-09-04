@@ -63,6 +63,7 @@ export function SellerDetailBoard({ sellerId }: { sellerId: number }) {
       <Card className="p-4">
         <ContactActions
           sellerId={seller.id}
+          vehicleId={vehicles[0]?.vehicleId}
           maskedPhone={seller.maskedPhone}
           muted={seller.muted}
           doNotDisturb={seller.doNotDisturb}

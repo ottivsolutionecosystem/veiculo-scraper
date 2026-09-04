@@ -29,6 +29,9 @@ const callBody = z.object({
   ]),
   durationSeconds: z.number().optional(),
   operator: z.string().optional(),
+  interactionId: z.number().int().positive().optional(),
+  channel: z.enum(["phone", "whatsapp"]).optional(),
+  externalId: z.string().min(1).optional(),
 });
 
 /** GET/POST /api/dialer/* — modo discagem da fila de consignação. */
@@ -99,8 +102,10 @@ export async function dialerRoutes(app: FastifyInstance) {
         outcome: body.outcome,
         operator: actor.name,
         operatorId: actor.id,
-        channel: "phone",
+        channel: body.channel ?? "phone",
         durationSeconds: body.durationSeconds,
+        interactionId: body.interactionId,
+        externalId: body.externalId,
       });
     });
     refreshFilaDoDia();

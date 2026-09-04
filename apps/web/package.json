@@ -25,6 +25,7 @@
     "@radix-ui/react-tooltip": "^1.1.3",
     "@tanstack/react-virtual": "^3.10.8",
     "@veiculo/types": "*",
+    "@wavoip/wavoip-api": "^2.7.0",
     "class-variance-authority": "^0.7.0",
     "clsx": "^2.1.1",
     "lucide-react": "^0.441.0",

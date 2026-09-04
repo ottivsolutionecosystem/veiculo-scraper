@@ -53,7 +53,7 @@ export function VehicleBoard({ vehicleId }: { vehicleId: number }) {
     );
   }
 
-  const { vehicle, seller, otherVehicles } = data;
+  const { vehicle, seller, otherVehicles, interactions } = data;
   const listing = vehicle.listings.find((l) => l.id === vehicle.primaryListingId) ?? vehicle.listings[0];
   if (!listing) return <p className="p-6 text-sm text-muted-foreground">Anúncio principal ausente.</p>;
 
@@ -124,7 +124,9 @@ export function VehicleBoard({ vehicleId }: { vehicleId: number }) {
         {seller && (
           <SellerCard
             seller={seller}
+            vehicleId={vehicle.id}
             otherVehicles={otherVehicles}
+            interactions={interactions ?? []}
             listing={{
               brand: listing.brand,
               model: listing.model,

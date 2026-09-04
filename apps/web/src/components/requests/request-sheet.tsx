@@ -146,6 +146,7 @@ export function RequestSheet({
 
             <ContactActions
               sellerId={request.sellerId}
+              vehicleId={request.vehicleId}
               muted={request.sellerMuted}
               doNotDisturb={request.sellerDoNotDisturb}
               hasPhone={request.sellerHasPhone ?? true}

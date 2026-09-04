@@ -200,6 +200,22 @@ export function mapSeller(row: Record<string, unknown>) {
   };
 }
 
+export function mapInteraction(row: Record<string, unknown>) {
+  return {
+    id: num(row.id),
+    vehicleId: num(row.veiculo_id),
+    sellerId: num(row.vendedor_id),
+    channel: row.canal,
+    outcome: row.resultado,
+    durationSeconds: num(row.duracao_segundos),
+    author: row.autor,
+    createdAt: iso(row.criado_em) ?? new Date(0).toISOString(),
+    startedAt: iso(row.iniciada_em),
+    endedAt: iso(row.encerrada_em),
+    recordingAvailable: Boolean(row.gravacao_id || row.gravacao_url),
+  };
+}
+
 export function mapCustomer(row: Record<string, unknown>) {
   return {
     id: num(row.id),

@@ -6,6 +6,8 @@ import { Phone, ThumbsUp, XCircle, ArrowRight, ImageOff, Loader2 } from "lucide-
 
 import type { Page, QueueItem } from "@/lib/api-types";
 import { getDialerQueue, postCall, postInteraction, discardVehicle } from "@/lib/api";
+import { useCallSession } from "@/lib/use-call-session";
+import { InCallBar } from "@/components/vehicle/in-call-bar";
 import { formatCents, formatKm, daysAgoLabel } from "@/lib/format";
 import { CALL_OUTCOME_LABELS } from "@/lib/labels";
 import { Card } from "@/components/ui/card";
@@ -22,8 +24,14 @@ export function DialerView({ initial }: { initial: Page<QueueItem> }) {
   const [dialogOpen, setDialogOpen] = React.useState(false);
   const [lastOutcome, setLastOutcome] = React.useState<CallOutcome | null>(null);
   const [busy, setBusy] = React.useState(false);
+  const [callError, setCallError] = React.useState<string | null>(null);
+  const call = useCallSession();
 
   const item = items[index];
+
+  React.useEffect(() => {
+    if ((call.status === "ended" || call.status === "failed") && call.started) setDialogOpen(true);
+  }, [call.status, call.started]);
 
   React.useEffect(() => {
     if (index >= items.length - 3 && cursor && !busy) {
@@ -44,12 +52,28 @@ export function DialerView({ initial }: { initial: Page<QueueItem> }) {
     if (!item) return;
     setBusy(true);
     try {
-      await postCall(item.id, { outcome });
+      await postCall(item.id, {
+        outcome,
+        durationSeconds: call.durationSeconds || undefined,
+        interactionId: call.started?.interactionId,
+        channel: call.started?.channel,
+      });
       setLastOutcome(outcome);
       setDialogOpen(false);
+      call.reset();
       setTimeout(next, 400);
     } finally {
       setBusy(false);
+    }
+  }
+
+  async function handleCall() {
+    if (!item || call.inCall) return;
+    setCallError(null);
+    try {
+      await call.start(item.id);
+    } catch (err) {
+      setCallError(err instanceof Error ? err.message : "Não ligou.");
     }
   }
 
@@ -78,7 +102,7 @@ export function DialerView({ initial }: { initial: Page<QueueItem> }) {
   React.useEffect(() => {
     function onKey(e: KeyboardEvent) {
       if (dialogOpen || !item || busy) return;
-      if (e.key === "l" || e.key === "L") setDialogOpen(true);
+      if (e.key === "l" || e.key === "L") void handleCall();
       if (e.key === "d" || e.key === "D") void handleDiscard();
       if (e.key === "i" || e.key === "I") void handleInterest();
       if (e.key === "ArrowRight") next();
@@ -139,8 +163,13 @@ export function DialerView({ initial }: { initial: Page<QueueItem> }) {
             <Badge variant="outline">Último resultado: {CALL_OUTCOME_LABELS[lastOutcome]}</Badge>
           )}
 
+          {call.inCall && (
+            <InCallBar status={call.status} durationSeconds={call.durationSeconds} onHangup={() => void call.hangup()} />
+          )}
+          {(callError || call.error) && <p className="text-sm text-destructive">{callError ?? call.error}</p>}
+
           <div className="flex flex-wrap gap-2 pt-2">
-            <Button onClick={() => setDialogOpen(true)} disabled={busy}>
+            <Button onClick={() => void handleCall()} disabled={busy || call.inCall}>
               {busy ? <Loader2 className="animate-spin" /> : <Phone />} Ligar (L)
             </Button>
             <Button variant="outline" onClick={handleInterest} disabled={busy}>

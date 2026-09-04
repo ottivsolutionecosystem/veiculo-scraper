@@ -25,4 +25,7 @@ export const env = {
   port: Number(process.env.PORT ?? 3001),
   webOrigin: required("WEB_ORIGIN", "http://localhost:3000"),
   sessionSecret: sessionSecret(),
+  /** Vazio = fallback `tel:`. Nunca logar. */
+  wavoipDeviceToken: process.env.WAVOIP_DEVICE_TOKEN ?? "",
+  wavoipWebhookSecret: process.env.WAVOIP_WEBHOOK_SECRET ?? "",
 };

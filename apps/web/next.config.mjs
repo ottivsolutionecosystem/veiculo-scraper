@@ -9,7 +9,7 @@ const nextConfig = {
   experimental: {
     outputFileTracingRoot: path.join(dir, "../.."),
   },
-  transpilePackages: ["@veiculo/types", "recharts"],
+    transpilePackages: ["@veiculo/types", "recharts", "@wavoip/wavoip-api"],
   eslint: {
     dirs: ["src"],
   },

@@ -218,12 +218,21 @@ de gravar novo vendedor.
 | `duracao_segundos` | integer, nullable | |
 | `autor` | text | |
 | `criado_em` | timestamptz | |
+| `id_externo` | text, nullable | id da ligação no fornecedor de voz |
+| `gravacao_id` | text, nullable | |
+| `gravacao_url` | text, nullable | só o proxy autenticado lê |
+| `iniciada_em` | timestamptz, nullable | |
+| `encerrada_em` | timestamptz, nullable | |
 
 **Índices**
 - `btree (vendedor_id, criado_em DESC)` — hot path: todo card do Discador
   e da Fila precisa saber se o vendedor está em cooldown de 24h. Sem esse
   índice é um scan por card renderizado.
 - `btree (veiculo_id, criado_em DESC)` — timeline da ficha.
+- `unique (id_externo) WHERE id_externo IS NOT NULL` — casa webhook inbound.
+
+### `telefonia_entregas`
+Idempotência do webhook de voz (`delivery_id` PK). Não é entidade de tela.
 
 ## Clientes, interesses e casamento
 

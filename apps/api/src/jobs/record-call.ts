@@ -14,6 +14,8 @@ export async function recordCall(
     operatorId: number;
     channel: "phone" | "whatsapp";
     durationSeconds?: number | null;
+    interactionId?: number | null;
+    externalId?: string | null;
   },
 ): Promise<void> {
   const outcome = normalizeOutcome(input.outcome);
@@ -22,18 +24,37 @@ export async function recordCall(
   const follow = effect.followUpDays !== null ? followUpAt(agora, effect.followUpDays) : null;
   const lock = effect.state === "discarded" ? null : lockUntil(agora);
 
-  await client.query(
-    `INSERT INTO interacoes (veiculo_id, vendedor_id, canal, resultado, duracao_segundos, autor)
-     VALUES ($1, $2, $3, $4, $5, $6)`,
-    [
-      input.vehicleId,
-      input.sellerId,
-      input.channel,
-      outcome,
-      input.durationSeconds ?? null,
-      input.operator || "api",
-    ],
-  );
+  if (input.interactionId) {
+    await client.query(
+      `UPDATE interacoes SET
+          resultado = $2,
+          duracao_segundos = COALESCE($3, duracao_segundos),
+          encerrada_em = COALESCE(encerrada_em, now()),
+          id_externo = COALESCE($4, id_externo)
+        WHERE id = $1 AND veiculo_id = $5`,
+      [
+        input.interactionId,
+        outcome,
+        input.durationSeconds ?? null,
+        input.externalId ?? null,
+        input.vehicleId,
+      ],
+    );
+  } else {
+    await client.query(
+      `INSERT INTO interacoes (veiculo_id, vendedor_id, canal, resultado, duracao_segundos, autor, encerrada_em, id_externo)
+       VALUES ($1, $2, $3, $4, $5, $6, now(), $7)`,
+      [
+        input.vehicleId,
+        input.sellerId,
+        input.channel,
+        outcome,
+        input.durationSeconds ?? null,
+        input.operator || "api",
+        input.externalId ?? null,
+      ],
+    );
+  }
 
   await client.query(
     `UPDATE veiculos SET

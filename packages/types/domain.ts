@@ -247,12 +247,31 @@ export type CallOutcome =
 export interface Interaction {
   id: number;
   vehicleId: number;
-  sellerId: number;
+  sellerId: number | null;
   channel: "phone" | "whatsapp";
   outcome: CallOutcome | null;
   durationSeconds: number | null;
   author: string;
   createdAt: string;
+  startedAt: string | null;
+  endedAt: string | null;
+  /** Player via API autenticada — a URL crua do fornecedor não sai. */
+  recordingAvailable: boolean;
+}
+
+export type TelephonyMode = "softphone" | "tel_link";
+
+export interface TelephonySession {
+  mode: TelephonyMode;
+  /** Só no modo softphone, só para operador autenticado. Nunca persistir. */
+  token?: string;
+}
+
+export interface StartCallResponse {
+  interactionId: number;
+  mode: TelephonyMode;
+  phone: string;
+  channel: "phone" | "whatsapp";
 }
 
 // ---------------------------------------------------------------------------

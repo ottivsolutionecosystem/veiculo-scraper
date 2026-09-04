@@ -2,7 +2,7 @@ import type { FastifyInstance } from "fastify";
 import { z } from "zod";
 
 import { pool, withTransaction, refreshFilaDoDia, refreshFilaDoDiaAsync } from "../db.js";
-import { mapVehicleDetail, mapSeller, mapListing, maskPhone, mapInterestMatch } from "../lib/serialize.js";
+import { mapVehicleDetail, mapSeller, mapListing, maskPhone, mapInterestMatch, mapInteraction } from "../lib/serialize.js";
 import { NotFoundError, ValidationError, ConflictError } from "../lib/http-errors.js";
 import { assertHasDiscardReason } from "../lib/regras-descarte.js";
 import { canClaim, canTransfer, followUpAt, lockUntil } from "../lib/consignacao.js";
@@ -108,7 +108,23 @@ export async function vehicleRoutes(app: FastifyInstance) {
       customer: { id: Number(m.cliente_id), name: m.cliente_nome },
     }));
 
-    reply.send({ vehicle: vehicleDetail, seller, otherVehicles, matches });
+    const { rows: interactionRows } = await pool.query(
+      `SELECT id, veiculo_id, vendedor_id, canal, resultado, duracao_segundos, autor,
+              criado_em, iniciada_em, encerrada_em, gravacao_id, gravacao_url
+         FROM interacoes
+        WHERE veiculo_id = $1
+        ORDER BY criado_em DESC, id DESC
+        LIMIT 20`,
+      [id],
+    );
+
+    reply.send({
+      vehicle: vehicleDetail,
+      seller,
+      otherVehicles,
+      matches,
+      interactions: interactionRows.map(mapInteraction),
+    });
   });
 
   app.post("/api/vehicles/:id/discard", async (req, reply) => {

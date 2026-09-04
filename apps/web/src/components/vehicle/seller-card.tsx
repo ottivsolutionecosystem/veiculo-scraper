@@ -1,18 +1,23 @@
 import Link from "next/link";
-import type { Seller, Listing } from "@veiculo/types";
+import type { Seller, Listing, Interaction } from "@veiculo/types";
 import { UserRound, BellOff, VolumeX } from "lucide-react";
 
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ContactActions } from "@/components/vehicle/contact-actions";
+import { CallHistory } from "@/components/vehicle/call-history";
 
 export function SellerCard({
   seller,
+  vehicleId,
   otherVehicles,
   listing,
+  interactions = [],
 }: {
   seller: Seller;
+  vehicleId?: number | null;
   otherVehicles: { vehicleId: number; listing: Partial<Listing> }[];
+  interactions?: Interaction[];
   listing?: {
     brand: string | null;
     model: string | null;
@@ -31,6 +36,7 @@ export function SellerCard({
       <CardContent className="space-y-3">
         <ContactActions
           sellerId={seller.id}
+          vehicleId={vehicleId}
           maskedPhone={seller.maskedPhone}
           muted={seller.muted}
           doNotDisturb={seller.doNotDisturb}
@@ -49,6 +55,7 @@ export function SellerCard({
             </Badge>
           )}
         </div>
+        <CallHistory items={interactions} />
         {otherVehicles.length > 0 && (
           <div>
             <p className="mb-1.5 text-xs font-medium text-muted-foreground">

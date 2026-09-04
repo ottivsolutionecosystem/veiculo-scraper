@@ -13,6 +13,7 @@ import type {
   ScrapeProgress,
   Settings,
   AuditRecord,
+  Interaction,
   Webhook,
 } from "@veiculo/types";
 
@@ -80,6 +81,7 @@ export interface VehicleDetailResponse {
   seller: (Seller & { maskedPhone: string | null }) | null;
   otherVehicles: { vehicleId: number; listing: Partial<Listing> }[];
   matches: (InterestMatch & { customer: { id: number; name: string } })[];
+  interactions: Interaction[];
 }
 
 export interface CustomerListItem extends Customer {

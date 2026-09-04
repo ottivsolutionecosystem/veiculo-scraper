@@ -4,6 +4,8 @@ import type {
   OpsOverview,
   OpsRange,
   Settings,
+  StartCallResponse,
+  TelephonySession,
   Webhook,
 } from "@veiculo/types";
 import { API_URL } from "./env";
@@ -165,13 +167,57 @@ export function revealSellerContact(sellerId: number) {
   });
 }
 
+export function getTelephonySession() {
+  return apiFetch<TelephonySession>("/api/telephony/session");
+}
+
+export function startVehicleCall(vehicleId: number) {
+  return apiFetch<StartCallResponse>(`/api/vehicles/${vehicleId}/calls/start`, {
+    method: "POST",
+    body: JSON.stringify({}),
+  });
+}
+
+export function linkCallExternal(interactionId: number, externalId: string) {
+  return apiFetch<void>(`/api/interactions/${interactionId}/external`, {
+    method: "POST",
+    body: JSON.stringify({ externalId }),
+  });
+}
+
+export async function fetchCallRecording(interactionId: number): Promise<Blob> {
+  const headers = new Headers();
+  const token = getStoredToken();
+  if (token) headers.set("Authorization", `Bearer ${token}`);
+  const res = await fetch(`${API_URL}/api/interactions/${interactionId}/recording`, {
+    cache: "no-store",
+    credentials: "include",
+    headers,
+  });
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({ error: res.statusText }));
+    throw new ApiError(res.status, body.error ?? `Erro ${res.status}`);
+  }
+  return res.blob();
+}
+
 // ---- Discador ------------------------------------------------------------
 
 export function getDialerQueue(params: { cursor?: string; limit?: number } = {}) {
   return apiFetch<Page<QueueItem>>(`/api/dialer/queue${qs(params)}`);
 }
 
-export function postCall(id: number, body: { outcome: string; durationSeconds?: number; operator?: string }) {
+export function postCall(
+  id: number,
+  body: {
+    outcome: string;
+    durationSeconds?: number;
+    operator?: string;
+    interactionId?: number;
+    channel?: "phone" | "whatsapp";
+    externalId?: string;
+  },
+) {
   return apiFetch<void>(`/api/vehicles/${id}/calls`, { method: "POST", body: JSON.stringify(body) });
 }
 

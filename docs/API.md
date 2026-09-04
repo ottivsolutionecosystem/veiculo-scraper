@@ -100,7 +100,8 @@ fase futura.
 | POST | `/api/vehicles/:id/fipe-match/confirm` | `{ fipeCode: string }` |
 | POST | `/api/requests` | `{ vehicleId, branchId, customerId?, proposedAt }` |
 
-`GET` devolve `Vehicle` completo: `listings` [E] (via `anuncio_veiculo`
+`GET` devolve `Vehicle` completo, as últimas 20 `interactions` da ficha
+(sem URL de gravação — só `recordingAvailable`) e `listings` [E] (via `anuncio_veiculo`
 [N]), `score` com `componentes` [W], `priceHistory` [E]
 (`preco_historico`), vendedor com "outros carros dele" (`veiculos` [N]
 por `vendedor_id`), `matches_interesse` [N] → clientes compatíveis, e
@@ -126,7 +127,12 @@ registrada, não lacuna esquecida).
 | Método | Rota | Params/Body |
 |---|---|---|
 | GET | `/api/dialer/queue` | `cursor?`, `limit?` |
-| POST | `/api/vehicles/:id/calls` | `{ outcome: CallOutcome, durationSeconds? }` |
+| GET | `/api/telephony/session` | — |
+| POST | `/api/vehicles/:id/calls/start` | — |
+| POST | `/api/vehicles/:id/calls` | `{ outcome: CallOutcome, durationSeconds?, interactionId?, channel? }` |
+| POST | `/api/interactions/:id/external` | `{ externalId }` |
+| GET | `/api/interactions/:id/recording` | — |
+| POST | `/api/telephony/inbound` | webhook do fornecedor de voz |
 
 `GET` filtra `veiculos.estado IN ('new','interested')` **e** vendedor fora
 de cooldown: `NOT EXISTS (SELECT 1 FROM interacoes [N] WHERE vendedor_id =
@@ -134,11 +140,23 @@ v.vendedor_id AND criado_em > now() - cooldown_horas)`, `nao_perturbe =
 false` e `mutado = false` em `vendedores` [N]. `cooldown_horas` vem de
 `configuracoes.cooldown_vendedor_horas` [N].
 
-`POST .../calls`: grava `interacoes` [N] (`resultado` obrigatório no
-body — o modal da Fase 1 já não deixa fechar sem escolher, isso é o
-espelho no backend). Resultado `agreed_to_bring` move `veiculos.estado`
-para `negotiating`; `not_interested`/`wrong_number` para `discarded` com
-motivo automático; os demais mantêm o estado. 422 se `outcome` ausente.
+`POST .../calls/start`: checa mute / não perturbe, audita revelação e
+abre `interacoes` [N] com `resultado` nulo. Devolve telefone só nesta
+resposta autenticada. Sem token de voz, `mode=tel_link`.
+
+`POST .../calls`: grava o parecer. Se vier `interactionId`, atualiza a
+linha aberta pelo start. Resultado `agreed_to_bring` move
+`veiculos.estado` para `negotiating`; `not_interested`/`wrong_number`
+para `discarded` com motivo automático; os demais mantêm o estado. 422
+se `outcome` ausente.
+
+`GET .../recording`: proxy autenticado da gravação — a URL do fornecedor
+não sai no JSON. `POST /api/telephony/inbound` é webhook de *entrada*
+(não confundir com `/api/webhooks`); idempotente por
+`X-Wavoip-Delivery-Id`.
+
+`GET /api/vehicles/:id` inclui as últimas 20 `interactions` da ficha
+(`recordingAvailable`, sem URL crua).
 
 ## 5. Clientes e interesses (`/clientes`, `/clientes/:id`)
 
