@@ -54,7 +54,10 @@ export function AuditBoard() {
         <>
         <div className="space-y-2 md:hidden">
           {items.map((record) => (
-            <article key={record.id} className="rounded-xl border bg-card p-3 shadow-card">
+            <article
+              key={record.id}
+              className="rounded-2xl border border-navy/[0.06] bg-card p-3.5 shadow-card"
+            >
               <div className="flex flex-wrap items-center gap-2">
                 <Badge variant="outline">{AUDIT_ACTION_LABELS[record.action]}</Badge>
                 <span className="text-xs text-muted-foreground">{formatDateTime(record.createdAt)}</span>
@@ -67,7 +70,7 @@ export function AuditBoard() {
             </article>
           ))}
         </div>
-        <div className="hidden overflow-x-auto md:block">
+        <div className="hidden overflow-hidden rounded-2xl border border-navy/[0.06] bg-card shadow-card md:block">
           <Table>
             <TableHeader>
               <TableRow>

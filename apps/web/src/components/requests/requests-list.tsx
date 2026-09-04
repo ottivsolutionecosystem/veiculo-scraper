@@ -75,15 +75,20 @@ export function RequestsList({
             <button
               key={request.id}
               type="button"
-              className="w-full rounded-xl border bg-card p-3 text-left shadow-card"
+              className={cn(
+                "w-full rounded-2xl border border-navy/[0.06] bg-card p-3.5 text-left shadow-card",
+                overdue && "border-l-[3px] border-l-destructive",
+              )}
               onClick={() => onOpen(request.id)}
             >
-              <p className="text-sm font-medium">
+              <p className="text-sm font-semibold leading-snug tracking-tight text-navy">
                 {request.vehicle
                   ? `${request.vehicle.brand} ${request.vehicle.model} ${request.vehicle.modelYear}`
                   : "—"}
               </p>
-              <p className="text-xs text-muted-foreground">{formatCents(request.vehicle?.priceCents ?? null)}</p>
+              <p className="mt-1 text-sm font-medium tabular-nums text-navy/70">
+                {formatCents(request.vehicle?.priceCents ?? null)}
+              </p>
               <div className="mt-2" onClick={(e) => e.stopPropagation()}>
                 <StageSelect
                   request={request}
@@ -101,7 +106,7 @@ export function RequestsList({
         })}
       </div>
 
-      <div className="hidden md:block">
+      <div className="hidden overflow-hidden rounded-2xl border border-navy/[0.06] bg-card shadow-card md:block">
         <Table>
           <TableHeader>
             <TableRow>

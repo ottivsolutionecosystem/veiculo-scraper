@@ -16,7 +16,7 @@ export function DashboardShell({ children }: { children: ReactNode }) {
       <Topbar />
       <main
         onScroll={(e) => onScrollFrame(e.currentTarget)}
-        className="min-h-0 flex-1 overflow-x-hidden overflow-y-auto pb-[calc(4.75rem+var(--safe-bottom))] md:pb-0"
+        className="app-canvas min-h-0 flex-1 overflow-x-hidden overflow-y-auto pb-[calc(4.75rem+var(--safe-bottom))] md:pb-0"
       >
         <PageFade>{children}</PageFade>
       </main>

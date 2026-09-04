@@ -14,6 +14,7 @@ import { Badge } from "@/components/ui/badge";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 import { SourceToggle } from "@/components/sources/source-toggle";
 import { RunScrapeButton } from "@/components/sources/run-scrape-button";
+import { cn } from "@/lib/utils";
 
 const MANUALLY_LOCKED = new Set(["webmotors", "olx"]);
 
@@ -64,9 +65,15 @@ export function SourcesBoard() {
           {sources.map((source) => {
             const locked = MANUALLY_LOCKED.has(source.source);
             return (
-              <Card key={source.source}>
-                <CardHeader className="flex-row items-center justify-between">
-                  <CardTitle className="capitalize">{source.source}</CardTitle>
+              <Card key={source.source} className="card-lift relative overflow-hidden">
+                {source.active && (
+                  <span aria-hidden className="auttus-gradient absolute inset-x-0 top-0 h-0.5" />
+                )}
+                <CardHeader className="flex-row items-start justify-between gap-3">
+                  <div className="min-w-0 space-y-2">
+                    <CardTitle className="capitalize">{source.source}</CardTitle>
+                    <Badge variant="outline">{ACCESS_LEVEL_LABELS[source.accessLevel]}</Badge>
+                  </div>
                   <SourceToggle
                     source={source.source}
                     active={source.active}
@@ -74,43 +81,60 @@ export function SourcesBoard() {
                     lockedReason={source.reason ?? undefined}
                   />
                 </CardHeader>
-                <CardContent className="space-y-2 text-sm">
-                  <Badge variant="outline">{ACCESS_LEVEL_LABELS[source.accessLevel]}</Badge>
-                  <p className="text-xs text-muted-foreground">{source.legalBasis}</p>
-                  {source.cursor && <p className="text-xs">Cursor: {source.cursor}</p>}
+                <CardContent className="space-y-3 text-sm">
+                  <p className="text-xs leading-relaxed text-muted-foreground">{source.legalBasis}</p>
+                  {source.cursor && (
+                    <p className="truncate text-xs text-muted-foreground">Cursor: {source.cursor}</p>
+                  )}
                   {source.pendingRequest ? (
                     source.lastRun ? (
-                      <div className="border-t pt-2 text-xs text-muted-foreground">
-                        <p>
-                          Última execução concluída: {formatDateTime(source.lastRun.finishedAt)}
-                          {source.lastRun.sellerTypeFilter
-                            ? ` (${SELLER_TYPE_LABELS[source.lastRun.sellerTypeFilter]})`
-                            : ""}
-                        </p>
-                      </div>
+                      <p className="border-t border-navy/[0.06] pt-3 text-xs text-muted-foreground">
+                        Última execução concluída: {formatDateTime(source.lastRun.finishedAt)}
+                        {source.lastRun.sellerTypeFilter
+                          ? ` (${SELLER_TYPE_LABELS[source.lastRun.sellerTypeFilter]})`
+                          : ""}
+                      </p>
                     ) : null
                   ) : source.lastRun ? (
-                    <div className="border-t pt-2 text-xs text-muted-foreground">
-                      <p>
+                    <div className="space-y-2.5 border-t border-navy/[0.06] pt-3">
+                      <p className="text-xs text-muted-foreground">
                         Última execução: {formatDateTime(source.lastRun.finishedAt)}
                         {source.lastRun.sellerTypeFilter
                           ? ` (${SELLER_TYPE_LABELS[source.lastRun.sellerTypeFilter]})`
                           : ""}
                       </p>
-                      <p>
-                        {source.lastRun.new} novos · {source.lastRun.updated} atualizados ·{" "}
-                        {source.lastRun.priceChanges} mudaram de preço
-                      </p>
-                      <p>
-                        {source.lastRun.deactivated} saíram do ar · {source.lastRun.needsReview} em revisão ·{" "}
-                        {source.lastRun.errors} erros
-                      </p>
-                      <p>{source.lastRun.endedBy}</p>
+                      <dl className="grid grid-cols-3 gap-px overflow-hidden rounded-xl bg-navy/[0.06]">
+                        {[
+                          { label: "Novos", value: source.lastRun.new },
+                          { label: "Atualizados", value: source.lastRun.updated },
+                          { label: "Mudou preço", value: source.lastRun.priceChanges },
+                          { label: "Saíram do ar", value: source.lastRun.deactivated },
+                          { label: "Revisão", value: source.lastRun.needsReview },
+                          { label: "Erros", value: source.lastRun.errors },
+                        ].map((stat) => (
+                          <div key={stat.label} className="bg-card px-2 py-2 text-center">
+                            <dt className="text-[10px] font-medium uppercase tracking-[0.06em] text-muted-foreground">
+                              {stat.label}
+                            </dt>
+                            <dd
+                              className={cn(
+                                "mt-0.5 text-base font-semibold tabular-nums tracking-tight",
+                                stat.label === "Erros" && stat.value > 0 ? "text-destructive" : "text-navy",
+                              )}
+                            >
+                              {stat.value}
+                            </dd>
+                          </div>
+                        ))}
+                      </dl>
+                      <p className="text-xs text-muted-foreground">{source.lastRun.endedBy}</p>
                     </div>
                   ) : (
-                    <p className="text-xs text-muted-foreground">Nunca executada.</p>
+                    <p className="border-t border-navy/[0.06] pt-3 text-xs text-muted-foreground">
+                      Nunca executada.
+                    </p>
                   )}
-                  <div className="border-t pt-2">
+                  <div className="border-t border-navy/[0.06] pt-3">
                     <RunScrapeButton
                       source={source.source}
                       locked={locked}
@@ -133,8 +157,8 @@ export function SourcesBoard() {
           <CardContent className="overflow-x-auto">
             <div className="space-y-2 md:hidden">
               {sourcesWithRuns.map((source) => (
-                <div key={source.source} className="rounded-lg border p-3 text-sm">
-                  <p className="font-medium capitalize">{source.source}</p>
+                <div key={source.source} className="rounded-xl border border-navy/[0.06] p-3 text-sm">
+                  <p className="font-semibold capitalize text-navy">{source.source}</p>
                   <p className="text-xs text-muted-foreground">{formatDateTime(source.lastRun!.finishedAt)}</p>
                   <p className="mt-1 text-xs text-muted-foreground">
                     {source.lastRun!.new} novos · {source.lastRun!.updated} atualizados · {source.lastRun!.errors} erros

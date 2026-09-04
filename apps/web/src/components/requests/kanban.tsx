@@ -37,19 +37,26 @@ export function RequestsKanban({
       {KANBAN_COLUMNS.map((state) => {
         const column = requests.filter((r) => boardColumn(r.state) === state);
         return (
-          <div key={state} className="w-64 shrink-0 space-y-2">
-            <div className="flex items-center justify-between gap-2">
-              <p className="text-xs font-semibold uppercase tracking-[0.12em] text-navy">
+          <div
+            key={state}
+            className={cn(
+              "w-64 shrink-0 rounded-2xl border p-2.5 transition-colors",
+              overState === state
+                ? "border-primary/40 bg-primary/[0.06]"
+                : "border-navy/[0.06] bg-navy/[0.025]",
+            )}
+          >
+            <div className="flex items-center justify-between gap-2 px-1">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-navy">
                 {REQUEST_STATE_LABELS[state]}
               </p>
-              <span className="text-xs tabular-nums text-muted-foreground">{column.length}</span>
+              <span className="rounded-full bg-card px-2 py-0.5 text-[11px] font-semibold tabular-nums text-navy/70 shadow-card">
+                {column.length}
+              </span>
             </div>
-            <div className="auttus-gradient h-0.5 w-8 rounded-full" />
+            <div aria-hidden className="accent-rule mx-1 mt-2" />
             <div
-              className={cn(
-                "min-h-32 space-y-2 rounded-xl border border-dashed p-1.5 transition-colors",
-                overState === state ? "border-primary bg-primary/5" : "border-transparent",
-              )}
+              className="mt-2.5 min-h-32 space-y-2"
               onDragOver={(e) => {
                 e.preventDefault();
                 e.dataTransfer.dropEffect = "move";
@@ -69,7 +76,7 @@ export function RequestsKanban({
                     key={request.id}
                     draggable={!consigned && movingId !== request.id}
                     className={cn(
-                      "p-3 transition-colors hover:ring-2 hover:ring-primary/20",
+                      "card-lift p-3",
                       consigned ? "cursor-pointer" : "cursor-grab active:cursor-grabbing",
                       overdue && "border-l-[3px] border-l-destructive",
                       movingId === request.id && "opacity-50",
@@ -91,14 +98,21 @@ export function RequestsKanban({
                       onOpen(request.id);
                     }}
                   >
-                    <p className="text-sm font-medium">
+                    <p className="text-sm font-semibold leading-snug tracking-tight text-navy">
                       {request.vehicle
                         ? `${request.vehicle.brand} ${request.vehicle.model} ${request.vehicle.modelYear}`
                         : "—"}
                     </p>
-                    <p className="text-xs text-muted-foreground">{formatCents(request.vehicle?.priceCents ?? null)}</p>
+                    <p className="mt-1 text-sm font-medium tabular-nums text-navy/70">
+                      {formatCents(request.vehicle?.priceCents ?? null)}
+                    </p>
                     {!consigned && (
-                      <p className={cn("text-xs", overdue ? "font-medium text-destructive" : "text-muted-foreground")}>
+                      <p
+                        className={cn(
+                          "mt-1.5 text-xs",
+                          overdue ? "font-medium text-destructive" : "text-muted-foreground",
+                        )}
+                      >
                         {overdue
                           ? "Parecer obrigatório"
                           : scheduled && request.proposedAt

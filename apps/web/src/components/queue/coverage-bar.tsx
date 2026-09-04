@@ -53,11 +53,20 @@ export function CoverageBar({
               type="button"
               onClick={() => go(metric.value)}
               className={cn(
-                "min-h-11 flex-1 rounded-full border px-2 py-1 text-center",
-                active ? "border-primary bg-primary/10 text-navy" : "border-navy/10 bg-card text-navy/70",
+                "min-h-11 flex-1 rounded-2xl border px-2 py-1.5 text-center transition-colors",
+                active
+                  ? "border-primary/40 bg-primary/[0.08] text-navy shadow-card"
+                  : "border-navy/[0.07] bg-card text-navy/70",
               )}
             >
-              <span className="block text-[10px] font-medium text-muted-foreground">{metric.label}</span>
+              <span
+                className={cn(
+                  "block text-[10px] font-medium uppercase tracking-[0.08em]",
+                  active ? "text-primary" : "text-muted-foreground",
+                )}
+              >
+                {metric.label}
+              </span>
               <span className="text-sm font-semibold tabular-nums">{stats[metric.key]}</span>
             </button>
           );
@@ -73,14 +82,25 @@ export function CoverageBar({
               type="button"
               onClick={() => go(metric.value)}
               className={cn(
-                "rounded-xl border bg-card px-3 py-2.5 text-left shadow-card transition-all sm:px-4 sm:py-3",
-                active
-                  ? "border-primary ring-2 ring-primary/20"
-                  : "border-transparent hover:border-navy/10",
+                "card-lift relative overflow-hidden rounded-2xl border bg-card px-3 py-3 text-left shadow-card sm:px-4 sm:py-3.5",
+                active ? "border-primary/35" : "border-navy/[0.06]",
               )}
             >
-              <p className="text-[11px] font-medium text-muted-foreground">{metric.label}</p>
-              <p className={cn("mt-0.5 text-xl font-semibold tabular-nums tracking-tight sm:text-2xl", active ? "text-navy" : "text-navy/70")}>
+              {active && <span aria-hidden className="auttus-gradient absolute inset-x-0 top-0 h-0.5" />}
+              <p
+                className={cn(
+                  "text-[11px] font-medium uppercase tracking-[0.1em]",
+                  active ? "text-primary" : "text-muted-foreground",
+                )}
+              >
+                {metric.label}
+              </p>
+              <p
+                className={cn(
+                  "mt-1 text-2xl font-semibold tabular-nums tracking-tight sm:text-[1.75rem]",
+                  active ? "text-navy" : "text-navy/70",
+                )}
+              >
                 {stats[metric.key]}
               </p>
             </button>

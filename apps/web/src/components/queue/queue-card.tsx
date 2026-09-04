@@ -22,7 +22,7 @@ export function QueueCard({ item, mode = "queue" }: { item: QueueItem; mode?: "q
   return (
     <Card
       className={cn(
-        "flex flex-col gap-3 p-3 shadow-card sm:flex-row sm:items-center sm:p-3.5",
+        "group card-lift flex flex-col gap-3 p-3 sm:flex-row sm:items-center sm:p-3.5",
         followUpDue && "border-l-[3px] border-l-primary",
         droppedAfterContact && !followUpDue && "border-l-[3px] border-l-coral",
         item.consignador && "ring-1 ring-navy/10",
@@ -32,10 +32,14 @@ export function QueueCard({ item, mode = "queue" }: { item: QueueItem; mode?: "q
         href={`/veiculos/${item.id}`}
         className="flex min-w-0 flex-1 flex-col gap-3 sm:flex-row sm:items-center"
       >
-        <span className="flex aspect-[16/10] w-full shrink-0 items-center justify-center overflow-hidden rounded-lg bg-muted sm:aspect-auto sm:h-[4.75rem] sm:w-[7.25rem]">
+        <span className="flex aspect-[16/10] w-full shrink-0 items-center justify-center overflow-hidden rounded-xl bg-muted ring-1 ring-inset ring-navy/[0.06] sm:aspect-auto sm:h-[4.75rem] sm:w-[7.25rem]">
           {photo ? (
             // eslint-disable-next-line @next/next/no-img-element -- data URI local, sem chamada de rede
-            <img src={photo} alt="" className="h-full w-full object-cover" />
+            <img
+              src={photo}
+              alt=""
+              className="h-full w-full object-cover transition-transform duration-300 ease-out group-hover:scale-[1.04]"
+            />
           ) : (
             <ImageOff className="h-6 w-6 text-muted-foreground" />
           )}
@@ -43,7 +47,7 @@ export function QueueCard({ item, mode = "queue" }: { item: QueueItem; mode?: "q
 
         <span className="min-w-0 flex-1">
           <span className="flex flex-wrap items-center gap-2">
-            <span className="font-semibold text-navy hover:text-primary">
+            <span className="text-[15px] font-semibold tracking-tight text-navy transition-colors group-hover:text-primary">
               {listing.brand ?? "?"} {listing.model ?? "?"} {listing.modelYear ?? ""}
             </span>
             <Badge variant="outline">{sourceLabel(listing.source)}</Badge>
@@ -56,8 +60,10 @@ export function QueueCard({ item, mode = "queue" }: { item: QueueItem; mode?: "q
               </Badge>
             )}
           </span>
-          <span className="mt-1.5 flex flex-wrap items-baseline gap-x-3 gap-y-1 text-sm">
-            <span className="text-base font-semibold tabular-nums text-navy">{formatCents(listing.priceCents)}</span>
+          <span className="mt-2 flex flex-wrap items-baseline gap-x-3 gap-y-1 text-sm">
+            <span className="text-[17px] font-semibold tabular-nums tracking-tight text-navy">
+              {formatCents(listing.priceCents)}
+            </span>
             {variacao && (
               <span
                 className={caiu ? "font-medium text-boa" : "font-medium text-destructive"}
@@ -70,12 +76,20 @@ export function QueueCard({ item, mode = "queue" }: { item: QueueItem; mode?: "q
               </span>
             )}
             {item.fipeDiscountPct !== null && (
-              <span className={item.fipeDiscountPct > 0 ? "text-boa" : "text-destructive"}>
+              <span
+                className={cn(
+                  "rounded-full px-2 py-0.5 text-xs font-medium",
+                  item.fipeDiscountPct > 0 ? "bg-boa/10 text-boa" : "bg-destructive/10 text-destructive",
+                )}
+              >
                 {formatPct(item.fipeDiscountPct)} vs FIPE
               </span>
             )}
-            <span className="text-muted-foreground">{formatKm(listing.km)}</span>
-            <span className="text-muted-foreground">{daysAgoLabel(item.daysListed)}</span>
+            <span className="inline-flex items-center gap-2 text-muted-foreground">
+              {formatKm(listing.km)}
+              <span aria-hidden className="h-1 w-1 rounded-full bg-navy/20" />
+              {daysAgoLabel(item.daysListed)}
+            </span>
           </span>
         </span>
       </Link>

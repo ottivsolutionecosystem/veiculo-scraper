@@ -64,12 +64,12 @@ export function OpsRanking({
               key={row.operatorId}
               type="button"
               className={cn(
-                "w-full rounded-lg border p-3 text-left",
-                selectedId === row.operatorId && "border-primary bg-accent",
+                "w-full rounded-xl border border-navy/[0.07] p-3 text-left transition-colors",
+                selectedId === row.operatorId && "border-primary/40 bg-accent",
               )}
               onClick={() => toggle(row.operatorId)}
             >
-              <p className="font-medium">
+              <p className="font-semibold tracking-tight text-navy">
                 {row.name}
                 {!row.active && <span className="ml-2 text-xs text-muted-foreground">inativo</span>}
               </p>
@@ -111,7 +111,7 @@ export function OpsRanking({
           ))}
         </div>
 
-        <div className="hidden overflow-x-auto md:block">
+        <div className="hidden overflow-hidden rounded-xl border border-navy/[0.06] md:block">
           <Table>
             <TableHeader>
               <TableRow>

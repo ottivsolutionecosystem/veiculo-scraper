@@ -50,8 +50,12 @@ export function TeamForm() {
 
   return (
     <div className="grid gap-6 lg:grid-cols-2">
-      <form className="space-y-3 rounded-xl border bg-card p-4 shadow-card" onSubmit={(e) => void submit(e)}>
-        <h2 className="text-sm font-semibold text-navy">Autorizar consignador</h2>
+      <form
+        className="space-y-3 rounded-2xl border border-navy/[0.06] bg-card p-5 shadow-card"
+        onSubmit={(e) => void submit(e)}
+      >
+        <h2 className="text-sm font-semibold uppercase tracking-[0.1em] text-navy">Autorizar consignador</h2>
+        <div aria-hidden className="accent-rule" />
         <div className="space-y-1.5">
           <Label htmlFor="eq-nome">Nome</Label>
           <Input id="eq-nome" value={name} onChange={(e) => setName(e.target.value)} required minLength={2} />
@@ -85,9 +89,10 @@ export function TeamForm() {
         </Button>
       </form>
 
-      <div className="rounded-xl border bg-card p-4 shadow-card">
-        <h2 className="text-sm font-semibold text-navy">Quem pode entrar</h2>
-        <ul className="mt-3 divide-y">
+      <div className="rounded-2xl border border-navy/[0.06] bg-card p-5 shadow-card">
+        <h2 className="text-sm font-semibold uppercase tracking-[0.1em] text-navy">Quem pode entrar</h2>
+        <div aria-hidden className="accent-rule mt-3" />
+        <ul className="mt-1 divide-y divide-navy/[0.06]">
           {items.map((op) => (
             <li key={op.id} className="flex items-center justify-between gap-3 py-3 text-sm">
               <span className="min-w-0">

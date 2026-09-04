@@ -64,6 +64,7 @@ const config: Config = {
       },
       boxShadow: {
         card: "0 1px 2px hsl(215 61% 15% / 0.04), 0 8px 24px hsl(215 61% 15% / 0.06)",
+        lift: "0 2px 4px hsl(215 61% 15% / 0.05), 0 18px 44px hsl(215 61% 15% / 0.11)",
       },
     },
   },

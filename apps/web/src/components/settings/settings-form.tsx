@@ -72,7 +72,7 @@ export function SettingsForm({
         </TabsContent>
       </Tabs>
 
-      <div className="flex flex-wrap items-center gap-3 rounded-lg border p-4">
+      <div className="flex flex-wrap items-center gap-3 rounded-2xl border border-navy/[0.06] bg-card p-4 shadow-card">
         <div className="space-y-1">
           <Label>Autor da alteração</Label>
           <Input value={author} onChange={(e) => setAuthor(e.target.value)} placeholder="seu nome" className="w-48" />

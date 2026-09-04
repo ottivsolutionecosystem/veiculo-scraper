@@ -102,16 +102,23 @@ export function VehicleBoard({ vehicleId }: { vehicleId: number }) {
 
         <Gallery photos={listing.photos} alt={`${listing.brand} ${listing.model}`} />
 
-        <div className="flex flex-wrap gap-x-6 gap-y-2 rounded-lg border p-4 text-sm">
-          <span className="font-semibold">{formatCents(listing.priceCents)}</span>
-          <span>{formatKm(listing.km)}</span>
-          <span>{listing.transmission}</span>
-          <span>{listing.fuelType}</span>
-          <span>{listing.color ?? "cor não informada"}</span>
-          <span>
-            {listing.city}/{listing.stateCode}
+        <div className="flex flex-wrap items-center gap-x-5 gap-y-2 rounded-2xl border border-navy/[0.06] bg-card p-4 text-sm shadow-card">
+          <span className="text-lg font-semibold tabular-nums tracking-tight text-navy">
+            {formatCents(listing.priceCents)}
           </span>
-          <span>{daysAgoLabel(vehicle.daysListed)}</span>
+          {[
+            formatKm(listing.km),
+            listing.transmission,
+            listing.fuelType,
+            listing.color ?? "cor não informada",
+            `${listing.city}/${listing.stateCode}`,
+            daysAgoLabel(vehicle.daysListed),
+          ].map((info, i) => (
+            <span key={`${info}-${i}`} className="flex items-center gap-5 text-muted-foreground">
+              <span aria-hidden className="h-1 w-1 rounded-full bg-navy/15" />
+              {info}
+            </span>
+          ))}
         </div>
 
         <FipeCard vehicle={vehicle} listing={listing} />

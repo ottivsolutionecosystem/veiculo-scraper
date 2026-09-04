@@ -56,10 +56,10 @@ export function SellersBoard() {
             <Link
               key={seller.id}
               href={`/vendedores/${seller.id}`}
-              className="block rounded-xl border bg-card p-3 shadow-card"
+              className="card-lift block rounded-2xl border border-navy/[0.06] bg-card p-3.5 shadow-card"
             >
-              <p className="font-medium text-navy">{seller.name}</p>
-              <p className="text-sm text-muted-foreground">
+              <p className="font-semibold tracking-tight text-navy">{seller.name}</p>
+              <p className="mt-0.5 text-sm text-muted-foreground">
                 {seller.maskedPhone ?? "sem telefone"} · {seller.totalListings} anúncios
               </p>
               <div className="mt-2 flex flex-wrap gap-1.5">
@@ -70,7 +70,7 @@ export function SellersBoard() {
             </Link>
           ))}
         </div>
-        <div className="hidden overflow-x-auto md:block">
+        <div className="hidden overflow-hidden rounded-2xl border border-navy/[0.06] bg-card shadow-card md:block">
           <Table>
             <TableHeader>
               <TableRow>

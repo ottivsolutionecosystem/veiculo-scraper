@@ -62,7 +62,10 @@ export function SearchFiltersForm() {
   }
 
   return (
-    <form className="space-y-4 rounded-lg border p-4" onSubmit={buscar}>
+    <form
+      className="space-y-4 rounded-2xl border border-navy/[0.06] bg-card p-4 shadow-card"
+      onSubmit={buscar}
+    >
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <div className="space-y-1">
           <Label>Marca</Label>

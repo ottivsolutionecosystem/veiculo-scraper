@@ -47,9 +47,23 @@ export function OpsKpis({ kpis }: { kpis: OpsOverview["kpis"] }) {
           <Card
             key={card.key}
             title={kpi.formula}
-            className={cn(card.featured && "col-span-2 bg-navy text-white shadow-none")}
+            className={cn(
+              "relative overflow-hidden",
+              card.featured
+                ? "col-span-2 border-navy/20 bg-navy text-white shadow-lift"
+                : "card-lift",
+            )}
           >
-            <CardContent className={cn("space-y-1 p-4", card.featured && "p-5")}>
+            {card.featured && (
+              <>
+                <span aria-hidden className="auttus-gradient absolute inset-x-0 top-0 h-0.5" />
+                <span
+                  aria-hidden
+                  className="pointer-events-none absolute -right-16 -top-16 h-48 w-48 rounded-full bg-[radial-gradient(circle,hsl(var(--orange)/0.28),transparent_65%)]"
+                />
+              </>
+            )}
+            <CardContent className={cn("relative space-y-1 p-4", card.featured && "p-5")}>
               <p
                 className={cn(
                   "text-[11px] font-medium uppercase tracking-[0.12em]",
@@ -58,7 +72,12 @@ export function OpsKpis({ kpis }: { kpis: OpsOverview["kpis"] }) {
               >
                 {card.label}
               </p>
-              <p className={cn("font-semibold tabular-nums tracking-tight", card.featured ? "text-3xl" : "text-2xl")}>
+              <p
+                className={cn(
+                  "font-semibold tabular-nums tracking-tight",
+                  card.featured ? "text-4xl" : "text-2xl text-navy",
+                )}
+              >
                 {formatOpsValue(kpi)}
               </p>
               {card.featured ? (
