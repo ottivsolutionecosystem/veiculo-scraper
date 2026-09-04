@@ -27,7 +27,7 @@ export function BottomNav() {
       <ul className="relative grid grid-cols-3">
         <span
           aria-hidden
-          className="pointer-events-none absolute inset-y-1 w-1/3 px-1 transition-transform duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none"
+          className="pointer-events-none absolute inset-y-1 w-1/3 px-1 transition-transform duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none"
           style={{ transform: `translateX(${activeIndex * 100}%)` }}
         >
           <span className="block h-full rounded-lg bg-primary/10" />
@@ -40,7 +40,7 @@ export function BottomNav() {
               <Link
                 href={item.href}
                 className={cn(
-                  "flex min-h-12 flex-col items-center justify-center gap-0.5 px-2 py-2 text-[11px] font-medium transition-colors duration-300 active:scale-[0.99]",
+                  "flex min-h-12 flex-col items-center justify-center gap-0.5 px-2 py-2 text-[11px] font-medium transition-colors duration-150 active:scale-[0.98]",
                   active ? "text-primary" : "text-muted-foreground",
                 )}
               >

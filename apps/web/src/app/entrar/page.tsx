@@ -11,9 +11,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ApiError, getAuthStatus, login, setupFirstOperator } from "@/lib/api";
 import { storeSession } from "@/lib/session";
-import { useVisualViewportFrame } from "@/lib/visual-viewport";
-
-const fieldClass = "border-white/15 bg-white/5 text-white focus-visible:ring-white/30";
 
 export default function EntrarPage() {
   const { operator, ready, setSession } = useAuth();
@@ -25,7 +22,6 @@ export default function EntrarPage() {
   const [password, setPassword] = React.useState("");
   const [error, setError] = React.useState<string | null>(null);
   const [busy, setBusy] = React.useState(false);
-  const frame = useVisualViewportFrame();
 
   React.useEffect(() => {
     void getAuthStatus().then((s) => {
@@ -58,89 +54,70 @@ export default function EntrarPage() {
   }
 
   return (
-    <div data-entrar className="fixed inset-0 bg-navy">
-      <div
-        className="flex items-center justify-center overflow-y-auto px-4"
-        style={{
-          height: frame.height || "100%",
-          marginTop: frame.offsetTop,
-          paddingTop: "max(1.25rem, env(safe-area-inset-top))",
-          paddingBottom: "max(1.25rem, env(safe-area-inset-bottom))",
-        }}
-      >
-        <div className="w-full max-w-sm space-y-6 rounded-2xl border border-white/10 bg-navy-deep/80 p-6">
-          <AuttusWordmark onDark />
-          <div>
-            <h1 className="text-lg font-semibold text-white">
-              {needsSetup ? "Criar o primeiro acesso" : "Entrar"}
-            </h1>
-            <p className="mt-1 text-sm text-white/55">
-              {needsSetup
-                ? `Só ${masterLogin} cria o primeiro acesso. Depois ele libera quem pode entrar.`
-                : "Seu trabalho fica no seu nome. Quem não foi autorizado pelo master não entra."}
-            </p>
-          </div>
-          <form className="space-y-3" onSubmit={(e) => void submit(e)}>
-            {needsSetup && (
-              <div className="space-y-1.5">
-                <Label htmlFor="nome" className="text-white/80">
-                  Seu nome
-                </Label>
-                <Input
-                  id="nome"
-                  name="name"
-                  autoComplete="name"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  required
-                  className={fieldClass}
-                />
-              </div>
-            )}
-            <div className="space-y-1.5">
-              <Label htmlFor="login" className="text-white/80">
-                Usuário
-              </Label>
-              <Input
-                id="login"
-                name="username"
-                autoComplete="username"
-                autoCapitalize="none"
-                autoCorrect="off"
-                spellCheck={false}
-                enterKeyHint="next"
-                value={loginValue}
-                onChange={(e) => setLoginValue(e.target.value)}
-                required
-                minLength={3}
-                readOnly={needsSetup}
-                className={fieldClass}
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="senha" className="text-white/80">
-                Senha
-              </Label>
-              <Input
-                id="senha"
-                name="password"
-                type="password"
-                autoComplete={needsSetup ? "new-password" : "current-password"}
-                enterKeyHint="go"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                minLength={6}
-                className={fieldClass}
-              />
-            </div>
-            {error && <p className="text-sm text-coral">{error}</p>}
-            <Button type="submit" className="w-full" disabled={busy}>
-              {busy && <Loader2 className="animate-spin" />}
-              {needsSetup ? "Criar acesso" : "Entrar"}
-            </Button>
-          </form>
+    <div className="flex min-h-dvh items-center justify-center bg-navy px-4 pb-[env(safe-area-inset-bottom)] pt-[env(safe-area-inset-top)]">
+      <div className="w-full max-w-sm space-y-6 rounded-2xl border border-white/10 bg-navy-deep/60 p-6 shadow-card">
+        <AuttusWordmark onDark />
+        <div>
+          <h1 className="text-lg font-semibold text-white">
+            {needsSetup ? "Criar o primeiro acesso" : "Entrar"}
+          </h1>
+          <p className="mt-1 text-sm text-white/55">
+            {needsSetup
+              ? `Só ${masterLogin} cria o primeiro acesso. Depois ele libera quem pode entrar.`
+              : "Seu trabalho fica no seu nome. Quem não foi autorizado pelo master não entra."}
+          </p>
         </div>
+        <form className="space-y-3" onSubmit={(e) => void submit(e)}>
+          {needsSetup && (
+            <div className="space-y-1.5">
+              <Label htmlFor="nome" className="text-white/80">
+                Seu nome
+              </Label>
+              <Input
+                id="nome"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                required
+                className="border-white/15 bg-white/5 text-white"
+              />
+            </div>
+          )}
+          <div className="space-y-1.5">
+            <Label htmlFor="login" className="text-white/80">
+              Usuário
+            </Label>
+            <Input
+              id="login"
+              autoComplete="username"
+              value={loginValue}
+              onChange={(e) => setLoginValue(e.target.value)}
+              required
+              minLength={3}
+              readOnly={needsSetup}
+              className="border-white/15 bg-white/5 text-white"
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="senha" className="text-white/80">
+              Senha
+            </Label>
+            <Input
+              id="senha"
+              type="password"
+              autoComplete={needsSetup ? "new-password" : "current-password"}
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+              minLength={6}
+              className="border-white/15 bg-white/5 text-white"
+            />
+          </div>
+          {error && <p className="text-sm text-coral">{error}</p>}
+          <Button type="submit" className="w-full" disabled={busy}>
+            {busy && <Loader2 className="animate-spin" />}
+            {needsSetup ? "Criar acesso" : "Entrar"}
+          </Button>
+        </form>
       </div>
     </div>
   );
