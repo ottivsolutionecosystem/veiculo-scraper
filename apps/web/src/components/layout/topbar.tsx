@@ -3,14 +3,14 @@
 import * as React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Menu } from "lucide-react";
+import { Menu, X } from "lucide-react";
 
 import { AuttusWordmark } from "@/components/brand/auttus-mark";
 import { BackToList } from "@/components/layout/back-to-list";
 import { useChromeVisibility } from "@/components/layout/chrome-visibility";
 import { OperatorBar } from "@/components/queue/operator-bar";
 import { Button } from "@/components/ui/button";
-import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet";
+import { Sheet, SheetClose, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet";
 import { useOperator } from "@/lib/operator";
 import { NAV_GROUPS, NAV_ITEMS, navGroupsFor, type NavGroup } from "@/lib/nav";
 import { cn } from "@/lib/utils";
@@ -44,7 +44,7 @@ function MobileNav({
               href={item.href}
               onClick={onNavigate}
               className={cn(
-                "relative flex min-h-11 items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium transition-colors duration-150 active:scale-[0.98]",
+                "relative flex min-h-11 items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium transition-colors duration-300 active:scale-[0.99]",
                 active ? "bg-navy-deep text-white" : "text-white/55 hover:bg-white/5 hover:text-white",
               )}
             >
@@ -84,17 +84,18 @@ export function Topbar() {
           </Button>
         </SheetTrigger>
         <SheetContent
+          hideClose
           side="left"
-          className={cn(
-            "flex w-[min(20rem,100vw)] flex-col border-0 bg-navy px-0 py-0 text-white",
-            "[&>button]:right-3 [&>button]:top-[calc(var(--safe-top)+0.25rem)] [&>button]:text-white",
-          )}
+          className="flex w-[min(20rem,100vw)] flex-col border-0 bg-navy px-0 py-0 text-white"
         >
           <SheetTitle className="sr-only">Navegação</SheetTitle>
           <div className="shrink-0 bg-navy" style={{ height: "var(--safe-top)" }} aria-hidden />
-          <div className="auttus-gradient h-[3px] w-full shrink-0" />
-          <div className="flex h-[4.25rem] shrink-0 items-center px-5">
+          <div className="flex h-[4.25rem] shrink-0 items-center justify-between gap-2 px-3 pl-5">
             <AuttusWordmark onDark />
+            <SheetClose className="flex h-11 w-11 shrink-0 items-center justify-center rounded-md text-white/55 transition-colors duration-300 hover:bg-white/10 hover:text-white focus:outline-none focus-visible:ring-0">
+              <X className="h-5 w-5" />
+              <span className="sr-only">Fechar</span>
+            </SheetClose>
           </div>
           <nav className="flex min-h-0 flex-1 flex-col gap-6 overflow-y-auto p-3 pb-[var(--safe-bottom)]">
             {groups.map((g) => (

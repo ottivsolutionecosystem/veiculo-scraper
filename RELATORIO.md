@@ -1,17 +1,18 @@
-# RELATORIO — PWA: safe area de verdade
+# RELATORIO — menu, teclado do login, animações
 
 ## Feito
-- O ajuste anterior não resolvia: `p-0` e `env()` zerado deixavam o
-  X embaixo do relógio; o hide por `h-0` ainda travava a lista.
-- Faixa navy fixa no topo (`--safe-top`, mínimo 3rem no telefone).
-  Menu usa a mesma faixa + spacer interno, não padding que o Tailwind
-  anula.
-- Hide no scroll saiu. Teclado: tirei `resizes-content` e o
-  `scrollIntoView` que brigavam com o iOS.
+- Menu mobile: saiu a faixa laranja do topo. O X agora é um ícone
+  simples ao lado da wordmark, sem anel laranja de foco.
+- Login: fundo navy fixo no html/body (o cream aparecia no vão do
+  teclado). `color-scheme: dark` pede teclado escuro. O card fica na
+  área visível (`visualViewport`), sem `transform` em cima do input.
+- Abrir/fechar (sheet, overlay, páginas, bottom nav) mais lento
+  (~400–500ms) e overlay mais leve.
 
 ## Decidido por mim e por quê
-- Sem env() o PWA reporta 0. `max(3rem, env())` segura o notch.
-- Chrome compacto já cabe; esconder a barra não vale o tranco.
+- O anel laranja era o `focus:ring` do shadcn no X. Tirei o ring.
+- `min-h-dvh` no login encolhia e deixava o papel cream no lugar do
+  teclado. `fixed inset-0` + navy no documento cobre o layout inteiro.
 
 ## Pendente de decisão sua
 - Redeploy do web. Sem isso o celular continua no build antigo.

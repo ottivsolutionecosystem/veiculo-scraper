@@ -95,6 +95,14 @@
     -webkit-tap-highlight-color: transparent;
   }
 
+  /* Login: navy atrás do teclado do iOS (o dvh encolhe e o papel cream aparece). */
+  html:has([data-entrar]),
+  html:has([data-entrar]) body {
+    background-color: #0f1c33;
+    color-scheme: dark;
+    overflow: hidden;
+  }
+
   /* No telefone, se o PWA não reportar safe-area, ainda sobra 3rem para o relógio. */
   @media (max-width: 767px) {
     :root {
