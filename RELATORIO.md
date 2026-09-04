@@ -1,15 +1,17 @@
-# RELATORIO — revisão da estrutura mobile/PWA
+# RELATORIO — PWA: safe area, scroll e teclado
 
 ## Feito
-- Revisto casco (chrome, fila, ícones). Dois furos corrigidos:
-  filtros da fila eram o mesmo elemento no desktop e no sheet;
-  favicon ainda era o FIV transparente (aba preta).
-- PWA 192/512/maskable e apple-icon: branco, marca no centro.
-  Fonte da arte continua em `/brand/logo-mark.png`.
+- Menu lateral respeita o notch: logo e X abaixo da barra do sistema.
+- Hide do chrome no scroll agora é corte seco (sem animar altura). A
+  lista virtualizada não remede no meio do dedo.
+- Teclado trava o hide. Folha de filtros usa a altura do
+  visualViewport. Input/textarea sobem para o centro no foco.
+- Sheet mais curto, fade na troca de rota, pílula na barra de baixo,
+  toque com scale leve.
 
 ## Decidido por mim e por quê
-- O resto está coerente: scroll da lista esconde o chrome, tipo de
-  anúncio saiu da fila, Operação ainda fatia, SW não cacheia ícone.
+- `interactiveWidget: resizes-content` para o PWA encolher o layout
+  com o teclado, em vez de empurrar solto.
 
 ## Pendente de decisão sua
 - Nada. Redeploy do web.

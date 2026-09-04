@@ -100,7 +100,11 @@ export function QueueView({
     <div
       ref={parentRef}
       onScroll={onScroll}
-      className={fill ? "h-full min-h-0 overflow-y-auto" : "max-h-[70dvh] min-h-[16rem] overflow-y-auto"}
+      className={
+        fill
+          ? "h-full min-h-0 overflow-y-auto overscroll-y-contain"
+          : "max-h-[70dvh] min-h-[16rem] overflow-y-auto overscroll-y-contain"
+      }
     >
       <div className="relative w-full" style={{ height: virtualizer.getTotalSize() }}>
         {virtualizer.getVirtualItems().map((virtualRow) => {

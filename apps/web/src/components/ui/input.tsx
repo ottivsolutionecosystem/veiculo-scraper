@@ -3,7 +3,7 @@ import * as React from "react";
 import { cn } from "@/lib/utils";
 
 const Input = React.forwardRef<HTMLInputElement, React.InputHTMLAttributes<HTMLInputElement>>(
-  ({ className, type, ...props }, ref) => {
+  ({ className, type, onFocus, ...props }, ref) => {
     return (
       <input
         type={type}
@@ -12,6 +12,13 @@ const Input = React.forwardRef<HTMLInputElement, React.InputHTMLAttributes<HTMLI
           className,
         )}
         ref={ref}
+        onFocus={(e) => {
+          onFocus?.(e);
+          if (typeof window === "undefined" || window.innerWidth >= 768) return;
+          window.setTimeout(() => {
+            e.target.scrollIntoView({ block: "center", behavior: "smooth" });
+          }, 350);
+        }}
         {...props}
       />
     );

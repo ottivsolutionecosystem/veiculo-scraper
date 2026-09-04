@@ -7,6 +7,7 @@ import { SlidersHorizontal, X } from "lucide-react";
 import { BRANDS, SOURCES } from "@/lib/catalog";
 import { SCORE_BAND_LABELS, sourceLabel } from "@/lib/labels";
 import { useChromeVisibility } from "@/components/layout/chrome-visibility";
+import { useVisualViewportHeight } from "@/lib/visual-viewport";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
@@ -99,6 +100,7 @@ export function QueueFilters() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const { lockChrome } = useChromeVisibility();
+  const viewportHeight = useVisualViewportHeight();
   const [q, setQ] = React.useState(searchParams.get("q") ?? "");
   const [priceMax, setPriceMax] = React.useState(searchParams.get("priceMax") ?? "");
   const [open, setOpen] = React.useState(false);
@@ -195,7 +197,11 @@ export function QueueFilters() {
           Filtros{sheetActive > 0 ? ` (${sheetActive})` : ""}
         </Button>
         <Sheet open={open} onOpenChange={setOpen}>
-          <SheetContent side="bottom" className="max-h-[85dvh] overflow-y-auto pb-[env(safe-area-inset-bottom)]">
+          <SheetContent
+            side="bottom"
+            className="overflow-y-auto pb-[env(safe-area-inset-bottom)]"
+            style={{ maxHeight: viewportHeight ? Math.round(viewportHeight * 0.85) : "85dvh" }}
+          >
             <SheetHeader>
               <SheetTitle>Filtros da fila</SheetTitle>
             </SheetHeader>

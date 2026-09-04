@@ -12,8 +12,7 @@ import { EmptyState } from "@/components/shared/empty-state";
 import { QueueView } from "@/components/queue/queue-view";
 import { QueueFilters } from "@/components/queue/queue-filters";
 import { CoverageBar } from "@/components/queue/coverage-bar";
-import { useChromeVisibility } from "@/components/layout/chrome-visibility";
-import { cn } from "@/lib/utils";
+import { ChromeCollapse } from "@/components/layout/chrome-collapse";
 
 const SCOPES: QueueScope[] = ["untouched", "mine", "followup", "price_drop", "all", "tagged"];
 
@@ -50,7 +49,6 @@ function asScope(raw: string | null): QueueScope {
 
 export function QueueBoard() {
   const { ready, operator } = useAuth();
-  const { hidden } = useChromeVisibility();
   const searchParams = useSearchParams();
   const scope = asScope(searchParams.get("scope"));
   const listFilters = parseQueueListFilters(Object.fromEntries(searchParams.entries()));
@@ -90,13 +88,7 @@ export function QueueBoard() {
 
   return (
     <div className="flex h-full min-h-0 flex-col">
-      <div
-        className={cn(
-          "grid shrink-0 transition-[grid-template-rows] duration-200 ease-out motion-reduce:transition-none md:!grid-rows-[1fr]",
-          hidden ? "max-md:grid-rows-[0fr]" : "grid-rows-[1fr]",
-        )}
-      >
-        <div className={cn("overflow-hidden", hidden && "max-md:pointer-events-none")}>
+      <ChromeCollapse>
           <div className="space-y-2 border-b border-navy/5 bg-card/40 px-3 py-2 sm:space-y-4 sm:px-6 sm:py-5">
             <p className="hidden text-sm text-muted-foreground md:block">
               Ordenado por score, com quem ainda não foi contatado na frente no empate. Consignar manda
@@ -105,8 +97,7 @@ export function QueueBoard() {
             {stats && <CoverageBar initial={stats} />}
             <QueueFilters />
           </div>
-        </div>
-      </div>
+      </ChromeCollapse>
 
       {loading && !page ? (
         <div className="flex items-center gap-2 p-4 text-sm text-muted-foreground sm:p-6">

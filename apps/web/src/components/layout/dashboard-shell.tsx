@@ -3,6 +3,7 @@
 import type { ReactNode } from "react";
 
 import { Topbar } from "@/components/layout/topbar";
+import { PageFade } from "@/components/layout/page-fade";
 import { useChromeVisibility } from "@/components/layout/chrome-visibility";
 
 /** Coluna do dashboard: topbar some no mobile ao descer, main reporta o scroll. */
@@ -23,7 +24,7 @@ export function DashboardShell({ children }: { children: ReactNode }) {
         onScroll={(e) => onScrollFrame(e.currentTarget)}
         className="min-h-0 flex-1 overflow-x-hidden overflow-y-auto pb-[calc(4.75rem+env(safe-area-inset-bottom))] md:pb-[env(safe-area-inset-bottom)]"
       >
-        {children}
+        <PageFade>{children}</PageFade>
       </main>
     </div>
   );

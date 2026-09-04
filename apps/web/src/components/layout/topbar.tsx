@@ -8,6 +8,7 @@ import { Menu } from "lucide-react";
 import { AuttusWordmark } from "@/components/brand/auttus-mark";
 import { BackToList } from "@/components/layout/back-to-list";
 import { useChromeVisibility } from "@/components/layout/chrome-visibility";
+import { ChromeCollapse } from "@/components/layout/chrome-collapse";
 import { OperatorBar } from "@/components/queue/operator-bar";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet";
@@ -44,7 +45,7 @@ function MobileNav({
               href={item.href}
               onClick={onNavigate}
               className={cn(
-                "relative flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium",
+                "relative flex min-h-11 items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium transition-colors duration-150 active:scale-[0.98]",
                 active ? "bg-navy-deep text-white" : "text-white/55 hover:bg-white/5 hover:text-white",
               )}
             >
@@ -62,7 +63,7 @@ function MobileNav({
 export function Topbar() {
   const pathname = usePathname();
   const { isMaster } = useOperator();
-  const { hidden, lockChrome } = useChromeVisibility();
+  const { lockChrome } = useChromeVisibility();
   const [open, setOpen] = React.useState(false);
   const groups = navGroupsFor(isMaster);
   const items = groups.flatMap((g) => g.items);
@@ -75,13 +76,7 @@ export function Topbar() {
   }, [open, lockChrome]);
 
   return (
-    <div
-      className={cn(
-        "grid shrink-0 transition-[grid-template-rows] duration-200 ease-out motion-reduce:transition-none md:!grid-rows-[1fr]",
-        hidden ? "max-md:grid-rows-[0fr]" : "grid-rows-[1fr]",
-      )}
-    >
-      <div className={cn("overflow-hidden", hidden && "max-md:pointer-events-none")}>
+    <ChromeCollapse>
         <header className="flex min-h-14 items-center gap-2 border-b bg-card/80 px-3 py-1.5 pt-[max(0.375rem,env(safe-area-inset-top))] backdrop-blur-md sm:gap-3 sm:px-6">
           <Sheet open={open} onOpenChange={setOpen}>
             <SheetTrigger asChild>
@@ -90,13 +85,16 @@ export function Topbar() {
                 <span className="sr-only">Abrir menu</span>
               </Button>
             </SheetTrigger>
-            <SheetContent side="left" className="w-[min(20rem,100vw)] border-0 bg-navy p-0 text-white [&>button]:text-white">
+            <SheetContent
+              side="left"
+              className="w-[min(20rem,100vw)] border-0 bg-navy p-0 pb-[env(safe-area-inset-bottom)] pt-[env(safe-area-inset-top)] text-white [&>button]:right-3 [&>button]:top-[calc(env(safe-area-inset-top)+0.5rem)] [&>button]:text-white"
+            >
               <SheetTitle className="sr-only">Navegação</SheetTitle>
               <div className="auttus-gradient h-[3px] w-full" />
               <div className="flex h-[4.25rem] items-center px-5">
                 <AuttusWordmark onDark />
               </div>
-              <nav className="flex max-h-[calc(100dvh-5rem)] flex-col gap-6 overflow-y-auto p-3">
+              <nav className="flex max-h-[calc(100dvh-5rem-env(safe-area-inset-top)-env(safe-area-inset-bottom))] flex-col gap-6 overflow-y-auto p-3">
                 {groups.map((g) => (
                   <MobileNav key={g.title} group={g} pathname={pathname} onNavigate={() => setOpen(false)} />
                 ))}
@@ -121,7 +119,6 @@ export function Topbar() {
           </div>
           <OperatorBar compact />
         </header>
-      </div>
-    </div>
+    </ChromeCollapse>
   );
 }
