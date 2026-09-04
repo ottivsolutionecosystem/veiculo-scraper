@@ -21,8 +21,8 @@ export function BottomNav() {
 
   return (
     <nav
-      className="fixed inset-x-0 bottom-0 z-30 border-t bg-card/95 backdrop-blur-md md:hidden"
-      style={{ paddingBottom: "var(--safe-bottom)" }}
+      className="fixed inset-x-0 bottom-0 z-30 border-0 shadow-none md:hidden"
+      style={{ backgroundColor: "#F7F4F2", paddingBottom: "var(--safe-bottom)" }}
     >
       <ul className="relative grid grid-cols-3">
         <span

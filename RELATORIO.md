@@ -1,13 +1,12 @@
-# RELATORIO — front no ar (menu, textos, login)
+# RELATORIO — barra de baixo sem rebarba
 
 ## Feito
-- Menu: sem faixa laranja, X na wordmark, recuo do notch.
-- Topo do PWA na cor do site; status bar clara.
-- Textos de ajuda sumiram dos módulos.
-- Tela de entrar nova (vidro, luz FIV, logo no centro no celular).
+- Tirei o `border-t` cinza e o blur/branco da bottom nav.
+- Fundo sólido `#F7F4F2`, igual ao papel do site.
 
 ## Decidido por mim e por quê
-- Só `apps/web`. Infra local (.local, .env, Postgres) ficou fora.
+- A linha e o `bg-card/95` faziam a barra parecer um filete
+  branco saindo do fundo.
 
 ## Pendente de decisão sua
-- Redeploy do **web** no Dokploy. Sem isso o oficial não muda.
+- Redeploy do web no Dokploy.
