@@ -25,33 +25,22 @@ function apply(pathname: string, current: URLSearchParams, patch: Record<string,
 }
 
 function FilterFields({
-  q,
   priceMax,
   brand,
   scoreBand,
   source,
-  onQ,
   onPriceMax,
   onGo,
 }: {
-  q: string;
   priceMax: string;
   brand: string;
   scoreBand: string;
   source: string;
-  onQ: (v: string) => void;
   onPriceMax: (v: string) => void;
   onGo: (patch: Record<string, string | null>) => void;
 }) {
   return (
     <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:flex lg:flex-wrap lg:items-center">
-      <Input
-        value={q}
-        onChange={(e) => onQ(e.target.value)}
-        placeholder="Nome do veículo"
-        aria-label="Nome do veículo"
-        className="lg:w-48"
-      />
       <Select value={brand || "all"} onValueChange={(v) => onGo({ brand: v === "all" ? null : v })}>
         <SelectTrigger aria-label="Marca" className="lg:w-40">
           <SelectValue placeholder="Marca" />
@@ -150,9 +139,15 @@ export function QueueFilters() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [priceMax]);
 
-  const activeCount = ["q", "brand", "priceMax", "scoreBand", "source"].filter((key) => searchParams.get(key)).length;
+  const sheetActive = ["brand", "priceMax", "scoreBand", "source"].filter((key) => searchParams.get(key)).length;
+  const anyActive = sheetActive + (searchParams.get("q") ? 1 : 0);
 
-  function limpar() {
+  function limparSheet() {
+    setPriceMax("");
+    go({ brand: null, priceMax: null, scoreBand: null, source: null });
+  }
+
+  function limparTudo() {
     setQ("");
     setPriceMax("");
     go({ q: null, brand: null, priceMax: null, scoreBand: null, source: null });
@@ -160,12 +155,10 @@ export function QueueFilters() {
 
   const fields = (
     <FilterFields
-      q={q}
       priceMax={priceMax}
       brand={searchParams.get("brand") ?? ""}
       scoreBand={searchParams.get("scoreBand") ?? ""}
       source={searchParams.get("source") ?? ""}
-      onQ={setQ}
       onPriceMax={setPriceMax}
       onGo={go}
     />
@@ -174,19 +167,34 @@ export function QueueFilters() {
   return (
     <>
       <div className="hidden md:flex md:flex-wrap md:items-center md:gap-2">
+        <Input
+          value={q}
+          onChange={(e) => setQ(e.target.value)}
+          placeholder="Nome do veículo"
+          aria-label="Nome do veículo"
+          className="lg:w-48"
+        />
         {fields}
-        {activeCount > 0 && (
-          <Button type="button" variant="ghost" size="sm" onClick={limpar}>
+        {anyActive > 0 && (
+          <Button type="button" variant="ghost" size="sm" onClick={limparTudo}>
             <X className="h-4 w-4" />
             Limpar
           </Button>
         )}
       </div>
 
-      <div className="md:hidden">
-        <Button type="button" variant="outline" className="min-w-[7rem]" onClick={() => setOpen(true)}>
+      <div className="flex items-center gap-2 md:hidden">
+        <div className="min-w-0 flex-1">
+          <Input
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            placeholder="Nome do veículo"
+            aria-label="Nome do veículo"
+          />
+        </div>
+        <Button type="button" variant="outline" className="min-w-[7rem] shrink-0" onClick={() => setOpen(true)}>
           <SlidersHorizontal />
-          Filtros{activeCount > 0 ? ` (${activeCount})` : ""}
+          Filtros{sheetActive > 0 ? ` (${sheetActive})` : ""}
         </Button>
         <Sheet open={open} onOpenChange={setOpen}>
           <SheetContent side="bottom" className="max-h-[85dvh] overflow-y-auto pb-[env(safe-area-inset-bottom)]">
@@ -195,8 +203,8 @@ export function QueueFilters() {
             </SheetHeader>
             <div className="mt-4 space-y-3">
               {fields}
-              {activeCount > 0 && (
-                <Button type="button" variant="ghost" className="w-full" onClick={limpar}>
+              {sheetActive > 0 && (
+                <Button type="button" variant="ghost" className="w-full" onClick={limparSheet}>
                   <X className="h-4 w-4" />
                   Limpar
                 </Button>

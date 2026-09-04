@@ -10,7 +10,6 @@ import { parseQueueListFilters, queueFiltersActive } from "@/lib/queue-filters";
 import { useAuth } from "@/components/auth/auth-provider";
 import { EmptyState } from "@/components/shared/empty-state";
 import { QueueView } from "@/components/queue/queue-view";
-import { SellerTypeFilter } from "@/components/queue/seller-type-filter";
 import { QueueFilters } from "@/components/queue/queue-filters";
 import { CoverageBar } from "@/components/queue/coverage-bar";
 import { useChromeVisibility } from "@/components/layout/chrome-visibility";
@@ -49,17 +48,10 @@ function asScope(raw: string | null): QueueScope {
   return SCOPES.includes(raw as QueueScope) ? (raw as QueueScope) : "untouched";
 }
 
-function asSellerType(raw: string | null): "individual" | "dealer" | undefined {
-  if (raw === "dealer") return "dealer";
-  if (raw === "individual") return "individual";
-  return undefined;
-}
-
 export function QueueBoard() {
   const { ready, operator } = useAuth();
   const { hidden } = useChromeVisibility();
   const searchParams = useSearchParams();
-  const sellerType = asSellerType(searchParams.get("sellerType"));
   const scope = asScope(searchParams.get("scope"));
   const listFilters = parseQueueListFilters(Object.fromEntries(searchParams.entries()));
   const filtered = queueFiltersActive(listFilters);
@@ -68,7 +60,7 @@ export function QueueBoard() {
   const [stats, setStats] = React.useState<QueueStats | null>(null);
   const [error, setError] = React.useState<string | null>(null);
   const [loading, setLoading] = React.useState(true);
-  const filterKey = JSON.stringify({ sellerType, scope, listFilters });
+  const filterKey = JSON.stringify({ scope, listFilters });
 
   React.useEffect(() => {
     if (!ready || !operator) return;
@@ -76,8 +68,8 @@ export function QueueBoard() {
     setLoading(true);
     setError(null);
     void Promise.all([
-      getQueue({ limit: 40, sellerType, scope, ...listFilters }),
-      getQueueStats({ sellerType }),
+      getQueue({ limit: 40, scope, ...listFilters }),
+      getQueueStats(),
     ])
       .then(([nextPage, nextStats]) => {
         if (cancelled) return;
@@ -106,20 +98,12 @@ export function QueueBoard() {
       >
         <div className={cn("overflow-hidden", hidden && "max-md:pointer-events-none")}>
           <div className="space-y-2 border-b border-navy/5 bg-card/40 px-3 py-2 sm:space-y-4 sm:px-6 sm:py-5">
-            <div className="hidden flex-col gap-3 md:flex sm:flex-row sm:flex-wrap sm:items-end sm:justify-between">
-              <p className="text-sm text-muted-foreground">
-                Ordenado por score, com quem ainda não foi contatado na frente no empate. Consignar manda
-                para o kanban.
-              </p>
-              <SellerTypeFilter />
-            </div>
-            {stats && <CoverageBar initial={stats} sellerType={sellerType} />}
-            <div className="flex items-center gap-2 md:block">
-              <div className="min-w-0 flex-1 md:hidden">
-                <SellerTypeFilter />
-              </div>
-              <QueueFilters />
-            </div>
+            <p className="hidden text-sm text-muted-foreground md:block">
+              Ordenado por score, com quem ainda não foi contatado na frente no empate. Consignar manda
+              para o kanban.
+            </p>
+            {stats && <CoverageBar initial={stats} />}
+            <QueueFilters />
           </div>
         </div>
       </div>
@@ -145,7 +129,6 @@ export function QueueBoard() {
             fill
             initial={page}
             source="queue"
-            sellerType={sellerType}
             scope={scope}
             listFilters={listFilters}
           />
