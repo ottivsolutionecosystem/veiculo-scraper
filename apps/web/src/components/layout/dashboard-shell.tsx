@@ -12,7 +12,7 @@ export function DashboardShell({ children }: { children: ReactNode }) {
 
   return (
     <div className="flex min-h-0 min-w-0 flex-1 flex-col">
-      <div className="shrink-0 bg-navy md:hidden" style={{ height: "var(--safe-top)" }} aria-hidden />
+      <div className="shrink-0 bg-card md:hidden" style={{ height: "var(--safe-top)" }} aria-hidden />
       <Topbar />
       <main
         onScroll={(e) => onScrollFrame(e.currentTarget)}

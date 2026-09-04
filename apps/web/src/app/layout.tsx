@@ -21,7 +21,7 @@ export const metadata: Metadata = {
   manifest: "/manifest.webmanifest",
   appleWebApp: {
     capable: true,
-    statusBarStyle: "black-translucent",
+    statusBarStyle: "default",
     title: "Auttus",
   },
   formatDetection: { telephone: false },
@@ -31,7 +31,7 @@ export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   viewportFit: "cover",
-  themeColor: "#0f1c33",
+  themeColor: "#f7f5f2",
 };
 
 export default function RootLayout({
