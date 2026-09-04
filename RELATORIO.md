@@ -1,14 +1,12 @@
-# RELATORIO — ícone PWA do FIV
+# RELATORIO — ícone PWA fundo branco
 
 ## Feito
-- Favicon volta a ser o FIV oficial (`icon.png`). O “A” laranja gerado
-  saiu.
-- Ícones de instalação: 192, 512 e 512 maskable a partir do mesmo
-  FIV, fundo preto. Banner de instalar mostra essa marca.
+- Ícones de instalar (192, 512, maskable) e apple-icon agora têm
+  fundo branco, marca centralizada. O preto vinha do flatten do FIV.
 
 ## Decidido por mim e por quê
-- Arquivo estático em `/icons`, não ImageResponse. O celular baixa o
-  PNG da marca, não um desenho.
+- O PNG da marca já era transparente. Colei no branco com folga
+  (~72%; maskable 58%) para o recorte do Android/iOS não comer a A.
 
 ## Pendente de decisão sua
 - Nada. Redeploy do web para o celular pegar o ícone.
