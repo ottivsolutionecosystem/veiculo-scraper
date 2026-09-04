@@ -1,17 +1,13 @@
-# RELATORIO — PWA: safe area de verdade
+# RELATORIO — front no ar (menu, textos, login)
 
 ## Feito
-- O ajuste anterior não resolvia: `p-0` e `env()` zerado deixavam o
-  X embaixo do relógio; o hide por `h-0` ainda travava a lista.
-- Faixa navy fixa no topo (`--safe-top`, mínimo 3rem no telefone).
-  Menu usa a mesma faixa + spacer interno, não padding que o Tailwind
-  anula.
-- Hide no scroll saiu. Teclado: tirei `resizes-content` e o
-  `scrollIntoView` que brigavam com o iOS.
+- Menu: sem faixa laranja, X na wordmark, recuo do notch.
+- Topo do PWA na cor do site; status bar clara.
+- Textos de ajuda sumiram dos módulos.
+- Tela de entrar nova (vidro, luz FIV, logo no centro no celular).
 
 ## Decidido por mim e por quê
-- Sem env() o PWA reporta 0. `max(3rem, env())` segura o notch.
-- Chrome compacto já cabe; esconder a barra não vale o tranco.
+- Só `apps/web`. Infra local (.local, .env, Postgres) ficou fora.
 
 ## Pendente de decisão sua
-- Redeploy do web. Sem isso o celular continua no build antigo.
+- Redeploy do **web** no Dokploy. Sem isso o oficial não muda.

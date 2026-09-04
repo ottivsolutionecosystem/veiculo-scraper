@@ -123,3 +123,29 @@
     background-image: linear-gradient(90deg, hsl(var(--coral)) 0%, hsl(var(--orange)) 100%);
   }
 }
+
+/* Tela de entrar: fundo navy mesmo se o body for cream. */
+html:has([data-entrar]),
+html:has([data-entrar]) body {
+  background-color: #0a1520;
+}
+
+@keyframes entrar-drift {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  50% {
+    transform: translate3d(6%, -8%, 0) scale(1.12);
+  }
+}
+
+@keyframes entrar-drift-alt {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0) scale(1.08);
+  }
+  50% {
+    transform: translate3d(-8%, 5%, 0) scale(1);
+  }
+}

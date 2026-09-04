@@ -14,14 +14,23 @@ export function AuttusMark({
 }
 
 /** Wordmark oficial Auttus + nome do produto. */
-export function AuttusWordmark({ onDark = true }: { onDark?: boolean }) {
+export function AuttusWordmark({
+  onDark = true,
+  align = "left",
+}: {
+  onDark?: boolean;
+  align?: "left" | "center";
+}) {
   return (
-    <div className="flex min-w-0 flex-col gap-1">
+    <div className={cn("flex min-w-0 flex-col gap-1", align === "center" && "items-center text-center")}>
       {/* eslint-disable-next-line @next/next/no-img-element -- arte local em /public */}
       <img
         src="/brand/logo-wordmark-on-dark.png"
         alt="Auttus"
-        className="h-8 w-auto max-w-[11.5rem] object-contain object-left"
+        className={cn(
+          "h-8 w-auto max-w-[11.5rem] object-contain",
+          align === "center" ? "object-center" : "object-left",
+        )}
       />
       <p className={cn("text-[10px] font-medium tracking-wide", onDark ? "text-white/50" : "text-navy/50")}>
         Consignação inteligente
