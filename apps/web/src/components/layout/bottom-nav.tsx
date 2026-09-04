@@ -11,7 +11,9 @@ function isActive(pathname: string, href: string) {
   return pathname === href || pathname.startsWith(`${href}/`);
 }
 
-/** Atalhos do dia no polegar — só no telefone. Desktop continua com a sidebar. */
+/** Atalhos do dia no polegar — só no telefone. Desktop continua com a sidebar.
+ * Fica no fluxo da coluna, não `fixed`: assim ocupa espaço de verdade e não
+ * tem como cobrir o conteúdo de nenhuma página. */
 export function BottomNav() {
   const pathname = usePathname();
   const activeIndex = Math.max(
@@ -21,14 +23,9 @@ export function BottomNav() {
 
   return (
     <nav
-      className="fixed inset-x-0 bottom-0 z-30 border-0 shadow-none md:hidden"
+      className="relative z-30 shrink-0 border-0 shadow-none md:hidden"
       style={{ backgroundColor: "#F7F4F2", paddingBottom: "var(--safe-bottom)" }}
     >
-      {/* A lista some por baixo da barra em vez de ser cortada na reta. */}
-      <span
-        aria-hidden
-        className="pointer-events-none absolute inset-x-0 bottom-full h-5 bg-gradient-to-t from-[#F7F4F2] to-transparent"
-      />
       <ul className="relative grid grid-cols-3">
         <span
           aria-hidden
@@ -45,7 +42,7 @@ export function BottomNav() {
               <Link
                 href={item.href}
                 className={cn(
-                  "flex min-h-12 flex-col items-center justify-center gap-0.5 px-2 py-2 text-[11px] font-medium transition-colors duration-150 active:scale-[0.98]",
+                  "flex h-14 flex-col items-center justify-center gap-0.5 px-2 text-[11px] font-medium transition-colors duration-150 active:scale-[0.98]",
                   active ? "text-primary" : "text-muted-foreground",
                 )}
               >

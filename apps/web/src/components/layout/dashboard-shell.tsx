@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 
 import { Topbar } from "@/components/layout/topbar";
 import { PageFade } from "@/components/layout/page-fade";
+import { BottomNav } from "@/components/layout/bottom-nav";
 import { useChromeVisibility } from "@/components/layout/chrome-visibility";
 
 /** Coluna do dashboard. A faixa de cima é a safe area — o relógio não come a UI. */
@@ -16,10 +17,11 @@ export function DashboardShell({ children }: { children: ReactNode }) {
       <Topbar />
       <main
         onScroll={(e) => onScrollFrame(e.currentTarget)}
-        className="app-canvas min-h-0 flex-1 overflow-x-hidden overflow-y-auto pb-[var(--bottom-nav-space)]"
+        className="app-canvas min-h-0 flex-1 overflow-x-hidden overflow-y-auto"
       >
         <PageFade>{children}</PageFade>
       </main>
+      <BottomNav />
     </div>
   );
 }

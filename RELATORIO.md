@@ -1,31 +1,28 @@
-# RELATORIO — acabamento dos módulos e fim do corte na fila
+# RELATORIO — barra de baixo sai de cima do conteúdo
 
 ## Feito
-- Acabamento visual dos módulos sem tocar em token de cor: `.app-canvas`
-  no papel do painel, `Card` com hairline navy/6% e `.card-lift`, tabela
-  com cabeçalho em caixa alta, listas grandes dentro de cartão, cartão da
-  fila com foto em zoom leve e preço maior, colunas do kanban viraram
-  painel, fontes com grade de 6 números, KPI destacado com halo laranja.
-  Base (botão, input, select, textarea, tabs, dialog, popover, dropdown)
-  padronizada em canto xl/2xl, foco laranja suave e `shadow-lift`.
-- Menu mobile: o X padrão do Radix agora depende da prop `showClose` do
-  `SheetContent`, não do truque `[&>button]:hidden`.
-- Fila: a lista ia só até 4.75rem antes do fim da tela, fatiando um
-  cartão branco na reta e deixando um vão morto antes da barra. Agora a
-  fila encosta na borda e a lista some por baixo da bottom nav.
-- Criei `--bottom-nav-space` (3rem + safe-bottom no telefone, 0 no
-  desktop) — a altura real da barra, no lugar do 4.75rem chutado.
-- A bottom nav ganhou um degradê de 20px acima dela, do próprio #F7F4F2
-  para transparente, para o conteúdo dissolver em vez de ser cortado.
+- A bottom nav não é mais `fixed`. Ela virou o último item da coluna do
+  `DashboardShell`, depois do `<main>`, com `shrink-0`. Ocupa espaço de
+  verdade, então não tem como cobrir página nenhuma.
+- Tirei o `pb-[...]` do `<main>`, o `data-fill-page`, a regra
+  `main:has(...)` e o degradê que eu tinha posto acima da barra — todos
+  eram remendo para o problema que agora não existe.
+- Altura da barra fixada em `h-14` por item (era `min-h-12` + `py-2`, que
+  dava 51px e não batia com o espaço reservado).
+- `--bottom-nav-space` (3.5rem + safe-bottom) ficou só para quem flutua
+  por cima dela: hoje só o banner de instalar o PWA.
+- Antes disso: acabamento visual dos módulos sem tocar em token de cor
+  (`.app-canvas`, `Card` com hairline e `.card-lift`, tabela com
+  cabeçalho em caixa alta, kanban em painel, fontes com grade de 6
+  números, KPI com halo laranja, base de inputs/botões padronizada) e o
+  X do menu mobile agora depende da prop `showClose` do `SheetContent`.
 
 ## Decidido por mim e por quê
-- Nenhum token de cor mudou. Tudo saiu de `--navy`, `--orange`, `--coral`
-  e do cream, só variando opacidade.
-- Subi o design-system em vez de retocar módulo a módulo, para não abrir
-  divergência entre telas.
-- `main:has([data-fill-page])` ficou fora de `@layer` de propósito: em
-  cascade layer, `@layer base` perde para a utility `pb-*` do Tailwind
-  mesmo tendo mais especificidade.
+- Reservar espaço com `padding-bottom` no `<main>` não funcionava: o
+  wrapper de página é `h-full`, o conteúdo transborda dele, e o WebKit
+  não soma o padding do container de scroll nesse caso. Barra no fluxo
+  resolve na raiz em vez de calibrar número mágico.
+- Nenhum token de cor mudou em nada disso.
 - A tela do menu com linha laranja que você mandou era o build do commit
   `92ec539`; aquele código saiu em `24c4ef5`.
 

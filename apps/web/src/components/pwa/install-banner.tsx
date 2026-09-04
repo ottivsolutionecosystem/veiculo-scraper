@@ -51,7 +51,7 @@ export function InstallBanner() {
   if (hidden) return null;
 
   return (
-    <div className="fixed inset-x-0 z-40 mx-auto max-w-lg px-3 md:bottom-4 md:px-0 max-md:bottom-[calc(4.25rem+env(safe-area-inset-bottom))]">
+    <div className="fixed inset-x-0 z-40 mx-auto max-w-lg px-3 md:bottom-4 md:px-0 max-md:bottom-[calc(var(--bottom-nav-space)+0.75rem)]">
       <div className="flex items-start gap-3 rounded-xl border bg-card p-3 shadow-card">
         {/* eslint-disable-next-line @next/next/no-img-element -- ícone estático do PWA */}
         <img src="/icons/icon-192.png" alt="" className="mt-0.5 h-10 w-10 shrink-0 rounded-lg" />

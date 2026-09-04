@@ -93,15 +93,13 @@ export function QueueBoard() {
           </div>
 
       {loading && !page ? (
-        <div className="flex items-center gap-2 px-4 pt-4 pb-[calc(var(--bottom-nav-space)+1rem)] text-sm text-muted-foreground sm:px-6 sm:pt-6">
+        <div className="flex items-center gap-2 p-4 text-sm text-muted-foreground sm:p-6">
           <Loader2 className="h-4 w-4 animate-spin" /> Carregando fila…
         </div>
       ) : error && !page ? (
-        <p className="px-4 pt-4 pb-[calc(var(--bottom-nav-space)+1rem)] text-sm text-destructive sm:px-6 sm:pt-6">
-          {error}
-        </p>
+        <p className="p-4 text-sm text-destructive sm:p-6">{error}</p>
       ) : !page || page.items.length === 0 ? (
-        <div className="px-4 pt-4 pb-[calc(var(--bottom-nav-space)+1rem)] sm:px-6 sm:pt-6">
+        <div className="p-4 sm:p-6">
           <EmptyState
             title={filtered ? "Nenhum carro com esses filtros" : EMPTY[scope].title}
             description={

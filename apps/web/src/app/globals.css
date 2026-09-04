@@ -48,7 +48,7 @@
     --safe-top: env(safe-area-inset-top, 0px);
     --safe-bottom: env(safe-area-inset-bottom, 0px);
 
-    /* Altura real da bottom nav. No desktop ela não existe. */
+    /* Altura real da bottom nav, para quem flutua por cima dela. */
     --bottom-nav-space: 0px;
   }
 
@@ -103,7 +103,7 @@
     :root {
       --safe-top: max(3rem, env(safe-area-inset-top, 3rem));
       --safe-bottom: max(0.5rem, env(safe-area-inset-bottom, 0px));
-      --bottom-nav-space: calc(3rem + var(--safe-bottom));
+      --bottom-nav-space: calc(3.5rem + var(--safe-bottom));
     }
   }
 
@@ -159,13 +159,6 @@
       transparent 100%
     );
   }
-}
-
-/* Tela que rola por dentro (fila) encosta na borda: a lista some atrás da
- * bottom nav em vez de ser cortada no meio de um cartão. Fora de @layer para
- * ganhar da utility `pb-*` aplicada no <main>. */
-main:has([data-fill-page]) {
-  padding-bottom: 0;
 }
 
 /* Tela de entrar: fundo navy mesmo se o body for cream. */

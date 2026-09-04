@@ -102,7 +102,7 @@ export function QueueView({
       onScroll={onScroll}
       className={
         fill
-          ? "h-full min-h-0 overflow-y-auto overscroll-y-contain pb-[calc(var(--bottom-nav-space)+0.75rem)]"
+          ? "h-full min-h-0 overflow-y-auto overscroll-y-contain pb-3"
           : "max-h-[70dvh] min-h-[16rem] overflow-y-auto overscroll-y-contain"
       }
     >
