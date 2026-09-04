@@ -139,6 +139,18 @@ export function SourcesBoard() {
             <CardTitle>Última execução por fonte</CardTitle>
           </CardHeader>
           <CardContent className="overflow-x-auto">
+            <div className="space-y-2 md:hidden">
+              {sourcesWithRuns.map((source) => (
+                <div key={source.source} className="rounded-lg border p-3 text-sm">
+                  <p className="font-medium capitalize">{source.source}</p>
+                  <p className="text-xs text-muted-foreground">{formatDateTime(source.lastRun!.finishedAt)}</p>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    {source.lastRun!.new} novos · {source.lastRun!.updated} atualizados · {source.lastRun!.errors} erros
+                  </p>
+                </div>
+              ))}
+            </div>
+            <div className="hidden md:block">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -171,6 +183,7 @@ export function SourcesBoard() {
                 ))}
               </TableBody>
             </Table>
+            </div>
           </CardContent>
         </Card>
       )}

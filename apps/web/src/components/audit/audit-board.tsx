@@ -54,7 +54,23 @@ export function AuditBoard() {
           description="Ações sensíveis (revelar contato, descartar, mudar peso) aparecem aqui assim que acontecem."
         />
       ) : (
-        <div className="overflow-x-auto">
+        <>
+        <div className="space-y-2 md:hidden">
+          {items.map((record) => (
+            <article key={record.id} className="rounded-xl border bg-card p-3 shadow-card">
+              <div className="flex flex-wrap items-center gap-2">
+                <Badge variant="outline">{AUDIT_ACTION_LABELS[record.action]}</Badge>
+                <span className="text-xs text-muted-foreground">{formatDateTime(record.createdAt)}</span>
+              </div>
+              <p className="mt-1 text-sm font-medium">{record.author}</p>
+              <p className="text-xs text-muted-foreground">
+                {record.targetType}/{record.targetId}
+              </p>
+              {record.detail && <p className="mt-1 text-sm">{record.detail}</p>}
+            </article>
+          ))}
+        </div>
+        <div className="hidden overflow-x-auto md:block">
           <Table>
             <TableHeader>
               <TableRow>
@@ -84,6 +100,7 @@ export function AuditBoard() {
             </TableBody>
           </Table>
         </div>
+        </>
       )}
     </div>
   );

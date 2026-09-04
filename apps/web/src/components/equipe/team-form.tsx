@@ -89,10 +89,10 @@ export function TeamForm() {
         <h2 className="text-sm font-semibold text-navy">Quem pode entrar</h2>
         <ul className="mt-3 divide-y">
           {items.map((op) => (
-            <li key={op.id} className="flex items-center justify-between gap-3 py-2 text-sm">
-              <span>
-                <span className="font-medium text-navy">{op.name}</span>
-                <span className="ml-2 text-muted-foreground">{op.login}</span>
+            <li key={op.id} className="flex items-center justify-between gap-3 py-3 text-sm">
+              <span className="min-w-0">
+                <span className="block font-medium text-navy">{op.name}</span>
+                <span className="text-muted-foreground">{op.login}</span>
                 {op.role === "master" && (
                   <span className="ml-2 text-[10px] font-semibold uppercase tracking-wide text-primary">master</span>
                 )}

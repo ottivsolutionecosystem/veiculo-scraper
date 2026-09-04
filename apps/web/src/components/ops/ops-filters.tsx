@@ -70,14 +70,14 @@ export function OpsFilters({
         <Input
           type="date"
           value={from}
-          className="w-40"
+          className="w-full sm:w-40"
           onChange={(e) => onPatch({ from: e.target.value || undefined, to: to || e.target.value || undefined })}
         />
         <span className="text-muted-foreground">até</span>
         <Input
           type="date"
           value={to}
-          className="w-40"
+          className="w-full sm:w-40"
           onChange={(e) => onPatch({ to: e.target.value || undefined, from: from || e.target.value || undefined })}
         />
       </div>

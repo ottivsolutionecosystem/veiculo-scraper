@@ -88,6 +88,22 @@
   html,
   body {
     @apply min-h-dvh overflow-x-hidden bg-background text-foreground antialiased;
+    overscroll-behavior: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  input,
+  select,
+  textarea {
+    font-size: 16px;
+  }
+
+  @media (min-width: 768px) {
+    input,
+    select,
+    textarea {
+      font-size: inherit;
+    }
   }
 }
 

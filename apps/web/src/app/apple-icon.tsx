@@ -3,9 +3,9 @@ import { ImageResponse } from "next/og";
 import { AuttusPwaGlyph } from "@/lib/pwa-icon";
 
 export const runtime = "edge";
-export const size = { width: 32, height: 32 };
+export const size = { width: 180, height: 180 };
 export const contentType = "image/png";
 
-export default function Icon() {
-  return new ImageResponse(<AuttusPwaGlyph size={32} />, { ...size });
+export default function AppleIcon() {
+  return new ImageResponse(<AuttusPwaGlyph size={180} />, { ...size });
 }

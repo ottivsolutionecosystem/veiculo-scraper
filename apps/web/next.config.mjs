@@ -13,6 +13,17 @@ const nextConfig = {
   eslint: {
     dirs: ["src"],
   },
+  async headers() {
+    return [
+      {
+        source: "/sw.js",
+        headers: [
+          { key: "Cache-Control", value: "no-cache, no-store, must-revalidate" },
+          { key: "Service-Worker-Allowed", value: "/" },
+        ],
+      },
+    ];
+  },
   async rewrites() {
     const apiUrl = process.env.API_URL || "http://api:3001";
     return [{

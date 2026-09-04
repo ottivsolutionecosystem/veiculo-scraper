@@ -14,6 +14,7 @@ import {
 export interface NavItem {
   href: string;
   label: string;
+  shortLabel?: string;
   icon: LucideIcon;
   masterOnly?: boolean;
 }
@@ -28,9 +29,9 @@ export const NAV_GROUPS: NavGroup[] = [
   {
     title: "Hoje",
     items: [
-      { href: "/", label: "Fila de trabalho", icon: Flame },
-      { href: "/solicitacoes", label: "Kanban", icon: Columns3 },
-      { href: "/busca", label: "Veículos consignados", icon: Search },
+      { href: "/", label: "Fila de trabalho", shortLabel: "Fila", icon: Flame },
+      { href: "/solicitacoes", label: "Kanban", shortLabel: "Kanban", icon: Columns3 },
+      { href: "/busca", label: "Veículos consignados", shortLabel: "Estoque", icon: Search },
     ],
   },
   {
@@ -48,6 +49,8 @@ export const NAV_GROUPS: NavGroup[] = [
 ];
 
 export const NAV_ITEMS: NavItem[] = NAV_GROUPS.flatMap((g) => g.items);
+
+export const PRIMARY_NAV: NavItem[] = NAV_GROUPS[0]?.items ?? [];
 
 export function navGroupsFor(isMaster: boolean): NavGroup[] {
   return NAV_GROUPS.map((group) => ({

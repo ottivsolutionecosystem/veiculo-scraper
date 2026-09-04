@@ -109,7 +109,7 @@ export function RequestSheet({
           if (!next) onOpenChange(false);
         }}
       >
-        <SheetContent>
+        <SheetContent className="overflow-y-auto pb-[env(safe-area-inset-bottom)]">
           <SheetHeader>
             <SheetTitle>
               {request.vehicle

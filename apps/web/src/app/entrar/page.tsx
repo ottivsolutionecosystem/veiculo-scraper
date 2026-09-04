@@ -54,7 +54,7 @@ export default function EntrarPage() {
   }
 
   return (
-    <div className="flex min-h-dvh items-center justify-center bg-navy px-4">
+    <div className="flex min-h-dvh items-center justify-center bg-navy px-4 pb-[env(safe-area-inset-bottom)] pt-[env(safe-area-inset-top)]">
       <div className="w-full max-w-sm space-y-6 rounded-2xl border border-white/10 bg-navy-deep/60 p-6 shadow-card">
         <AuttusWordmark onDark />
         <div>

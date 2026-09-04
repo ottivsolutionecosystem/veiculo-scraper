@@ -68,7 +68,7 @@ export function Topbar() {
   const group = groups.find((g) => g.items.some((i) => i.href === current?.href)) ?? NAV_GROUPS.find((g) => g.items.some((i) => i.href === current?.href));
 
   return (
-    <header className="flex min-h-14 shrink-0 items-center gap-2 border-b bg-card/80 px-3 py-1.5 backdrop-blur-md sm:gap-3 sm:px-6">
+    <header className="flex min-h-14 shrink-0 items-center gap-2 border-b bg-card/80 px-3 py-1.5 pt-[max(0.375rem,env(safe-area-inset-top))] backdrop-blur-md sm:gap-3 sm:px-6">
       <Sheet open={open} onOpenChange={setOpen}>
         <SheetTrigger asChild>
           <Button variant="ghost" size="icon" className="md:hidden">
