@@ -6,14 +6,12 @@ import { Input } from "@/components/ui/input";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 export function RequestsToolbar({
-  total,
   query,
   view,
   mobile,
   onQueryChange,
   onViewChange,
 }: {
-  total: number;
   query: string;
   view: "kanban" | "lista";
   mobile: boolean;
@@ -22,11 +20,8 @@ export function RequestsToolbar({
 }) {
   return (
     <>
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <p className="text-sm text-muted-foreground">
-          {total} em tratativa. No celular a vista é lista; no computador dá para arrastar no kanban.
-        </p>
-        {!mobile && (
+      {!mobile && (
+        <div className="flex justify-end">
           <Tabs value={view} onValueChange={onViewChange}>
             <TabsList>
               <TabsTrigger value="kanban" className="gap-1.5">
@@ -39,8 +34,8 @@ export function RequestsToolbar({
               </TabsTrigger>
             </TabsList>
           </Tabs>
-        )}
-      </div>
+        </div>
+      )}
       <div className="relative max-w-md">
         <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
         <Input

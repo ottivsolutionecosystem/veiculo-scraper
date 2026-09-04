@@ -52,10 +52,6 @@ export function SettingsBoard() {
 
   return (
     <div className="space-y-4 p-4 sm:p-6">
-      <p className="text-sm text-muted-foreground">
-        Pesos, faixas, regras de descarte, cadência, templates e integrações — editáveis sem deploy (princípio 2
-        do SPEC).
-      </p>
       {settings === null ? (
         <EmptyState
           icon={SlidersHorizontal}

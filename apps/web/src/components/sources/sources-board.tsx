@@ -57,14 +57,6 @@ export function SourcesBoard() {
 
   return (
     <div className="space-y-4 p-4 sm:p-6">
-      <p className="text-sm text-muted-foreground">
-        {sources.length} fontes configuradas. O botão só grava o pedido no Postgres; quem raspa é o
-        serviço <code className="rounded bg-muted px-1">work</code> (VPS) ou{" "}
-        <code className="rounded bg-muted px-1">npm run dev:collector</code> (local).{" "}
-        <code className="rounded bg-muted px-1">webmotors</code> e{" "}
-        <code className="rounded bg-muted px-1">olx</code> nascem desligadas — não são ligadas por aqui.
-      </p>
-
       {sources.length === 0 ? (
         <EmptyState icon={Radio} title="Nenhuma fonte configurada" description="Configure ao menos uma fonte de coleta para começar." />
       ) : (

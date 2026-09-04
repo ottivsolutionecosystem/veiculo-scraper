@@ -43,9 +43,6 @@ export function SellersBoard() {
 
   return (
     <div className="space-y-4 p-4 sm:p-6">
-      <p className="text-sm text-muted-foreground">
-        Particulares que anunciaram. O ranking do time de consignação fica na fila de trabalho.
-      </p>
       {items.length === 0 ? (
         <EmptyState
           icon={UserRound}

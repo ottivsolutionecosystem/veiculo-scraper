@@ -12,7 +12,6 @@ import { FipeReviewCard } from "@/components/fipe-review/review-card";
 export function FipeReviewBoard() {
   const { ready, operator } = useAuth();
   const [items, setItems] = React.useState<FipeReviewItem[] | null>(null);
-  const [nextCursor, setNextCursor] = React.useState<string | null>(null);
   const [error, setError] = React.useState<string | null>(null);
 
   React.useEffect(() => {
@@ -22,7 +21,6 @@ export function FipeReviewBoard() {
       .then((page) => {
         if (cancelled) return;
         setItems(page.items);
-        setNextCursor(page.nextCursor);
       })
       .catch((err: unknown) => {
         if (!cancelled) setError(err instanceof ApiError ? err.message : "Não carregou a revisão FIPE.");
@@ -44,11 +42,6 @@ export function FipeReviewBoard() {
 
   return (
     <div className="space-y-4 p-4 sm:p-6">
-      <p className="text-sm text-muted-foreground">
-        {items.length}
-        {nextCursor ? "+" : ""} veículos aguardando confirmação — confiança entre 0,60 e 0,85 ganha 3 candidatos;
-        sem match nenhum precisa de classificação manual (seção 8 do SPEC).
-      </p>
       {items.length === 0 ? (
         <EmptyState
           icon={GitCompareArrows}

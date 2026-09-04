@@ -44,9 +44,6 @@ export function AuditBoard() {
 
   return (
     <div className="space-y-4 p-4 sm:p-6">
-      <p className="text-sm text-muted-foreground">
-        Quem revelou contato, quem descartou, quem mudou peso — registro completo e imutável.
-      </p>
       {items.length === 0 ? (
         <EmptyState
           icon={ScrollText}

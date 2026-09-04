@@ -42,11 +42,6 @@ export function ConsignadosBoard({ filters }: { filters: SearchFilters }) {
 
   return (
     <div className="space-y-4 p-4 sm:p-6">
-      <p className="text-sm text-muted-foreground">
-        {page ? `${page.items.length}${page.nextCursor ? "+" : ""} no estoque` : "Estoque consignado"} — todo
-        veículo que consignou, particular ou loja. Filtro afina, não esconde o restante por padrão.
-      </p>
-
       <SearchFiltersForm />
 
       {loading ? (

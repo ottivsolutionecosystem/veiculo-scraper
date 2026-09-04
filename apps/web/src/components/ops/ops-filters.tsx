@@ -32,9 +32,6 @@ export function OpsFilters({
   return (
     <>
       <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
-        <p className="max-w-2xl text-sm text-muted-foreground">
-          Números da consignação. Passe o mouse no card para ver a fórmula. Telefone não entra aqui.
-        </p>
         <div className="flex flex-wrap items-center gap-2">
           {RANGES.map((r) => (
             <Button

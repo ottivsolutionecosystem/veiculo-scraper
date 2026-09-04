@@ -88,10 +88,6 @@ export function QueueBoard() {
   return (
     <div className="flex h-full min-h-0 flex-col">
       <div className="shrink-0 space-y-2 border-b border-navy/5 bg-card/40 px-3 py-2 sm:space-y-4 sm:px-6 sm:py-5">
-            <p className="hidden text-sm text-muted-foreground md:block">
-              Ordenado por score, com quem ainda não foi contatado na frente no empate. Consignar manda
-              para o kanban.
-            </p>
             {stats && <CoverageBar initial={stats} />}
             <QueueFilters />
           </div>
