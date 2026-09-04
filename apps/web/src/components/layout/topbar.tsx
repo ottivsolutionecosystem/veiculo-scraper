@@ -85,15 +85,16 @@ export function Topbar() {
         </SheetTrigger>
         <SheetContent
           side="left"
-          className="flex w-[min(20rem,100vw)] flex-col border-0 bg-navy px-0 py-0 text-white [&>button]:hidden"
+          showClose={false}
+          className="flex w-[min(20rem,100vw)] flex-col border-0 bg-navy px-0 py-0 text-white"
         >
           <SheetTitle className="sr-only">Navegação</SheetTitle>
           <div
-            className="flex shrink-0 items-center justify-between gap-2 px-3 pb-2 pl-5"
-            style={{ paddingTop: "var(--safe-top)" }}
+            className="flex shrink-0 items-center justify-between gap-2 pb-3 pl-5 pr-2"
+            style={{ paddingTop: "calc(var(--safe-top) + 0.75rem)" }}
           >
             <AuttusWordmark onDark />
-            <SheetClose className="flex h-11 w-11 shrink-0 items-center justify-center rounded-md text-white/55 hover:bg-white/10 hover:text-white focus:outline-none focus-visible:ring-0">
+            <SheetClose className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-white/55 transition-colors hover:bg-white/10 hover:text-white focus:outline-none focus-visible:ring-0">
               <X className="h-5 w-5" />
               <span className="sr-only">Fechar</span>
             </SheetClose>
