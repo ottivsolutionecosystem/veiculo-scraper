@@ -16,14 +16,11 @@ export const PIPELINE_STATES = [
   "offer_made",
 ] as const;
 
-export const RETURN_REASONS = [
-  "Sem interesse em consignar",
-  "Quer vender à vista",
-  "Preço irreal",
-  "Não compareceu",
-  "Anúncio ou contato inválido",
-  "Já vendeu",
-] as const;
+/**
+ * O motivo do parecer é texto livre de propósito: a lista que o consignador vê
+ * mora na UI (parecer-dialog.tsx) e pode mudar sem migration, e as tags já
+ * gravadas continuam valendo mesmo depois que a lista muda.
+ */
 
 export const CONSIGNMENT_OUTCOMES = [
   "no_answer",

@@ -15,6 +15,7 @@ export const RETURN_REASONS = [
   "Sem interesse em consignar",
   "Quer vender à vista",
   "Preço irreal",
+  "Não consegui contato",
   "Não compareceu",
   "Anúncio ou contato inválido",
   "Já vendeu",
