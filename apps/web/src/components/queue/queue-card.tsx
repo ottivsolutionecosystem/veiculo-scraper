@@ -2,7 +2,15 @@ import Link from "next/link";
 import { ImageOff } from "lucide-react";
 
 import type { QueueItem } from "@/lib/api-types";
-import { formatCents, formatKm, formatPct, formatDate, daysAgoLabel, priceChangeLabel } from "@/lib/format";
+import {
+  formatCents,
+  formatKm,
+  formatPct,
+  formatDate,
+  daysAgoLabel,
+  locationLabel,
+  priceChangeLabel,
+} from "@/lib/format";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ScoreBadge } from "@/components/shared/score-badge";
@@ -18,6 +26,7 @@ export function QueueCard({ item, mode = "queue" }: { item: QueueItem; mode?: "q
   const followUpDue =
     Boolean(item.followUpAt) && new Date(item.followUpAt!) <= new Date() && item.state !== "discarded";
   const droppedAfterContact = Boolean(item.lastContactedAt) && (item.priceChangeCents ?? 0) < 0;
+  const local = locationLabel(listing.city, listing.stateCode);
 
   return (
     <Card
@@ -90,6 +99,12 @@ export function QueueCard({ item, mode = "queue" }: { item: QueueItem; mode?: "q
             )}
             <span className="inline-flex items-center gap-2 text-muted-foreground">
               {formatKm(listing.km)}
+              {local && (
+                <>
+                  <span aria-hidden className="h-1 w-1 rounded-full bg-navy/20" />
+                  {local}
+                </>
+              )}
               <span aria-hidden className="h-1 w-1 rounded-full bg-navy/20" />
               {daysAgoLabel(item.daysListed)}
             </span>

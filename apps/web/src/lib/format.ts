@@ -57,6 +57,12 @@ export function priceChangeLabel(changeCents: number | null): string | null {
   return `${verbo} ${formatCents(Math.abs(changeCents))}`;
 }
 
+/** "Campo Grande/MS". Null quando o anúncio não trouxe nem cidade nem UF. */
+export function locationLabel(city: string | null, stateCode: string | null): string | null {
+  if (city && stateCode) return `${city}/${stateCode}`;
+  return city ?? stateCode ?? null;
+}
+
 export function daysAgoLabel(days: number): string {
   if (days === 0) return "hoje";
   if (days === 1) return "1 dia no ar";

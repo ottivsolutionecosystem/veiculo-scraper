@@ -6,7 +6,7 @@ import { Loader2 } from "lucide-react";
 import { ApiError, getVehicle } from "@/lib/api";
 import type { VehicleDetailResponse } from "@/lib/api-types";
 import { useAuth } from "@/components/auth/auth-provider";
-import { formatCents, formatKm, daysAgoLabel } from "@/lib/format";
+import { formatCents, formatKm, daysAgoLabel, locationLabel } from "@/lib/format";
 import { VEHICLE_STATE_LABELS, sourceLabel } from "@/lib/labels";
 import { Badge } from "@/components/ui/badge";
 import { Gallery } from "@/components/vehicle/gallery";
@@ -114,14 +114,16 @@ export function VehicleBoard({ vehicleId }: { vehicleId: number }) {
             listing.transmission,
             listing.fuelType,
             listing.color ?? "cor não informada",
-            `${listing.city}/${listing.stateCode}`,
+            locationLabel(listing.city, listing.stateCode),
             daysAgoLabel(vehicle.daysListed),
-          ].map((info, i) => (
-            <span key={`${info}-${i}`} className="flex items-center gap-5 text-muted-foreground">
-              <span aria-hidden className="h-1 w-1 rounded-full bg-navy/15" />
-              {info}
-            </span>
-          ))}
+          ]
+            .filter(Boolean)
+            .map((info, i) => (
+              <span key={`${info}-${i}`} className="flex items-center gap-5 text-muted-foreground">
+                <span aria-hidden className="h-1 w-1 rounded-full bg-navy/15" />
+                {info}
+              </span>
+            ))}
         </div>
 
         <FipeCard vehicle={vehicle} listing={listing} />
