@@ -3,6 +3,7 @@ import type {
   Operator,
   OpsOverview,
   OpsRange,
+  Seller,
   Settings,
   StartCallResponse,
   TelephonySession,
@@ -279,6 +280,14 @@ export function getSeller(id: number) {
 
 export function patchSeller(id: number, body: { muted?: boolean; doNotDisturb?: boolean }) {
   return apiFetch<SellerListItem>(`/api/sellers/${id}`, { method: "PATCH", body: JSON.stringify(body) });
+}
+
+/** Nome e telefone que o consignador anotou falando com o vendedor. */
+export function putVehicleSeller(vehicleId: number, body: { name: string; phone?: string }) {
+  return apiFetch<Seller>(`/api/vehicles/${vehicleId}/seller`, {
+    method: "PUT",
+    body: JSON.stringify(body),
+  });
 }
 
 // ---- Revisão de match FIPE ---------------------------------------------

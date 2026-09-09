@@ -49,6 +49,7 @@ tabela nova (`docs/MODELO.md`), `[W]` calculado pelo worker e persistido
 | GET | `/api/queue` | `cursor?`, `limit?`, `sellerType?`, `scope?`, `q?`, `brand?`, `priceMaxCents?`, `scoreBand?`, `source?` | — |
 | POST | `/api/vehicles/:id/interactions` | — | `{ channel, outcome?, durationSeconds? }` |
 | POST | `/api/vehicles/:id/discard` | — | `{ reason: string, notes?: string }` |
+| PUT | `/api/vehicles/:id/seller` | — | `{ name: string, phone?: string }` |
 | POST | `/api/sellers/:id/reveal-contact` | — | — |
 
 `GET /api/queue` devolve `Pick<Vehicle, "id"|"listings"|"state"|"score"|
@@ -71,6 +72,16 @@ só aparece quando o filtro está ausente.
 
 `POST .../discard`: 422 se `reason` vazio (seção 7.2: "todo descarte exige
 motivo"). Grava em `estados_veiculo` [N] + atualiza `veiculos.estado` [N].
+
+`PUT .../seller`: nome e telefone que o consignador descobriu falando com o
+vendedor — o do anúncio erra muito. Normaliza para E.164 (só Brasil, 422 se
+não der), e o sha256 do E.164 é a chave de dedupe (`vendedores.telefone_hash`
+[N]). Telefone já cadastrado em outro vendedor cai no mesmo `vendedores.id`,
+que é a regra de dedupe. Telefone novo em vendedor que responde por outros
+carros cria vendedor separado, para não mexer em anúncio que não é esse.
+409 se o telefone está em `bloqueio_contato` [N]. Grava `contatos_vendedor`
+com `fonte_primeira_coleta = NULL` e TTL de 730 dias, e uma linha em
+`auditoria` [N] (`action: "edit_seller_contact"`) sem o número.
 
 `POST .../reveal-contact`: lê `contatos_vendedor` [N], grava linha em
 `auditoria` [N] (`action: "reveal_contact"`). 403 se o vendedor está em

@@ -325,6 +325,7 @@ export function mapRequest(row: Record<string, unknown>) {
     createdAt: iso(row.criado_em),
     listingUrl: (row.anuncio_url as string | null) ?? null,
     fipeDiscountPct: num(row.desconto_fipe_pct),
+    sellerName: (row.vendedor_nome as string | null) ?? null,
     sellerMuted: Boolean(row.vendedor_mutado),
     sellerDoNotDisturb: Boolean(row.vendedor_nao_perturbe),
     sellerHasPhone: Boolean(row.tem_telefone),

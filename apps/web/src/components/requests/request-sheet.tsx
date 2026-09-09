@@ -14,6 +14,7 @@ import { countdownLabel, formatDateTime, toDatetimeLocalValue } from "@/lib/form
 import { REQUEST_STATE_LABELS } from "@/lib/labels";
 import { isTratativaOverdue, tratativaDeadlineIso, showsVisitField, boardColumn } from "@/lib/tratativa";
 import { ParecerDialog } from "@/components/requests/parecer-dialog";
+import { SellerContactForm } from "@/components/requests/seller-contact-form";
 import { ContactActions } from "@/components/vehicle/contact-actions";
 
 export function RequestSheet({
@@ -112,6 +113,9 @@ export function RequestSheet({
         <SheetContent className="overflow-y-auto pb-[env(safe-area-inset-bottom)]">
           <SheetHeader>
             <SheetTitle>
+              <span className="mr-1.5 rounded-md bg-navy/[0.06] px-1.5 py-0.5 text-xs font-semibold tabular-nums text-navy/60">
+                #{request.vehicleId}
+              </span>
               {request.vehicle
                 ? `${request.vehicle.brand} ${request.vehicle.model} ${request.vehicle.modelYear}`
                 : "Solicitação"}
@@ -158,6 +162,15 @@ export function RequestSheet({
                 fipeDiscountPct: request.fipeDiscountPct ?? null,
               }}
             />
+
+            {!closed && (
+              <SellerContactForm
+                vehicleId={request.vehicleId}
+                currentName={request.sellerName ?? null}
+                hasPhone={request.sellerHasPhone ?? false}
+                onSaved={onChanged}
+              />
+            )}
 
             {showVisit && (
               <div className="space-y-2">

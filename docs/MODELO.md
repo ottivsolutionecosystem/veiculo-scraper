@@ -184,7 +184,7 @@ sem apagar o histórico de interações do vendedor.
 | `id` | bigserial PK | |
 | `vendedor_id` | bigint FK `vendedores.id` | |
 | `telefone_e164` | text | único lugar do banco com telefone em claro |
-| `fonte_primeira_coleta` | text | qual `fontes.fonte` originou o dado |
+| `fonte_primeira_coleta` | text nullable | qual `fontes.fonte` originou o dado; `NULL` = anotado à mão na tratativa, não veio de coleta |
 | `ttl_expira_em` | timestamptz | job de limpeza periódica apaga ao vencer |
 | `criado_em` | timestamptz | |
 

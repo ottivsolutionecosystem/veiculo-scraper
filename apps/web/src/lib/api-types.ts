@@ -103,6 +103,7 @@ export interface RequestListItem extends AcquisitionRequest {
   branchName?: string;
   listingUrl?: string | null;
   fipeDiscountPct?: number | null;
+  sellerName?: string | null;
   sellerMuted?: boolean;
   sellerDoNotDisturb?: boolean;
   sellerHasPhone?: boolean;

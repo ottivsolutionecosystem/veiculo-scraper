@@ -9,6 +9,7 @@ import { canClaim, canTransfer, followUpAt, lockUntil } from "../lib/consignacao
 import { lockFromRow, VEHICLE_LOCK_SQL } from "../lib/vehicle-lock.js";
 import { requireOperator } from "../lib/current-operator.js";
 import { isMaster } from "../lib/roles.js";
+import { manualContactExpiry, normalizePhoneBR, phoneHash } from "../lib/telefone.js";
 import { recordCall } from "../jobs/record-call.js";
 
 const discardBody = z.object({ reason: z.string(), notes: z.string().optional() });
@@ -30,6 +31,10 @@ const interactionBody = z.object({
   operator: z.string().optional(),
 });
 const transferBody = z.object({ toOperatorId: z.number().int().positive() });
+const sellerContactBody = z.object({
+  name: z.string().trim().min(1).max(120),
+  phone: z.string().trim().max(40).optional(),
+});
 const fipeConfirmBody = z.object({ fipeCode: z.string() });
 
 /** GET/POST /api/vehicles/:id/* — Ficha do veículo (docs/API.md seção 3)
@@ -275,6 +280,138 @@ export async function vehicleRoutes(app: FastifyInstance) {
     });
     refreshFilaDoDia();
     reply.status(204).send();
+  });
+
+  /**
+   * Nome e telefone que o consignador descobriu falando com o vendedor. O que
+   * vem do anúncio erra muito (número de intermediário, nome do anunciante e
+   * não do dono), e sem isso o carro fica sem canal de saída.
+   */
+  app.put("/api/vehicles/:id/seller", async (req, reply) => {
+    const actor = await requireOperator(req);
+    const id = Number((req.params as { id: string }).id);
+    const body = sellerContactBody.parse(req.body);
+
+    let sellerId = 0;
+    await withTransaction(async (client) => {
+      const { rows } = await client.query(
+        "SELECT id, vendedor_id, consignador_id, consignador FROM veiculos WHERE id = $1 FOR UPDATE",
+        [id],
+      );
+      const vehicle = rows[0];
+      if (!vehicle) throw new NotFoundError("Veículo não encontrado.");
+      if (vehicle.consignador_id != null && !isMaster(actor) && Number(vehicle.consignador_id) !== actor.id) {
+        throw new ConflictError(
+          `Em contato com ${vehicle.consignador ?? "outro consignador"}. Peça a transferência para editar o contato.`,
+        );
+      }
+
+      const currentSellerId = vehicle.vendedor_id == null ? null : Number(vehicle.vendedor_id);
+      const phone = body.phone ? normalizePhoneBR(body.phone) : null;
+      if (body.phone && !phone) {
+        throw new ValidationError("Telefone inválido. Use DDD e número, como (11) 99999-8888.");
+      }
+
+      if (!phone) {
+        if (currentSellerId === null) {
+          throw new ValidationError("Informe o telefone para cadastrar o vendedor.");
+        }
+        sellerId = currentSellerId;
+        await client.query("UPDATE vendedores SET nome = $2, atualizado_em = now() WHERE id = $1", [
+          sellerId,
+          body.name,
+        ]);
+      } else {
+        const hash = phoneHash(phone);
+
+        const { rows: blocked } = await client.query(
+          "SELECT 1 FROM bloqueio_contato WHERE telefone_hash = $1",
+          [hash],
+        );
+        if (blocked[0]) {
+          throw new ConflictError("Este telefone pediu para não ser contatado. Não dá para cadastrar.");
+        }
+
+        const { rows: byHash } = await client.query(
+          "SELECT id FROM vendedores WHERE telefone_hash = $1 FOR UPDATE",
+          [hash],
+        );
+        const { rows: outros } = currentSellerId === null
+          ? { rows: [{ total: 0 }] }
+          : await client.query(
+              "SELECT count(*)::int AS total FROM veiculos WHERE vendedor_id = $1 AND id <> $2",
+              [currentSellerId, id],
+            );
+
+        if (byHash[0]) {
+          // Mesmo telefone é o mesmo vendedor — é essa a chave de dedupe.
+          sellerId = Number(byHash[0].id);
+          await client.query("UPDATE vendedores SET nome = $2, atualizado_em = now() WHERE id = $1", [
+            sellerId,
+            body.name,
+          ]);
+        } else if (currentSellerId !== null && Number(outros[0]!.total) === 0) {
+          sellerId = currentSellerId;
+          await client.query(
+            "UPDATE vendedores SET nome = $2, telefone_hash = $3, atualizado_em = now() WHERE id = $1",
+            [sellerId, body.name, hash],
+          );
+        } else {
+          // O vendedor de hoje responde por outros carros. Trocar o telefone
+          // dele mudaria anúncio que não é este, então cadastra separado.
+          const { rows: criado } = await client.query(
+            "INSERT INTO vendedores (nome, telefone_hash) VALUES ($1, $2) RETURNING id",
+            [body.name, hash],
+          );
+          sellerId = Number(criado[0]!.id);
+        }
+
+        await client.query(
+          `INSERT INTO contatos_vendedor (vendedor_id, telefone_e164, fonte_primeira_coleta, ttl_expira_em)
+           VALUES ($1, $2, NULL, $3)
+           ON CONFLICT (vendedor_id) DO UPDATE
+              SET telefone_e164 = EXCLUDED.telefone_e164,
+                  ttl_expira_em = EXCLUDED.ttl_expira_em`,
+          [sellerId, phone, manualContactExpiry()],
+        );
+      }
+
+      if (currentSellerId !== sellerId) {
+        await client.query("UPDATE veiculos SET vendedor_id = $2, atualizado_em = now() WHERE id = $1", [
+          id,
+          sellerId,
+        ]);
+        await client.query(
+          `UPDATE solicitacoes_captacao SET vendedor_id = $2, atualizado_em = now()
+            WHERE veiculo_id = $1 AND estado NOT IN ('closed', 'declined', 'no_show')`,
+          [id, sellerId],
+        );
+      }
+
+      // Sem telefone no detalhe: auditoria não é lugar de dado pessoal.
+      await client.query(
+        `INSERT INTO auditoria (acao, autor, alvo_tipo, alvo_id, detalhe)
+         VALUES ('edit_seller_contact', $1, 'seller', $2, $3)`,
+        [
+          actor.login,
+          String(sellerId),
+          phone ? `Contato do veículo #${id} anotado à mão` : `Nome do vendedor do veículo #${id} corrigido`,
+        ],
+      );
+    });
+
+    await refreshFilaDoDiaAsync();
+
+    const { rows: sellerRows } = await pool.query(
+      `SELECT vd.*, cv.telefone_e164
+         FROM vendedores vd
+         LEFT JOIN contatos_vendedor cv ON cv.vendedor_id = vd.id
+        WHERE vd.id = $1`,
+      [sellerId],
+    );
+    const seller = mapSeller(sellerRows[0]!);
+    seller.maskedPhone = maskPhone(sellerRows[0]!.telefone_e164 as string | null);
+    reply.send(seller);
   });
 
   app.post("/api/vehicles/:id/interactions", async (req, reply) => {

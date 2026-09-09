@@ -405,7 +405,8 @@ export type AuditAction =
   | "transfer"
   | "create_operator"
   | "authorize_operator"
-  | "parecer";
+  | "parecer"
+  | "edit_seller_contact";
 
 /** Consignador autenticado. O nome no card vem daqui, não de texto livre. */
 export type OperatorRole = "master" | "consignador";

@@ -50,7 +50,7 @@ const parecerBody = z.object({
 const REQUEST_SELECT = `
   SELECT s.*, a.marca, a.modelo, a.ano_modelo, a.preco, a.url AS anuncio_url, u.nome AS unidade_nome,
          v.travado_ate, v.consignador, v.consignador_id, v.desconto_fipe_pct,
-         vd.mutado AS vendedor_mutado, vd.nao_perturbe AS vendedor_nao_perturbe,
+         vd.nome AS vendedor_nome, vd.mutado AS vendedor_mutado, vd.nao_perturbe AS vendedor_nao_perturbe,
          (cv.telefone_e164 IS NOT NULL) AS tem_telefone
     FROM solicitacoes_captacao s
     JOIN veiculos v ON v.id = s.veiculo_id

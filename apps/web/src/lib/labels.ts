@@ -104,4 +104,5 @@ export const AUDIT_ACTION_LABELS: Record<AuditAction, string> = {
   create_operator: "Cadastrou consignador",
   authorize_operator: "Autorizou acesso",
   parecer: "Registrou parecer",
+  edit_seller_contact: "Editou contato do vendedor",
 };
