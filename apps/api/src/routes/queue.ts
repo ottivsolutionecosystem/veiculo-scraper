@@ -7,6 +7,7 @@ import { isMaster } from "../lib/roles.js";
 import { mapQueueRow, unmapSellerType } from "../lib/serialize.js";
 import { decodeCursor, encodeCursor, parseLimit } from "../lib/pagination.js";
 import { NO_OPEN_DEAL_SQL, NOT_STOCK_SQL } from "../lib/vehicle-lock.js";
+import { parseVehicleNumberQuery } from "../lib/vehicle-number.js";
 
 const querySchema = z.object({
   cursor: z.string().optional(),
@@ -48,14 +49,20 @@ function listFilterClause(
   values: unknown[],
 ): string {
   const parts: string[] = [];
-  const text = query.q?.trim();
-  if (text) {
-    values.push(`%${text.replace(/[%_]/g, " ")}%`);
+  const search = parseVehicleNumberQuery(query.q);
+  const alternatives: string[] = [];
+  if (search.text) {
+    values.push(`%${search.text.replace(/[%_]/g, " ")}%`);
     const p = `$${values.length}`;
-    parts.push(
-      `AND (f.titulo_normalizado ILIKE ${p} OR f.marca ILIKE ${p} OR f.modelo ILIKE ${p} OR concat_ws(' ', f.marca, f.modelo, f.versao) ILIKE ${p})`,
+    alternatives.push(
+      `f.titulo_normalizado ILIKE ${p} OR f.marca ILIKE ${p} OR f.modelo ILIKE ${p} OR concat_ws(' ', f.marca, f.modelo, f.versao) ILIKE ${p}`,
     );
   }
+  if (search.id !== null) {
+    values.push(search.id);
+    alternatives.push(`f.veiculo_id = $${values.length}`);
+  }
+  if (alternatives.length) parts.push(`AND (${alternatives.join(" OR ")})`);
   if (query.brand?.trim()) {
     values.push(query.brand.trim());
     parts.push(`AND upper(f.marca) = upper($${values.length})`);

@@ -99,6 +99,9 @@ export function RequestsKanban({
                     }}
                   >
                     <p className="text-sm font-semibold leading-snug tracking-tight text-navy">
+                      <span className="mr-1.5 rounded-md bg-navy/[0.06] px-1.5 py-0.5 text-[11px] font-semibold tabular-nums text-navy/60">
+                        #{request.vehicleId}
+                      </span>
                       {request.vehicle
                         ? `${request.vehicle.brand} ${request.vehicle.model} ${request.vehicle.modelYear}`
                         : "—"}

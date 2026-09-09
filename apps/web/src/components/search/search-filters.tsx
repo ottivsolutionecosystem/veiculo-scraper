@@ -15,6 +15,7 @@ const TRANSMISSIONS = ["MANUAL", "AUTOMATICO", "AUTOMATIZADO"];
 
 function fromParams(params: URLSearchParams) {
   return {
+    vehicleId: params.get("vehicleId") ?? "",
     brand: params.get("brand") ?? "",
     model: params.get("model") ?? "",
     yearMin: params.get("yearMin") ?? "",
@@ -47,6 +48,9 @@ export function SearchFiltersForm() {
   function buscar(e: React.FormEvent) {
     e.preventDefault();
     const params = new URLSearchParams();
+    // O consignador digita "#42" porque é o que está no card.
+    const vehicleId = draft.vehicleId.replace(/\D/g, "");
+    if (vehicleId) params.set("vehicleId", vehicleId);
     if (draft.brand) params.set("brand", draft.brand);
     if (draft.model) params.set("model", draft.model);
     if (draft.yearMin) params.set("yearMin", draft.yearMin);
@@ -67,6 +71,16 @@ export function SearchFiltersForm() {
       onSubmit={buscar}
     >
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="space-y-1">
+          <Label>Nº do veículo</Label>
+          <Input
+            inputMode="numeric"
+            value={draft.vehicleId}
+            placeholder="ex: 42"
+            onChange={(e) => patch("vehicleId", e.target.value)}
+          />
+        </div>
+
         <div className="space-y-1">
           <Label>Marca</Label>
           <Select value={draft.brand || "all"} onValueChange={(v) => patch("brand", v === "all" ? "" : v)}>

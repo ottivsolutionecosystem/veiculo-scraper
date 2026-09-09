@@ -60,6 +60,10 @@ materializada `fila_do_dia` [N] (junta `veiculos` [N], `anuncios` [E],
 `estado` default exclui `discarded`/`lost` (mesma regra de
 `queueVehicles()` da Fase 1).
 
+`q` aceita o número do veículo, que é o `veiculos.id` mostrado no card como
+`#42`. Com `#` filtra só pelo id (índice único de `fila_do_dia`); número solto
+vale pelos dois caminhos, id ou texto, porque também pode ser ano.
+
 `sellerType` (Fase 4, pedido do usuário): `"individual"` (particular) ou
 `"dealer"` (loja); omitido = ambos. Mapeia `anuncios.tipo_anunciante` —
 `null` (não detectado pelo coletor) nunca casa com nenhum dos dois valores,
@@ -79,7 +83,7 @@ por engano em Fase 4.
 
 | Método | Rota | Params |
 |---|---|---|
-| GET | `/api/vehicles/search` | `cursor?`, `limit?`, `brand?`, `model?`, `city?`, `yearMin?`, `yearMax?`, `priceMaxCents?`, `minFipeDiscountPct?`, `transmission?`, `onlyActive?`, `sellerType?` |
+| GET | `/api/vehicles/search` | `cursor?`, `limit?`, `vehicleId?`, `brand?`, `model?`, `city?`, `yearMin?`, `yearMax?`, `priceMaxCents?`, `minFipeDiscountPct?`, `transmission?`, `onlyActive?`, `sellerType?` |
 
 Mesmo shape de item do `/api/queue`, mesma origem (`fila_do_dia` [N]) —
 mas **sem** o filtro implícito de estado da fila: Busca mostra qualquer

@@ -1,4 +1,6 @@
 export interface SearchFilters {
+  /** Número que aparece no card — é o próprio id do veículo. */
+  vehicleId?: number;
   brand?: string;
   model?: string;
   city?: string;
@@ -26,6 +28,7 @@ export function parseSearchFilters(params: Record<string, string | string[] | un
   const sellerType = get("sellerType");
 
   return {
+    vehicleId: num("vehicleId"),
     brand: get("brand") || undefined,
     model: get("model") || undefined,
     city: get("city") || undefined,

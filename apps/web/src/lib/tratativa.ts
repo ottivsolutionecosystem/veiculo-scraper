@@ -74,6 +74,7 @@ export function requestMatchesQuery(
   request: {
     owner: string;
     state: AcquisitionRequestState;
+    vehicleId: number;
     vehicle?: { brand: string | null; model: string | null; modelYear: number | null } | undefined;
   },
   query: string,
@@ -81,7 +82,19 @@ export function requestMatchesQuery(
 ): boolean {
   const q = query.trim().toLowerCase();
   if (!q) return true;
-  return [request.vehicle?.brand, request.vehicle?.model, request.vehicle?.modelYear, request.owner, stateLabel]
+  // "#42" procura só pelo número do veículo; sem "#" é busca livre no texto.
+  if (q.startsWith("#")) {
+    const digits = q.slice(1).trim();
+    return digits ? String(request.vehicleId).includes(digits) : true;
+  }
+  return [
+    request.vehicleId,
+    request.vehicle?.brand,
+    request.vehicle?.model,
+    request.vehicle?.modelYear,
+    request.owner,
+    stateLabel,
+  ]
     .filter(Boolean)
     .join(" ")
     .toLowerCase()

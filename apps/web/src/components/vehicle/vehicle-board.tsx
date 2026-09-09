@@ -63,6 +63,9 @@ export function VehicleBoard({ vehicleId }: { vehicleId: number }) {
         <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-start sm:justify-between">
           <div className="min-w-0">
             <h1 className="text-lg font-semibold tracking-tight text-navy sm:text-xl">
+              <span className="mr-2 align-middle rounded-md bg-navy/[0.06] px-2 py-0.5 text-sm font-semibold tabular-nums text-navy/60">
+                #{vehicle.id}
+              </span>
               {listing.brand} {listing.model} {listing.trim} {listing.modelYear}
             </h1>
             <p className="text-sm text-muted-foreground">{listing.normalizedTitle}</p>

@@ -117,6 +117,7 @@ export function searchVehicles(
   params: {
     cursor?: string;
     limit?: number;
+    vehicleId?: number;
     brand?: string;
     model?: string;
     city?: string;

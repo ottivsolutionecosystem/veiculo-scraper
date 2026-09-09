@@ -8,6 +8,7 @@ import { decodeCursor, encodeCursor, parseLimit } from "../lib/pagination.js";
 const querySchema = z.object({
   cursor: z.string().optional(),
   limit: z.string().optional(),
+  vehicleId: z.coerce.number().int().positive().optional(),
   brand: z.string().optional(),
   model: z.string().optional(),
   city: z.string().optional(),
@@ -34,6 +35,7 @@ export async function searchRoutes(app: FastifyInstance) {
       conditions.push(sql.replace("?", `$${values.length}`));
     }
 
+    if (q.vehicleId !== undefined) push("f.veiculo_id = ?", q.vehicleId);
     if (q.brand) push("f.marca = ?", q.brand);
     if (q.model) push("f.modelo ILIKE '%' || ? || '%'", q.model);
     if (q.city) push("f.cidade = ?", q.city);

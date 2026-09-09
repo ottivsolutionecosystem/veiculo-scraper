@@ -82,6 +82,9 @@ export function RequestsList({
               onClick={() => onOpen(request.id)}
             >
               <p className="text-sm font-semibold leading-snug tracking-tight text-navy">
+                <span className="mr-1.5 rounded-md bg-navy/[0.06] px-1.5 py-0.5 text-[11px] font-semibold tabular-nums text-navy/60">
+                  #{request.vehicleId}
+                </span>
                 {request.vehicle
                   ? `${request.vehicle.brand} ${request.vehicle.model} ${request.vehicle.modelYear}`
                   : "—"}
@@ -110,6 +113,7 @@ export function RequestsList({
         <Table>
           <TableHeader>
             <TableRow>
+              <TableHead className="w-16">Nº</TableHead>
               <TableHead>Veículo</TableHead>
               <TableHead>Preço</TableHead>
               <TableHead className="w-48">Estágio</TableHead>
@@ -124,6 +128,7 @@ export function RequestsList({
               const consigned = column === "closed";
               return (
                 <TableRow key={request.id} className="cursor-pointer" onClick={() => onOpen(request.id)}>
+                  <TableCell className="tabular-nums font-semibold text-navy/60">#{request.vehicleId}</TableCell>
                   <TableCell className="font-medium">
                     {request.vehicle
                       ? `${request.vehicle.brand} ${request.vehicle.model} ${request.vehicle.modelYear}`

@@ -170,8 +170,8 @@ export function QueueFilters() {
         <Input
           value={q}
           onChange={(e) => setQ(e.target.value)}
-          placeholder="Nome do veículo"
-          aria-label="Nome do veículo"
+          placeholder="Nome ou #número"
+          aria-label="Nome ou número do veículo"
           className="lg:w-48"
         />
         <FilterFields {...fieldProps} />
@@ -188,8 +188,8 @@ export function QueueFilters() {
           <Input
             value={q}
             onChange={(e) => setQ(e.target.value)}
-            placeholder="Nome do veículo"
-            aria-label="Nome do veículo"
+            placeholder="Nome ou #número"
+            aria-label="Nome ou número do veículo"
           />
         </div>
         <Button type="button" variant="outline" className="min-w-[7rem] shrink-0" onClick={() => setOpen(true)}>

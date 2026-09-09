@@ -47,6 +47,9 @@ export function QueueCard({ item, mode = "queue" }: { item: QueueItem; mode?: "q
 
         <span className="min-w-0 flex-1">
           <span className="flex flex-wrap items-center gap-2">
+            <span className="shrink-0 rounded-md bg-navy/[0.06] px-1.5 py-0.5 text-[11px] font-semibold tabular-nums text-navy/60">
+              #{item.id}
+            </span>
             <span className="text-[15px] font-semibold tracking-tight text-navy transition-colors group-hover:text-primary">
               {listing.brand ?? "?"} {listing.model ?? "?"} {listing.modelYear ?? ""}
             </span>

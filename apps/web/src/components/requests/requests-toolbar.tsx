@@ -41,7 +41,7 @@ export function RequestsToolbar({
         <Input
           value={query}
           onChange={(e) => onQueryChange(e.target.value)}
-          placeholder="Buscar marca, modelo, ano, estágio ou responsável"
+          placeholder="Buscar #número, marca, modelo, ano, estágio ou responsável"
           className="pl-9"
         />
       </div>
