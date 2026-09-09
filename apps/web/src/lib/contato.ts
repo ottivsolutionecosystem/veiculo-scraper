@@ -17,6 +17,19 @@ export const CONTACT_BLOCK_MESSAGE: Record<ContactBlock, string> = {
   no_phone: "Sem telefone coletado neste anúncio.",
 };
 
+/** E.164 em formato de ler: +5511999998888 vira (11) 99999-8888. */
+export function formatPhoneBR(phone: string): string {
+  const digits = phone.replace(/\D/g, "");
+  const national = digits.startsWith("55") && digits.length > 11 ? digits.slice(2) : digits;
+  if (national.length === 11) {
+    return `(${national.slice(0, 2)}) ${national.slice(2, 7)}-${national.slice(7)}`;
+  }
+  if (national.length === 10) {
+    return `(${national.slice(0, 2)}) ${national.slice(2, 6)}-${national.slice(6)}`;
+  }
+  return phone;
+}
+
 export function phoneDigitsForWhatsapp(phone: string): string {
   const digits = phone.replace(/\D/g, "");
   if (digits.length >= 12) return digits;

@@ -5,7 +5,7 @@ import type { CallOutcome } from "@veiculo/types";
 import { Eye, Loader2, MessageCircle, Phone } from "lucide-react";
 
 import { ApiError, getSettings, postCall, revealSellerContact } from "@/lib/api";
-import { CONTACT_BLOCK_MESSAGE, contactBlockReason } from "@/lib/contato";
+import { CONTACT_BLOCK_MESSAGE, contactBlockReason, formatPhoneBR } from "@/lib/contato";
 import { useCallSession } from "@/lib/use-call-session";
 import { fillWhatsappTemplate, templateFromSettings, whatsappHref } from "@/lib/whatsapp";
 import { Button } from "@/components/ui/button";
@@ -113,7 +113,16 @@ export function ContactActions({
 
   return (
     <div className="space-y-2">
-      <p className="text-sm text-muted-foreground">{phone ? "Contato revelado nesta sessão." : maskedPhone || "sem telefone"}</p>
+      {phone ? (
+        <p className="flex flex-wrap items-baseline gap-x-2 text-sm">
+          <span className="select-all font-semibold tabular-nums tracking-tight text-navy">
+            {formatPhoneBR(phone)}
+          </span>
+          <span className="text-xs text-muted-foreground">revelado nesta sessão</span>
+        </p>
+      ) : (
+        <p className="text-sm text-muted-foreground">{maskedPhone || "sem telefone"}</p>
+      )}
       {blockedMsg ? (
         <p className="text-sm text-destructive">{blockedMsg}</p>
       ) : call.inCall ? (
