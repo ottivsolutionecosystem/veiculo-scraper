@@ -14,6 +14,7 @@ import { Badge } from "@/components/ui/badge";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 import { SourceToggle } from "@/components/sources/source-toggle";
 import { RunScrapeButton } from "@/components/sources/run-scrape-button";
+import { ListingIngestPanel } from "@/components/sources/listing-ingest-panel";
 import { cn } from "@/lib/utils";
 
 const MANUALLY_LOCKED = new Set(["webmotors", "olx"]);
@@ -142,6 +143,13 @@ export function SourcesBoard() {
                       onRefresh={reload}
                     />
                   </div>
+                  {source.source === "shopcar" && (
+                    <ListingIngestPanel
+                      source={source.source}
+                      pendingCount={source.pendingListingIngest ?? 0}
+                      onRefresh={reload}
+                    />
+                  )}
                 </CardContent>
               </Card>
             );

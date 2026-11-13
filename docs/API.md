@@ -259,6 +259,8 @@ filtro ano/combustível), não recalculados na hora do GET.
 | GET | `/api/sources/:source/runs` | `cursor?`, `limit?` |
 | PATCH | `/api/sources/:source` | `{ active: boolean }` |
 | POST | `/api/sources/:source/run` | `{ sellerType?: "individual"\|"dealer", limit?: number }` |
+| POST | `/api/sources/:source/ingest-listings` | `{ pages: [{ html, page?, baseUrl? }] }` (máx. 10) |
+| GET | `/api/sources/:source/ingest-listings` | — (últimas 40) |
 
 `GET /api/sources`: `Source` [E] (`fontes`) + última linha de
 `scrape_runs` [E] por fonte + `pendingRequest` (última linha não
@@ -283,6 +285,13 @@ a coleta: não é RPC (SPEC seção 5), é o coletor Python que lê essa tabela
 quando roda (`captacao_bot.cli pedidos --fonte <fonte>`, hoje só manual;
 agendamento em produção é decisão de infra, seção 5 do SPEC — "orquestrador
 de produção em aberto").
+
+`POST .../ingest-listings` (ingestão assistida): só `shopcar`. O usuário
+cola HTML da busca já aberto no browser; a API grava em
+`ingestao_listagens` [N] (202). O coletor processa com
+`captacao_bot.cli ingerir` — parse dos cards, sem GET na fonte. Não
+desativa anúncios ausentes (cada página é recorte). `GET` devolve o
+histórico recente e o `GET /api/sources` inclui `pendingListingIngest`.
 
 ## 10. Ajustes (`/ajustes`)
 

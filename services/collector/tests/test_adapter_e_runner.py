@@ -92,6 +92,38 @@ class TestParseAnuncio:
         assert com_tipo
         assert all(c.tipo_anunciante == "loja" for c in com_tipo)
 
+    def test_card_listagem_traz_campos_para_ingestao(self, adapter):
+        html = (FIXTURES / "shopcar_busca.html").read_text(encoding="utf-8")
+        cards = adapter.cards_de_listagem(html, "https://www.shopcar.com.br/busca.php?tipo=1")
+        assert cards
+        c = cards[0]
+        assert c.preco_texto and "R$" in c.preco_texto
+        assert c.modelo_texto
+        assert c.ano_texto
+        assert c.marca_texto
+        bruto = adapter.bruto_da_listagem(c)
+        assert bruto is not None
+        assert bruto.id_externo == c.id_externo
+        assert bruto.preco_texto == c.preco_texto
+        v = normalizar(bruto)
+        assert v.preco is not None and v.preco > 0
+
+    def test_ingerir_html_grava_sem_rede(self, adapter):
+        from captacao_bot.http_client import PoliteClient
+        from captacao_bot.runner import Runner
+        from captacao_bot.storage import MemoryStorage
+
+        html = (FIXTURES / "shopcar_busca.html").read_text(encoding="utf-8")
+        storage = MemoryStorage()
+        with PoliteClient(adapter.cfg) as client:
+            res = Runner(adapter, client, storage).ingerir_html(
+                html, "https://www.shopcar.com.br/busca.php?tipo=1&tipoanuncio=2"
+            )
+        assert res.encerrado_por == "ingestao_listagem"
+        assert res.novos >= 10
+        assert res.requisicoes == 0
+        assert len(storage.anuncios) == res.novos
+
     def test_html_real_anuncio_parseia(self, adapter):
         html = (FIXTURES / "shopcar_anuncio.html").read_text(encoding="utf-8")
         bruto = adapter.parse_anuncio(html, URL_PARTICULAR)

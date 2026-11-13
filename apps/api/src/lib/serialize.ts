@@ -351,6 +351,30 @@ export function mapSource(row: Record<string, unknown>) {
     pendingRequest: row.pedido_pendente
       ? mapScrapeRequest(row.pedido_pendente as Record<string, unknown>)
       : null,
+    pendingListingIngest: num(row.ingestao_pendente) ?? 0,
+  };
+}
+
+/** Linha de `ingestao_listagens` (HTML de listagem colado no painel). */
+export function mapListingIngest(row: Record<string, unknown>) {
+  const resultado = (row.resultado as Record<string, unknown> | null) ?? {};
+  return {
+    id: num(row.id),
+    source: row.fonte as string,
+    page: row.pagina === null || row.pagina === undefined ? null : num(row.pagina),
+    requestedAt: iso(row.solicitado_em),
+    startedAt: iso(row.iniciado_em),
+    processedAt: iso(row.processado_em),
+    error: (row.erro as string | null) ?? null,
+    scrapeRunId: row.scrape_run_id === null || row.scrape_run_id === undefined ? null : num(row.scrape_run_id),
+    result: {
+      online: num(resultado.no_ar) ?? 0,
+      pages: num(resultado.paginas) ?? 0,
+      new: num(resultado.novos) ?? 0,
+      updated: num(resultado.atualizados) ?? 0,
+      unchanged: num(resultado.inalterados) ?? 0,
+      errors: num(resultado.erros) ?? 0,
+    },
   };
 }
 

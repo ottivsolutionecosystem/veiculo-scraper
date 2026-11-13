@@ -3,7 +3,7 @@ import { z } from "zod";
 
 import { pool } from "../db.js";
 import { decodeCursor, encodeCursor, parseLimit } from "../lib/pagination.js";
-import { mapSource, mapScrapeRun, mapScrapeRequest, unmapSellerType } from "../lib/serialize.js";
+import { mapSource, mapScrapeRun, mapScrapeRequest, mapListingIngest, unmapSellerType } from "../lib/serialize.js";
 import { ForbiddenError, NotFoundError, ConflictError } from "../lib/http-errors.js";
 import { requireMaster } from "../lib/current-operator.js";
 
@@ -14,10 +14,23 @@ const runBody = z.object({
   limit: z.number().int().positive().optional(),
 });
 
+const MAX_HTML_CHARS = 1_500_000;
+const MAX_PAGES_PER_REQUEST = 10;
+
+const ingestPage = z.object({
+  html: z.string().min(200).max(MAX_HTML_CHARS),
+  page: z.number().int().positive().optional(),
+  baseUrl: z.string().url().optional(),
+});
+const ingestBody = z.object({
+  pages: z.array(ingestPage).min(1).max(MAX_PAGES_PER_REQUEST),
+});
+
 // Só shopcar tem self-service de liga/desliga — webmotors/olx nascem
 // desligadas por decisão de projeto (CLAUDE.md) e só mudam por
 // homologação/config manual, nunca pela API.
 const SELF_SERVICE_SOURCES = new Set(["shopcar"]);
+const LISTING_INGEST_SOURCES = new Set(["shopcar"]);
 
 /** GET/PATCH /api/sources* — Fontes (docs/API.md seção 9). */
 export async function sourceRoutes(app: FastifyInstance) {
@@ -35,6 +48,12 @@ export async function sourceRoutes(app: FastifyInstance) {
         [source.fonte],
       );
       source.pedido_pendente = pendente[0] ?? null;
+
+      const { rows: ingestCount } = await pool.query(
+        "SELECT count(*)::int AS n FROM ingestao_listagens WHERE fonte = $1 AND processado_em IS NULL",
+        [source.fonte],
+      );
+      source.ingestao_pendente = ingestCount[0]?.n ?? 0;
     }
     reply.send(sources.map(mapSource));
   });
@@ -75,7 +94,9 @@ export async function sourceRoutes(app: FastifyInstance) {
     }
     const { rows } = await pool.query("UPDATE fontes SET ativa = $2 WHERE fonte = $1 RETURNING *", [source, body.active]);
     if (!rows[0]) throw new NotFoundError("Fonte não encontrada.");
-    reply.send(mapSource({ ...rows[0], ultima_execucao: null, pedido_pendente: null }));
+    reply.send(
+      mapSource({ ...rows[0], ultima_execucao: null, pedido_pendente: null, ingestao_pendente: 0 }),
+    );
   });
 
   // Botão "Rodar coleta agora" (Fase 4). Não dispara nada: só grava o
@@ -106,5 +127,52 @@ export async function sourceRoutes(app: FastifyInstance) {
       [source, unmapSellerType(body.sellerType), body.limit ?? null, actor.login],
     );
     reply.status(202).send(mapScrapeRequest(rows[0]!));
+  });
+
+  // Ingestão assistida: HTML da listagem que o usuário já abriu no browser.
+  // O coletor Python processa a fila (cli ingerir) sem GET na fonte.
+  app.post(
+    "/api/sources/:source/ingest-listings",
+    { bodyLimit: 16 * 1024 * 1024 },
+    async (req, reply) => {
+      const actor = await requireMaster(req);
+      const source = (req.params as { source: string }).source;
+      if (!LISTING_INGEST_SOURCES.has(source)) {
+        throw new ForbiddenError(
+          `"${source}" não aceita ingestão de listagem — só shopcar por enquanto.`,
+        );
+      }
+      const body = ingestBody.parse(req.body);
+      const { rows: fonteRows } = await pool.query("SELECT fonte FROM fontes WHERE fonte = $1", [source]);
+      if (!fonteRows[0]) throw new NotFoundError("Fonte não encontrada.");
+      const defaultBase =
+        source === "shopcar" ? "https://www.shopcar.com.br" : `https://www.${source}.com.br`;
+
+      const inserted = [];
+      for (const page of body.pages) {
+        const baseUrl = page.baseUrl ?? defaultBase;
+        const { rows } = await pool.query(
+          `INSERT INTO ingestao_listagens (fonte, pagina, html, base_url, solicitado_por)
+           VALUES ($1, $2, $3, $4, $5) RETURNING id, fonte, pagina, solicitado_em, processado_em, iniciado_em, erro, resultado`,
+          [source, page.page ?? null, page.html, baseUrl, actor.login],
+        );
+        inserted.push(mapListingIngest(rows[0]!));
+      }
+      reply.status(202).send({ items: inserted, queued: inserted.length });
+    },
+  );
+
+  app.get("/api/sources/:source/ingest-listings", async (req, reply) => {
+    await requireMaster(req);
+    const source = (req.params as { source: string }).source;
+    const { rows } = await pool.query(
+      `SELECT id, fonte, pagina, solicitado_em, iniciado_em, processado_em, erro, resultado, scrape_run_id
+         FROM ingestao_listagens
+        WHERE fonte = $1
+        ORDER BY solicitado_em DESC
+        LIMIT 40`,
+      [source],
+    );
+    reply.send({ items: rows.map((r) => mapListingIngest(r)) });
   });
 }

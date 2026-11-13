@@ -167,6 +167,33 @@ def _primeiro(tree: HTMLParser, seletor: str) -> str | None:
     return None
 
 
+def _marca_da_url(url: str) -> str | None:
+    """ /veiculos/{marca}/{slug}/{aa-aa}/{id} → marca legível. """
+    m = re.search(r"/veiculos/([^/]+)/", url)
+    if not m:
+        return None
+    slug = m.group(1).replace("-", " ").strip()
+    return slug.upper() if slug else None
+
+
+def _titulo_do_card(marca: str | None, modelo: str | None) -> str | None:
+    partes = [p for p in (marca, modelo) if p]
+    return " ".join(partes) if partes else None
+
+
+def _cambio_do_modelo(modelo: str | None) -> str | None:
+    if not modelo:
+        return None
+    u = sem_acento(modelo).upper()
+    if " CVT" in f" {u}" or u.endswith("CVT"):
+        return "CVT"
+    if "A/T" in u or "AUTOMAT" in u:
+        return "Automático"
+    if "M/T" in u or "MANUAL" in u:
+        return "Manual"
+    return None
+
+
 def extrair_jsonld(tree: HTMLParser) -> dict | None:
     """Primeiro bloco JSON-LD que descreve um veículo (não a Organization Shopcar)."""
     for script in tree.css("script[type='application/ld+json']"):
@@ -212,9 +239,9 @@ class ShopcarAdapter(Adapter):
         return [card.url for card in self.cards_de_listagem(html_listagem, base_url)]
 
     def cards_de_listagem(self, html_listagem: str, base_url: str) -> list[CardListagem]:
-        """Lê preço junto com a URL. Com o preço da listagem em mão o runner
-        só abre a ficha de quem mudou — é o que faz uma revarredura das 1546
-        custar ~80 requisições em vez de 1546."""
+        """Lê preço e demais campos do card. Com o preço da listagem o runner
+        só abre a ficha de quem mudou; na ingestão assistida esses campos
+        bastam para gravar sem GET no anúncio."""
         tree = HTMLParser(html_listagem)
         cards: list[CardListagem] = []
         vistos: set[str] = set()
@@ -229,15 +256,66 @@ class ShopcarAdapter(Adapter):
             if not _RE_ANUNCIO.search(absoluta) or absoluta in vistos:
                 continue
             vistos.add(absoluta)
+            img = node.css_first("img.img-bd-sd") or node.css_first("img")
+            foto = None
+            titulo_alt = None
+            if img is not None:
+                foto = img.attributes.get("src") or img.attributes.get("srcset")
+                if foto and " " in foto:
+                    foto = foto.split()[0]
+                if foto:
+                    foto = urljoin(base_url, foto)
+                titulo_alt = (img.attributes.get("alt") or "").strip() or None
+            marca = _marca_da_url(absoluta)
+            modelo = _texto(node.css_first(".modelo"))
             cards.append(
                 CardListagem(
                     url=absoluta,
                     id_externo=self.id_externo(absoluta),
                     preco_texto=_texto(node.css_first(".preco")),
                     tipo_anunciante=tipo_do_card(node.html or ""),
+                    titulo=titulo_alt or _titulo_do_card(marca, modelo),
+                    marca_texto=marca,
+                    modelo_texto=modelo,
+                    ano_texto=_texto(node.css_first(".caract-anomodelo")),
+                    km_texto=_texto(node.css_first(".caract-km")),
+                    cor_texto=_texto(node.css_first(".caract-cor")),
+                    combustivel_texto=_texto(node.css_first(".caract-combust")),
+                    cambio_texto=_cambio_do_modelo(modelo),
+                    cidade_texto=_texto(node.css_first(".cidade")),
+                    foto=foto,
                 )
             )
         return cards
+
+    def bruto_da_listagem(self, card: CardListagem) -> AnuncioBruto | None:
+        titulo = (card.titulo or "").strip()
+        if not titulo:
+            titulo = _titulo_do_card(card.marca_texto, card.modelo_texto) or ""
+        if not titulo:
+            return None
+        fotos = [card.foto] if card.foto else []
+        return AnuncioBruto(
+            fonte=self.cfg.fonte,
+            id_externo=card.id_externo,
+            url=card.url,
+            titulo=titulo,
+            preco_texto=card.preco_texto,
+            km_texto=card.km_texto,
+            ano_texto=card.ano_texto,
+            cambio_texto=card.cambio_texto,
+            combustivel_texto=card.combustivel_texto,
+            cor_texto=card.cor_texto,
+            cidade_texto=card.cidade_texto,
+            fotos=fotos,
+            vendedor_nome=None,
+            vendedor_telefone=None,
+            vendedor_tipo=card.tipo_anunciante,
+            marca_texto=card.marca_texto,
+            modelo_versao_texto=card.modelo_texto,
+            categoria=None,
+            raw={"origem": "listagem_assistida", "card_url": card.url},
+        )
 
     def proxima_pagina(self, html_listagem: str, base_url: str) -> str | None:
         """O 'Próxima' do Shopcar às vezes cai `tipoanuncio`. A página

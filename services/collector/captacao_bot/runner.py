@@ -149,6 +149,69 @@ class Runner:
         self._notificar(res, ao_progredir)
         return res
 
+    def ingerir_html(
+        self,
+        html: str,
+        base_url: str,
+        ao_progredir: Callable[[ResultadoColeta], None] | None = None,
+    ) -> ResultadoColeta:
+        """Grava anúncios a partir do HTML de uma listagem já obtida no
+        navegador. Zero GET na fonte — não desativa ausentes (página é recorte)."""
+        res = ResultadoColeta(fonte=self.cfg.fonte)
+        res.encerrado_por = "ingestao_listagem"
+        res.fase = "listagem"
+        cards = self.adapter.cards_de_listagem(html, base_url)
+        res.anuncios_no_ar = len(cards)
+        res.paginas_listagem = 1
+        self._notificar(res, ao_progredir)
+
+        for indice, card in enumerate(cards):
+            try:
+                bruto = self.adapter.bruto_da_listagem(card)
+                if bruto is None:
+                    res.erros += 1
+                    continue
+                estado = self.storage.estado_do_anuncio(self.cfg.fonte, card.url)
+                if (
+                    estado is not None
+                    and estado.ativo
+                    and estado.content_hash == bruto.content_hash()
+                ):
+                    res.inalterados += 1
+                    self.storage.marcar_visto(self.cfg.fonte, card.url)
+                    continue
+                veiculo = normalizar(bruto)
+                pendencias = precisa_revisao(veiculo)
+                if pendencias:
+                    res.revisao += 1
+                salvo = self.storage.salvar(
+                    veiculo,
+                    raw=bruto.raw,
+                    etag=None,
+                    last_modified=None,
+                    pendencias=pendencias,
+                )
+                if salvo.novo:
+                    res.novos += 1
+                else:
+                    res.atualizados += 1
+                    if salvo.preco_mudou:
+                        res.precos_alterados += 1
+            except Exception as exc:
+                res.erros += 1
+                log.warning(
+                    "%s: falha ao ingerir card %s: %s",
+                    self.cfg.fonte,
+                    card.id_externo,
+                    exc,
+                )
+            if indice % 10 == 0:
+                self._notificar(res, ao_progredir)
+
+        res.scrape_run_id = self.storage.registrar_execucao(res)
+        self._notificar(res, ao_progredir)
+        return res
+
     def _notificar(
         self, res: ResultadoColeta, ao_progredir: Callable[[ResultadoColeta], None] | None
     ) -> None:

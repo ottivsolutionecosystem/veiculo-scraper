@@ -43,6 +43,11 @@ class Adapter(ABC):
         """HTML de um anúncio → AnuncioBruto. None quando a página não é
         um anúncio válido (removido, 404 mascarado como 200)."""
 
+    def bruto_da_listagem(self, card: CardListagem) -> AnuncioBruto | None:
+        """Monta AnuncioBruto só com o card da busca (ingestão assistida).
+        Default: não suportado — a fonte precisa sobrescrever."""
+        return None
+
     def urls_de_listagem(self, tipo_anunciante: str | None = None) -> Iterator[str]:
         """Pontos de partida da coleta. `tipo_anunciante` ("particular"/"loja")
         deve virar filtro na URL da fonte quando ela oferece isso — não

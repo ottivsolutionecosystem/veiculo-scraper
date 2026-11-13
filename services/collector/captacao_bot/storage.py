@@ -358,3 +358,54 @@ class PostgresStorage:
                 (scrape_run_id, pedido_id),
             )
         self.conn.commit()
+
+    def ingestao_pendente(self, fonte: str) -> list[dict]:
+        """HTML de listagem colado no painel, ainda não processado."""
+        with self.conn.cursor() as cur:
+            cur.execute(
+                """
+                SELECT id, pagina, html, base_url
+                  FROM ingestao_listagens
+                 WHERE fonte = %s AND processado_em IS NULL
+                 ORDER BY solicitado_em ASC
+                """,
+                (fonte,),
+            )
+            colunas = [d.name for d in cur.description]
+            return [dict(zip(colunas, row)) for row in cur.fetchall()]
+
+    def marcar_ingestao_iniciada(self, ingestao_id: int) -> None:
+        with self.conn.cursor() as cur:
+            cur.execute(
+                "UPDATE ingestao_listagens SET iniciado_em = now() WHERE id = %s",
+                (ingestao_id,),
+            )
+        self.conn.commit()
+
+    def marcar_ingestao_processada(
+        self,
+        ingestao_id: int,
+        scrape_run_id: int | None,
+        resultado: dict,
+        erro: str | None = None,
+    ) -> None:
+        import json
+
+        with self.conn.cursor() as cur:
+            cur.execute(
+                """
+                UPDATE ingestao_listagens
+                   SET processado_em = now(),
+                       scrape_run_id = %s,
+                       resultado = %s::jsonb,
+                       erro = %s
+                 WHERE id = %s
+                """,
+                (
+                    scrape_run_id,
+                    json.dumps(resultado, ensure_ascii=False),
+                    erro,
+                    ingestao_id,
+                ),
+            )
+        self.conn.commit()

@@ -23,6 +23,7 @@ import type {
   SourceWithLastRun,
   SettingsResponse,
   ScrapeRequest,
+  ListingIngestItem,
 } from "./api-types";
 
 export class ApiError extends Error {
@@ -310,6 +311,21 @@ export function patchSource(source: string, active: boolean) {
  * coletor Python lendo execucoes_solicitadas (sem RPC, SPEC seção 5). */
 export function triggerScrapeRun(source: string, body: { sellerType?: "individual" | "dealer"; limit?: number }) {
   return apiFetch<ScrapeRequest>(`/api/sources/${source}/run`, { method: "POST", body: JSON.stringify(body) });
+}
+
+/** HTML de listagem Shopcar já aberto no browser — fila ingestao_listagens. */
+export function enqueueListingIngest(
+  source: string,
+  pages: { html: string; page?: number; baseUrl?: string }[],
+) {
+  return apiFetch<{ items: ListingIngestItem[]; queued: number }>(
+    `/api/sources/${source}/ingest-listings`,
+    { method: "POST", body: JSON.stringify({ pages }) },
+  );
+}
+
+export function getListingIngest(source: string) {
+  return apiFetch<{ items: ListingIngestItem[] }>(`/api/sources/${source}/ingest-listings`);
 }
 
 // ---- Ajustes ---------------------------------------------------------

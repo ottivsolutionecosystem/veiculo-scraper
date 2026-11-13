@@ -153,9 +153,30 @@ export interface ScrapeRequest {
   phase?: "queued" | "stale" | "started" | "running";
 }
 
+export interface ListingIngestItem {
+  id: number;
+  source: string;
+  page: number | null;
+  requestedAt: string;
+  startedAt: string | null;
+  processedAt: string | null;
+  error: string | null;
+  scrapeRunId: number | null;
+  result: {
+    online: number;
+    pages: number;
+    new: number;
+    updated: number;
+    unchanged: number;
+    errors: number;
+  };
+}
+
 export interface SourceWithLastRun extends Source {
   lastRun: ScrapeRun | null;
   pendingRequest: ScrapeRequest | null;
+  /** Páginas de listagem HTML na fila (ingestão assistida). */
+  pendingListingIngest?: number;
 }
 
 export interface SettingsResponse extends Settings {

@@ -17,12 +17,26 @@ from typing import Any
 @dataclass
 class CardListagem:
     """Uma linha da página de busca. Preço vem daqui para decidir se vale
-    gastar requisição na ficha — listagem é barata, ficha não."""
+    gastar requisição na ficha — listagem é barata, ficha não.
+
+    Na ingestão assistida (HTML colado), os campos extras da listagem
+    bastam para montar a ficha sem abrir o anúncio.
+    """
 
     url: str
     id_externo: str
     preco_texto: str | None = None
     tipo_anunciante: str | None = None
+    titulo: str | None = None
+    marca_texto: str | None = None
+    modelo_texto: str | None = None
+    ano_texto: str | None = None
+    km_texto: str | None = None
+    cor_texto: str | None = None
+    combustivel_texto: str | None = None
+    cambio_texto: str | None = None
+    cidade_texto: str | None = None
+    foto: str | None = None
 
 
 @dataclass

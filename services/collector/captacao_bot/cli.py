@@ -7,6 +7,7 @@
     python -m captacao_bot.cli coletar --fonte shopcar --limite 20 --postgres  # requer DATABASE_URL
     python -m captacao_bot.cli coletar --fonte shopcar --tipo-anunciante loja --postgres
     python -m captacao_bot.cli pedidos --fonte shopcar  # processa fila de execucoes_solicitadas
+    python -m captacao_bot.cli ingerir --fonte shopcar  # HTML de listagem colado no painel
 """
 
 from __future__ import annotations
@@ -103,6 +104,44 @@ def cmd_coletar(args) -> None:
               "(sempre gravou; a única forma de não gravar é não passar --postgres).")
 
 
+def cmd_ingerir(args) -> None:
+    """Processa HTML de listagem enfileirado pelo painel (ingestao_listagens).
+    Sem GET na fonte — o navegador do usuário já passou a Cloudflare."""
+    adapter = _adapter(args.fonte)
+    storage = _postgres_storage()
+    pendentes = storage.ingestao_pendente(args.fonte)
+    if not pendentes:
+        print(f"[{args.fonte}] nenhuma listagem pendente.")
+        return
+
+    # Sem PoliteClient: não há rede. Runner só precisa do adapter + storage.
+    from .http_client import PoliteClient
+
+    with PoliteClient(adapter.cfg) as client:
+        runner = Runner(adapter, client, storage)
+        for item in pendentes:
+            storage.marcar_ingestao_iniciada(item["id"])
+            try:
+                resultado = runner.ingerir_html(
+                    html=item["html"],
+                    base_url=item["base_url"],
+                )
+                storage.marcar_ingestao_processada(
+                    item["id"],
+                    resultado.scrape_run_id,
+                    resultado.progresso(),
+                )
+                print(
+                    f"ingestao #{item['id']} (pagina={item.get('pagina')}): "
+                    f"{resultado.resumo()}"
+                )
+            except Exception as exc:
+                storage.marcar_ingestao_processada(
+                    item["id"], None, {}, erro=str(exc)[:500]
+                )
+                raise
+
+
 def cmd_pedidos(args) -> None:
     """Processa pedidos de coleta sob demanda gravados pelo botão da tela
     Fontes (tabela execucoes_solicitadas — migration 0012). O botão não
@@ -189,6 +228,13 @@ def main() -> None:
     )
     pd.add_argument("--fonte", required=True)
     pd.set_defaults(func=cmd_pedidos)
+
+    pi = sub.add_parser(
+        "ingerir",
+        help="processa HTML de listagem colado no painel (tabela ingestao_listagens)",
+    )
+    pi.add_argument("--fonte", required=True)
+    pi.set_defaults(func=cmd_ingerir)
 
     args = p.parse_args()
     args.func(args)
