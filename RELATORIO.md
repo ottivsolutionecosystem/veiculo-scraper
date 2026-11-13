@@ -1,13 +1,16 @@
-# RELATORIO — limpar anúncios coletados
+# RELATORIO — captura por links (bookmarklet)
 
 ## Feito
-- `POST /api/ops/reset-collected` (só master) + botão em Fontes.
-- Script `reset-collected` passa a zerar também `ingestao_listagens`.
+- Painel Fontes: modo **Links** (URL base + de/até, ou cola links).
+- Gera favorito “Capturar listagem Shopcar”: no Shopcar, 1 clique envia
+  o HTML (Ctrl+U) e abre a próxima página da lista.
+- CORS da API aceita origem shopcar para o POST do bookmarklet.
 
 ## Decidido por mim e por quê
-- Sem DATABASE_URL daqui; o caminho é o reset já previsto no repo,
-  exposto ao master para executar em produção.
+- GET no servidor continua bloqueado pela Cloudflare — a captura tem
+  que rodar no browser do usuário (mesma regra da ingestão assistida).
 
 ## Pendente de decisão sua
-- Deploy **crawler-api** + **crawler-web**, depois Fontes →
-  “Limpar anúncios coletados”.
+- Deploy **crawler-api** + **crawler-web**. Em Fontes → Links → Armar
+  capturador → arrastar favorito → abrir pág.1 → clicar o favorito em
+  cada página.

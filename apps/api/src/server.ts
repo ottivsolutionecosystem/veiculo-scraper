@@ -26,8 +26,19 @@ import { telephonyRoutes } from "./routes/telephony.js";
 export function buildServer() {
   const app = Fastify({ logger: true, trustProxy: true });
 
+  // webOrigin = painel; shopcar = bookmarklet de captura (ingestão assistida
+  // no browser do usuário — o servidor não faz GET na fonte).
+  const corsOrigins = new Set(
+    [env.webOrigin, "https://www.shopcar.com.br", "https://shopcar.com.br"].filter(Boolean),
+  );
   app.register(cors, {
-    origin: env.webOrigin,
+    origin: (origin, cb) => {
+      if (!origin || corsOrigins.has(origin)) {
+        cb(null, true);
+        return;
+      }
+      cb(null, false);
+    },
     credentials: true,
   });
 
