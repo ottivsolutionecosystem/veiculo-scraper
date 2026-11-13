@@ -1,9 +1,12 @@
-# RELATORIO — favorito não funciona; usa Console
+# RELATORIO — captura com um botão
 
 ## Feito
-- Chrome bloqueia/trunca favorito `javascript:` — trocado por script no
-  **Console (F12)** + fila `ingestao_url_fila` (migration 0024).
-- Fluxo: Armar captura → Copiar script → no Shopcar F12 → colar → Enter.
+- Botão **Iniciar captura automática** em Fontes.
+- Userscript `public/capturar-shopcar.user.js` (Tampermonkey, 1×):
+  percorre busca.php, envia HTML e abre a próxima sozinho.
+- Cloudflare continua no browser do usuário (sem GET no servidor).
 
 ## Pendente de decisão sua
-- Deploy **crawler-api** (migration 0024) + **crawler-web**.
+- Deploy **crawler-web** (+ api se 0024 ainda não rodou).
+- Instalar Tampermonkey → abrir `/capturar-shopcar.user.js` →
+  recarregar Fontes → um clique em **Iniciar captura automática**.

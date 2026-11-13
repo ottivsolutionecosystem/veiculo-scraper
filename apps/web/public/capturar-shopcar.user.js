@@ -1,0 +1,143 @@
+// ==UserScript==
+// @name         Ottiv — captura automática Shopcar
+// @namespace    https://crawler.ottiv.io
+// @version      1.1.0
+// @description  Um botão no painel Ottiv percorre a busca do Shopcar e envia o HTML (Cloudflare no browser).
+// @author       Ottiv
+// @match        https://www.shopcar.com.br/busca.php*
+// @match        https://shopcar.com.br/busca.php*
+// @match        https://crawler.ottiv.io/*
+// @match        http://localhost:3000/*
+// @connect      crawler.ottiv.io
+// @connect      localhost
+// @grant        GM_setValue
+// @grant        GM_getValue
+// @grant        GM_xmlhttpRequest
+// @run-at       document-idle
+// @updateURL    https://crawler.ottiv.io/capturar-shopcar.user.js
+// @downloadURL  https://crawler.ottiv.io/capturar-shopcar.user.js
+// ==/UserScript==
+
+(function () {
+  "use strict";
+
+  const KEY = "ottiv-capture";
+
+  function markInstalled() {
+    try {
+      document.documentElement.setAttribute("data-ottiv-capture", "1");
+    } catch (_) {
+      /* ignore */
+    }
+  }
+
+  function gmRequest(opts) {
+    return new Promise((resolve, reject) => {
+      GM_xmlhttpRequest({
+        method: opts.method || "GET",
+        url: opts.url,
+        headers: opts.headers || {},
+        data: opts.body,
+        onload: (res) => resolve(res),
+        onerror: (err) => reject(err),
+        ontimeout: () => reject(new Error("timeout")),
+      });
+    });
+  }
+
+  function syncArmFromPainel() {
+    let raw = null;
+    try {
+      raw = localStorage.getItem("ottiv-capture-arm");
+    } catch (_) {
+      return;
+    }
+    if (!raw) return;
+    try {
+      const data = JSON.parse(raw);
+      if (!data || !data.token || !data.api) return;
+      GM_setValue(KEY, {
+        token: data.token,
+        api: String(data.api).replace(/\/$/, ""),
+        source: data.source || "shopcar",
+        active: true,
+        armedAt: data.armedAt || Date.now(),
+      });
+      localStorage.removeItem("ottiv-capture-arm");
+      console.info("[Ottiv] captura armada");
+    } catch (err) {
+      console.warn("[Ottiv] arm falhou", err);
+    }
+  }
+
+  async function captureShopcarPage() {
+    const cfg = GM_getValue(KEY);
+    if (!cfg || !cfg.active || !cfg.token || !cfg.api) return;
+
+    const sentKey = "ottiv-sent:" + location.href.split("#")[0];
+    if (sessionStorage.getItem(sentKey)) return;
+    sessionStorage.setItem(sentKey, "1");
+
+    const html = "<!DOCTYPE html>" + document.documentElement.outerHTML;
+    const page = Number(new URLSearchParams(location.search).get("pagina") || 1);
+    const source = cfg.source || "shopcar";
+
+    try {
+      const post = await gmRequest({
+        method: "POST",
+        url: cfg.api + "/api/sources/" + encodeURIComponent(source) + "/ingest-listings",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: "Bearer " + cfg.token,
+        },
+        body: JSON.stringify({
+          pages: [{ html: html, page: page, baseUrl: location.origin }],
+        }),
+      });
+      if (post.status < 200 || post.status >= 300) {
+        sessionStorage.removeItem(sentKey);
+        alert("Ottiv: falha ao enfileirar pág. " + page + "\n" + String(post.responseText || "").slice(0, 240));
+        return;
+      }
+
+      const adv = await gmRequest({
+        method: "POST",
+        url: cfg.api + "/api/sources/" + encodeURIComponent(source) + "/ingest-url-queue/advance",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: "Bearer " + cfg.token,
+        },
+        body: "{}",
+      });
+      let next = null;
+      try {
+        next = JSON.parse(adv.responseText || "{}");
+      } catch (_) {
+        next = {};
+      }
+      if (next && next.next && next.next.url) {
+        location.href = next.next.url;
+        return;
+      }
+      GM_setValue(KEY, Object.assign({}, cfg, { active: false }));
+      alert("Ottiv: captura automática concluída (até a pág. " + page + ").");
+    } catch (err) {
+      sessionStorage.removeItem(sentKey);
+      alert("Ottiv: erro na captura — " + (err && err.message ? err.message : err));
+    }
+  }
+
+  markInstalled();
+
+  if (/crawler\.ottiv\.io$|localhost/.test(location.hostname)) {
+    syncArmFromPainel();
+    document.addEventListener("ottiv-capture-arm", syncArmFromPainel);
+    setInterval(syncArmFromPainel, 800);
+    return;
+  }
+
+  if (/shopcar\.com\.br$/.test(location.hostname) && /busca\.php/i.test(location.pathname)) {
+    // Pequeno atraso para o DOM da listagem estabilizar
+    setTimeout(captureShopcarPage, 1200);
+  }
+})();
