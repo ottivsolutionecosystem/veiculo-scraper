@@ -51,10 +51,18 @@ async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
     headers,
   });
   if (!res.ok) {
-    const body = (await res.json().catch(() => ({ error: res.statusText }))) as {
-      error?: string;
-      issues?: { message?: string }[];
-    };
+    const raw = await res.text();
+    let body: { error?: string; issues?: { message?: string }[] } = {};
+    try {
+      body = JSON.parse(raw) as { error?: string; issues?: { message?: string }[] };
+    } catch {
+      body = {
+        error:
+          res.status >= 500
+            ? "API fora do ar (erro interno). Reinicie o serviço api no Dokploy e tente de novo."
+            : raw.slice(0, 180) || res.statusText,
+      };
+    }
     const issue = body.issues?.[0]?.message;
     const message =
       body.error && issue && !String(body.error).includes(issue)

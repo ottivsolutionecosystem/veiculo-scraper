@@ -44,7 +44,7 @@ const LISTING_INGEST_SOURCES = new Set(["shopcar"]);
 
 /** GET/PATCH /api/sources* — Fontes (docs/API.md seção 9). */
 export async function sourceRoutes(app: FastifyInstance) {
-  app.get("/api/sources", async (_req, reply) => {
+  app.get("/api/sources", async (req, reply) => {
     const { rows: sources } = await pool.query("SELECT * FROM fontes ORDER BY fonte");
     for (const source of sources) {
       const { rows: lastRun } = await pool.query(
@@ -59,11 +59,18 @@ export async function sourceRoutes(app: FastifyInstance) {
       );
       source.pedido_pendente = pendente[0] ?? null;
 
-      const { rows: ingestCount } = await pool.query(
-        "SELECT count(*)::int AS n FROM ingestao_listagens WHERE fonte = $1 AND processado_em IS NULL",
-        [source.fonte],
-      );
-      source.ingestao_pendente = ingestCount[0]?.n ?? 0;
+      // Contagem opcional: se a migration 0023 ainda não rodou, a listagem
+      // de fontes não pode cair — o painel de ingestão zera o contador.
+      try {
+        const { rows: ingestCount } = await pool.query(
+          "SELECT count(*)::int AS n FROM ingestao_listagens WHERE fonte = $1 AND processado_em IS NULL",
+          [source.fonte],
+        );
+        source.ingestao_pendente = ingestCount[0]?.n ?? 0;
+      } catch (err) {
+        req.log.warn({ err, fonte: source.fonte }, "ingestao_listagens indisponível");
+        source.ingestao_pendente = 0;
+      }
     }
     reply.send(sources.map(mapSource));
   });
