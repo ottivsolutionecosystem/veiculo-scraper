@@ -1,17 +1,17 @@
 "use client";
 
 import * as React from "react";
-import { AlertTriangle, Link2, Loader2, Upload } from "lucide-react";
+import { AlertTriangle, Copy, Link2, Loader2, Upload } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
-import { ApiError, enqueueListingIngest, getListingIngest } from "@/lib/api";
+import { ApiError, enqueueListingIngest, enqueueListingUrlQueue, getListingIngest } from "@/lib/api";
 import type { ListingIngestItem } from "@/lib/api-types";
 import { formatDateTime } from "@/lib/format";
 import { getStoredToken } from "@/lib/session";
 import {
-  buildListingCaptureBookmarklet,
+  buildListingCaptureConsoleScript,
   buildShopcarListingUrlRange,
   parseShopcarListingUrls,
   splitHtmlDocuments,
@@ -20,7 +20,6 @@ import {
 } from "@/lib/listing-ingest";
 
 const MAX_PAGES = 10;
-/** Loop do coletor é ~15s; acima disso sem `startedAt` = serviço parado. */
 const STALE_MS = 90_000;
 const POLL_MS = 3000;
 
@@ -28,9 +27,8 @@ const DEFAULT_BASE =
   "https://www.shopcar.com.br/busca.php?tipo=1&tipoanuncio=2&pagina=1";
 
 /**
- * Cola HTML da busca Shopcar (já aberto no browser). O painel só enfileira;
- * o coletor Python processa sem GET na fonte.
- * Alternativa: lista de links + bookmarklet (Cloudflare bloqueia GET do servidor).
+ * Cola HTML da busca Shopcar. Alternativa: lista de links + script no Console
+ * (Chrome bloqueia favorito javascript: — Console é o caminho confiável).
  */
 export function ListingIngestPanel({
   source,
@@ -54,14 +52,15 @@ export function ListingIngestPanel({
   const [rangeFrom, setRangeFrom] = React.useState("1");
   const [rangeTo, setRangeTo] = React.useState("10");
   const [pastedLinks, setPastedLinks] = React.useState("");
-  const [urlQueue, setUrlQueue] = React.useState<ShopcarListingUrl[]>([]);
-  const [bookmarklet, setBookmarklet] = React.useState<string | null>(null);
+  const [firstUrl, setFirstUrl] = React.useState<ShopcarListingUrl | null>(null);
+  const [consoleScript, setConsoleScript] = React.useState<string | null>(null);
+  const [armedTotal, setArmedTotal] = React.useState(0);
 
   const reloadRecent = React.useCallback(() => {
     return getListingIngest(source)
       .then((res) => setRecent(res.items.slice(0, 8)))
       .catch(() => {
-        /* silencioso: histórico é opcional */
+        /* silencioso */
       });
   }, [source]);
 
@@ -89,40 +88,54 @@ export function ListingIngestPanel({
     return Number.isFinite(t) && now - t >= STALE_MS;
   });
 
-  function armLinkQueue() {
+  async function armLinkQueue() {
     setError(null);
     setMessage(null);
-    setBookmarklet(null);
+    setConsoleScript(null);
+    setFirstUrl(null);
     try {
       const fromPaste = parseShopcarListingUrls(pastedLinks);
       const from = Math.max(1, Number.parseInt(rangeFrom, 10) || 1);
       const to = Math.max(from, Number.parseInt(rangeTo, 10) || from);
-      const fromRange = pastedLinks.trim()
+      const urls = pastedLinks.trim()
         ? fromPaste
         : buildShopcarListingUrlRange(baseUrl, from, to);
-      if (fromRange.length === 0) {
+      if (urls.length === 0) {
         setError("Nenhum link de busca.php do Shopcar. Cole URLs ou use o intervalo.");
         return;
       }
       const token = getStoredToken();
       if (!token) {
-        setError("Sessão expirada — entre de novo e gere o capturador.");
+        setError("Sessão expirada — entre de novo.");
         return;
       }
-      const apiOrigin = window.location.origin;
-      const href = buildListingCaptureBookmarklet({
-        apiOrigin,
+      setBusy(true);
+      const queued = await enqueueListingUrlQueue(source, urls);
+      const script = buildListingCaptureConsoleScript({
+        apiOrigin: window.location.origin,
         token,
         source,
-        urls: fromRange,
       });
-      setUrlQueue(fromRange);
-      setBookmarklet(href);
+      setConsoleScript(script);
+      setFirstUrl(urls[0] ?? null);
+      setArmedTotal(queued.total);
       setMessage(
-        `${fromRange.length} link(s) armados. Arraste o botão “Capturar listagem” para a barra de favoritos, abra a 1ª página no Shopcar e clique no favorito em cada página (ele envia o HTML e abre a próxima).`,
+        `${queued.total} página(s) na fila de captura. Abra a 1ª página no Shopcar → F12 → aba Console → cole o script → Enter. Em cada página nova, cole de novo (ou use ↑ + Enter).`,
       );
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Não montou a lista de links.");
+      setError(err instanceof ApiError ? err.message : err instanceof Error ? err.message : "Não armou a fila.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function copyScript() {
+    if (!consoleScript) return;
+    try {
+      await navigator.clipboard.writeText(consoleScript);
+      setMessage("Script copiado. No Shopcar: F12 → Console → Ctrl+V → Enter.");
+    } catch {
+      setError("Não copiou — selecione o script e Ctrl+C manualmente.");
     }
   }
 
@@ -133,7 +146,7 @@ export function ListingIngestPanel({
     const chunks = splitHtmlDocuments(html);
     if (chunks.length === 0) {
       setError(
-        "Cole o HTML completo da busca. No Chrome: abra a página → Ctrl+U (código-fonte) → Ctrl+A → Ctrl+C. Não copie um pedaço do inspetor (F12).",
+        "Cole o HTML completo da busca. No Chrome: abra a página → Ctrl+U → Ctrl+A → Ctrl+C.",
       );
       return;
     }
@@ -156,9 +169,7 @@ export function ListingIngestPanel({
         chunks.map((doc, i) => ({ html: doc, page: start + i })),
       );
       setHtml("");
-      setMessage(
-        `${res.queued} página(s) na fila. O coletor processa em seguida (loop de ~15s).`,
-      );
+      setMessage(`${res.queued} página(s) na fila do coletor.`);
       await reloadRecent();
       await onRefresh?.();
     } catch (err) {
@@ -173,9 +184,8 @@ export function ListingIngestPanel({
       <div>
         <p className="text-xs font-medium text-navy">Ingestão assistida (listagem)</p>
         <p className="mt-1 text-xs text-muted-foreground">
-          O servidor <strong className="font-medium">não</strong> baixa o Shopcar (Cloudflare). O HTML
-          tem que sair do <strong className="font-medium">seu</strong> browser — por links + favorito
-          capturador, ou colando o Ctrl+U.
+          O servidor não baixa o Shopcar (Cloudflare). Use <strong className="font-medium">Links + Console</strong>{" "}
+          (F12) — favorito javascript: o Chrome costuma bloquear.
         </p>
         <div className="mt-2 flex gap-1">
           <Button
@@ -210,11 +220,7 @@ export function ListingIngestPanel({
               Coletor parado — a listagem está na fila, mas ninguém processou.
             </p>
             <p className="text-xs text-muted-foreground">
-              No Dokploy, reinicie o serviço <strong className="font-medium">collector</strong> (ou{" "}
-              <strong className="font-medium">work</strong> com{" "}
-              <code className="rounded bg-muted px-1">COLLECTOR_ENABLED=true</code>
-              ). Precisa do mesmo <code className="rounded bg-muted px-1">DATABASE_URL</code> da
-              api.
+              No Dokploy, reinicie o <strong className="font-medium">collector</strong>.
             </p>
           </div>
         )}
@@ -257,13 +263,14 @@ export function ListingIngestPanel({
                 className="h-8 w-20"
               />
             </label>
-            <Button type="button" size="sm" onClick={armLinkQueue}>
-              Armar capturador
+            <Button type="button" size="sm" disabled={busy} onClick={() => void armLinkQueue()}>
+              {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : null}
+              Armar captura
             </Button>
           </div>
           <label className="block space-y-1">
             <span className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
-              Ou cole links (um por linha) — ignora o intervalo se houver links
+              Ou cole links (um por linha)
             </span>
             <Textarea
               value={pastedLinks}
@@ -272,36 +279,36 @@ export function ListingIngestPanel({
               className="min-h-[72px] font-mono text-[11px]"
             />
           </label>
-          {bookmarklet && (
+          {consoleScript && (
             <div className="space-y-2 rounded-md border border-navy/10 bg-navy/[0.03] p-2">
-              <p className="text-xs text-muted-foreground">
-                Arraste este link para a barra de favoritos ({urlQueue.length} páginas):
+              <p className="text-xs font-medium text-navy">
+                {armedTotal} páginas armadas — use o Console (não o favorito)
               </p>
-              <a
-                href={bookmarklet}
-                className="inline-flex rounded-md bg-peach px-3 py-1.5 text-xs font-semibold text-navy"
-                onClick={(ev) => {
-                  ev.preventDefault();
-                  window.alert(
-                    "Arraste este botão para a barra de favoritos do Chrome (não clique). Depois abra a 1ª página no Shopcar e clique no favorito.",
-                  );
-                }}
-              >
-                ★ Capturar listagem Shopcar
-              </a>
-              {urlQueue[0] && (
-                <p className="text-[11px] text-muted-foreground">
-                  Primeira:{" "}
-                  <a
-                    className="underline"
-                    href={urlQueue[0].url}
-                    target="_blank"
-                    rel="noreferrer"
-                  >
-                    página {urlQueue[0].page}
-                  </a>
-                </p>
-              )}
+              <ol className="list-decimal space-y-1 pl-4 text-[11px] text-muted-foreground">
+                <li>
+                  Abra a{" "}
+                  {firstUrl ? (
+                    <a className="underline" href={firstUrl.url} target="_blank" rel="noreferrer">
+                      página {firstUrl.page}
+                    </a>
+                  ) : (
+                    "1ª página"
+                  )}{" "}
+                  no Shopcar
+                </li>
+                <li>
+                  Aperte <strong className="font-medium">F12</strong> → aba <strong className="font-medium">Console</strong>
+                </li>
+                <li>
+                  <Button type="button" size="sm" variant="outline" className="h-7" onClick={() => void copyScript()}>
+                    <Copy className="h-3 w-3" />
+                    Copiar script
+                  </Button>{" "}
+                  → cole (Ctrl+V) → Enter
+                </li>
+                <li>A página vai para a fila e abre a próxima — cole o script de novo (ou ↑ Enter)</li>
+              </ol>
+              <Textarea readOnly value={consoleScript} className="min-h-[64px] font-mono text-[10px]" />
             </div>
           )}
         </div>
@@ -325,7 +332,7 @@ export function ListingIngestPanel({
           <Textarea
             value={html}
             onChange={(ev) => setHtml(ev.target.value)}
-            placeholder="Cole aqui o HTML de busca.php?…&pagina=N (um ou vários documentos)."
+            placeholder="Cole aqui o HTML de busca.php?…&pagina=N"
             className="min-h-[120px] font-mono text-[11px]"
           />
           <Button type="submit" size="sm" disabled={busy || !html.trim()}>

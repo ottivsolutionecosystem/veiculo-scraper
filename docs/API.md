@@ -288,8 +288,11 @@ de produção em aberto").
 
 `POST .../ingest-listings` (ingestão assistida): só `shopcar`. O usuário
 cola HTML da busca já aberto no browser; a API grava em
-`ingestao_listagens` [N] (202). O coletor processa com
-`captacao_bot.cli ingerir` — parse dos cards, sem GET na fonte. Não
+`ingestao_listagens` [N] (202). Fila de URLs para o script do Console:
+`POST/GET /api/sources/:source/ingest-url-queue` e
+`POST .../ingest-url-queue/advance` (só master; sem GET na fonte).
+O coletor processa com `captacao_bot.cli ingerir` — parse dos cards,
+sem GET na fonte. Não
 desativa anúncios ausentes (cada página é recorte). `GET` devolve o
 histórico recente e o `GET /api/sources` inclui `pendingListingIngest`.
 

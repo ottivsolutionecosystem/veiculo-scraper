@@ -199,4 +199,102 @@ export async function sourceRoutes(app: FastifyInstance) {
     );
     reply.send({ items: rows.map((r) => mapListingIngest(r)) });
   });
+
+  // Fila de URLs para o script do Console (browser do usuário). Sem GET na fonte.
+  const urlQueueBody = z.object({
+    urls: z
+      .array(
+        z.object({
+          url: z.string().url(),
+          page: z.number().int().positive(),
+        }),
+      )
+      .min(1)
+      .max(200),
+  });
+
+  app.post("/api/sources/:source/ingest-url-queue", async (req, reply) => {
+    const actor = await requireMaster(req);
+    const source = (req.params as { source: string }).source;
+    if (!LISTING_INGEST_SOURCES.has(source)) {
+      throw new ForbiddenError(`"${source}" não aceita fila de URLs.`);
+    }
+    const body = urlQueueBody.parse(req.body);
+    await pool.query(
+      `UPDATE ingestao_url_fila SET encerrado_em = now()
+        WHERE fonte = $1 AND encerrado_em IS NULL`,
+      [source],
+    );
+    const { rows } = await pool.query(
+      `INSERT INTO ingestao_url_fila (fonte, urls, cursor_idx, solicitado_por)
+       VALUES ($1, $2::jsonb, 0, $3)
+       RETURNING id, fonte, urls, cursor_idx, criado_em`,
+      [source, JSON.stringify(body.urls), actor.login],
+    );
+    const row = rows[0]!;
+    const urls = row.urls as { url: string; page: number }[];
+    reply.status(201).send({
+      id: Number(row.id),
+      source: row.fonte,
+      total: urls.length,
+      current: urls[0] ?? null,
+    });
+  });
+
+  app.get("/api/sources/:source/ingest-url-queue", async (req, reply) => {
+    await requireMaster(req);
+    const source = (req.params as { source: string }).source;
+    const { rows } = await pool.query(
+      `SELECT id, fonte, urls, cursor_idx, criado_em
+         FROM ingestao_url_fila
+        WHERE fonte = $1 AND encerrado_em IS NULL
+        ORDER BY criado_em DESC
+        LIMIT 1`,
+      [source],
+    );
+    const row = rows[0];
+    if (!row) {
+      reply.send({ id: null, total: 0, cursor: 0, current: null, next: null });
+      return;
+    }
+    const urls = row.urls as { url: string; page: number }[];
+    const cursor = Number(row.cursor_idx) || 0;
+    reply.send({
+      id: Number(row.id),
+      total: urls.length,
+      cursor,
+      current: urls[cursor] ?? null,
+      next: urls[cursor + 1] ?? null,
+    });
+  });
+
+  app.post("/api/sources/:source/ingest-url-queue/advance", async (req, reply) => {
+    await requireMaster(req);
+    const source = (req.params as { source: string }).source;
+    const { rows } = await pool.query(
+      `SELECT id, urls, cursor_idx
+         FROM ingestao_url_fila
+        WHERE fonte = $1 AND encerrado_em IS NULL
+        ORDER BY criado_em DESC
+        LIMIT 1`,
+      [source],
+    );
+    const row = rows[0];
+    if (!row) {
+      reply.send({ done: true, next: null });
+      return;
+    }
+    const urls = row.urls as { url: string; page: number }[];
+    const nextIdx = (Number(row.cursor_idx) || 0) + 1;
+    if (nextIdx >= urls.length) {
+      await pool.query(`UPDATE ingestao_url_fila SET cursor_idx = $2, encerrado_em = now() WHERE id = $1`, [
+        row.id,
+        nextIdx,
+      ]);
+      reply.send({ done: true, next: null });
+      return;
+    }
+    await pool.query(`UPDATE ingestao_url_fila SET cursor_idx = $2 WHERE id = $1`, [row.id, nextIdx]);
+    reply.send({ done: false, next: urls[nextIdx] });
+  });
 }

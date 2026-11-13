@@ -344,6 +344,14 @@ export function getListingIngest(source: string) {
   return apiFetch<{ items: ListingIngestItem[] }>(`/api/sources/${source}/ingest-listings`);
 }
 
+/** Fila de URLs para o script do Console (sem GET na fonte). */
+export function enqueueListingUrlQueue(source: string, urls: { url: string; page: number }[]) {
+  return apiFetch<{ id: number; source: string; total: number; current: { url: string; page: number } | null }>(
+    `/api/sources/${source}/ingest-url-queue`,
+    { method: "POST", body: JSON.stringify({ urls }) },
+  );
+}
+
 // ---- Ajustes ---------------------------------------------------------
 
 export function getSettings() {

@@ -84,21 +84,17 @@ export function buildShopcarListingUrlRange(baseUrl: string, fromPage: number, t
   return out;
 }
 
-/** Bookmarklet: envia o HTML da página atual e abre a próxima da lista. */
-export function buildListingCaptureBookmarklet(opts: {
+/**
+ * Script curto para colar no Console do Chrome (F12) na página do Shopcar.
+ * Favoritos javascript: o Chrome costuma bloquear ou truncar — o Console é o caminho.
+ */
+export function buildListingCaptureConsoleScript(opts: {
   apiOrigin: string;
   token: string;
   source: string;
-  urls: ShopcarListingUrl[];
 }): string {
-  const payload = {
-    api: opts.apiOrigin.replace(/\/$/, ""),
-    token: opts.token,
-    source: opts.source,
-    urls: opts.urls.map((u) => ({ u: u.url, p: u.page })),
-  };
-  const json = JSON.stringify(payload).replace(/</g, "\\u003c");
-  // Minificado de propósito: favorito javascript:
-  const body = `(()=>{try{const C=${json};const html="<!DOCTYPE html>"+document.documentElement.outerHTML;const here=location.href.split("#")[0];let i=C.urls.findIndex(x=>here.startsWith(x.u.split("#")[0])||here.includes("pagina="+x.p));if(i<0){const m=location.search.match(/pagina=(\\d+)/);const pg=m?Number(m[1]):1;i=C.urls.findIndex(x=>x.p===pg);if(i<0)i=0;}const cur=C.urls[i]||C.urls[0];const page=cur?cur.p:1;fetch(C.api+"/api/sources/"+encodeURIComponent(C.source)+"/ingest-listings",{method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+C.token},body:JSON.stringify({pages:[{html:html,page:page,baseUrl:location.origin}]})}).then(async r=>{const t=await r.text();if(!r.ok)throw new Error(t.slice(0,180)||("HTTP "+r.status));const next=C.urls[i+1];if(next){alert("Pagina "+page+" na fila. Abrindo pagina "+next.p+"...");location.href=next.u;}else{alert("Pagina "+page+" na fila. Fim da lista.");}}).catch(e=>alert("Falhou: "+e.message));}catch(e){alert("Falhou: "+e);}})();`;
-  return `javascript:${encodeURIComponent(body)}`;
+  const api = opts.apiOrigin.replace(/\/$/, "");
+  const source = opts.source;
+  const token = opts.token;
+  return `(()=>{const A=${JSON.stringify(api)},S=${JSON.stringify(source)},T=${JSON.stringify(token)};const html="<!DOCTYPE html>"+document.documentElement.outerHTML;const page=Number(new URLSearchParams(location.search).get("pagina")||1);fetch(A+"/api/sources/"+S+"/ingest-listings",{method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+T},body:JSON.stringify({pages:[{html,page,baseUrl:location.origin}]})}).then(async r=>{const t=await r.text();if(!r.ok)throw new Error(t.slice(0,200)||("HTTP "+r.status));return fetch(A+"/api/sources/"+S+"/ingest-url-queue/advance",{method:"POST",headers:{"Authorization":"Bearer "+T,"Content-Type":"application/json"},body:"{}"});}).then(async r=>r.json()).then(j=>{if(j.next&&j.next.url){console.log("ok pagina",page,"->",j.next.page);location.href=j.next.url;}else{alert("Pagina "+page+" na fila. Fim da lista de links.");}}).catch(e=>alert("Falhou: "+e.message));})();`;
 }
