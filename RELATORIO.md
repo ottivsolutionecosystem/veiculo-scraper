@@ -1,11 +1,10 @@
-# RELATORIO — API_URL no Dokploy
+# RELATORIO — painel em localhost:3001
 
 ## Feito
-- Login Dokploy; no crawler-web faltava `API_URL`.
-- Defini `API_URL` para o domínio público da api (sslip.io)
-  e `NEXT_PUBLIC_API_URL` vazio; Reload do crawler-web.
-- `/api/auth/me` agora responde 401 de auth (não mais 502).
+- Browser chamava `http://localhost:3001` (fallback do
+  `NEXT_PUBLIC_API_URL` ausente no build) → “Não carregou…”.
+- `env.ts`: no browser, default é mesma origem (nunca localhost).
+- API_URL no Dokploy (sslip) permanece para o proxy server-side.
 
-## Pendente de decisão sua
-- Fontes → Iniciar captura automática de novo.
-- Trocar a senha do Dokploy (apareceu no print).
+## Pendente
+- Deploy/Rebuild do **crawler-web** (precisa rebuild, não só Reload).

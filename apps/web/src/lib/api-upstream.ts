@@ -19,6 +19,8 @@ function candidates(): string[] {
     .map((h) => (h.includes("://") ? h : `http://${h.replace(/\/$/, "")}:3001`));
 
   const defaults = [
+    "http://servidor-ii-crawlerapi-jeljvt:3001",
+    "https://servidor-ii-crawlerapi-jeljvt-037d2d-162-141-109-97.sslip.io",
     "http://crawler-api:3001",
     "http://api:3001",
     "http://veiculo-api:3001",
