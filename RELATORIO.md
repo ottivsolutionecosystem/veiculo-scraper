@@ -1,15 +1,15 @@
-# RELATORIO — 404 do userscript
+# RELATORIO — API no ar, web sem alcançar
 
 ## Feito
-- 404 em `/capturar-shopcar.user.js`: no standalone o `public/`
-  às vezes não sobe; agora a rota App Router `/capturar-shopcar`
-  serve o JS e o rewrite mapeia `.user.js` → essa rota.
-- Fonte única em `capturar-shopcar-userscript.ts` (+ cópia em `public/`).
-
-## Decidido
-- Servir via route handler (mesmo pipeline do painel), não só arquivo estático.
+- Log da api: migrations + listen `:3001` OK.
+- `/api/*` no domínio ainda 500: rewrite do Next usava
+  hostname bakeado (`http://api:3001`); no Dokploy o DNS
+  costuma ser outro (ex. `crawler-api`).
+- Proxy runtime em `app/api/[...path]` lê `API_URL` no request
+  e devolve 502 com `apiUrl`/`detail` se falhar.
 
 ## Pendente de decisão sua
-- Deploy **crawler-web** no Dokploy.
-- Abrir de novo `https://crawler.ottiv.io/capturar-shopcar.user.js`
-  (deve baixar/instalar no Tampermonkey, não 404).
+- No **crawler-web**, `API_URL` = hostname interno do api
+  (tente `http://crawler-api:3001` se o serviço se chama assim).
+- Deploy **crawler-web**.
+- Fontes → Iniciar captura de novo.

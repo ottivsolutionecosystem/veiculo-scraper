@@ -25,17 +25,13 @@ const nextConfig = {
     ];
   },
   async rewrites() {
-    const apiUrl = process.env.API_URL || "http://api:3001";
     return [
       // Tampermonkey espera .user.js; a rota App Router é /capturar-shopcar.
       {
         source: "/capturar-shopcar.user.js",
         destination: "/capturar-shopcar",
       },
-      {
-        source: "/api/:path*",
-        destination: `${apiUrl}/api/:path*`,
-      },
+      // /api/* → apps/web/src/app/api/[...path] (proxy com API_URL em runtime).
     ];
   },
 };
