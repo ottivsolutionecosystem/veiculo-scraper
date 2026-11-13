@@ -1,11 +1,13 @@
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
 
+import { pool } from "../db.js";
 import { requireMaster } from "../lib/current-operator.js";
 import { unmapSellerType } from "../lib/serialize.js";
 import { parseLimit } from "../lib/pagination.js";
 import { resolvePeriod } from "../lib/ops.js";
 import { loadOpsOverview, loadOpsOverdue, loadOpsVisits } from "../lib/ops-data.js";
+import { resetCollectedData } from "../lib/reset-collected.js";
 
 const rangeEnum = z.enum(["today", "7d", "30d", "month"]);
 
@@ -68,5 +70,13 @@ export async function opsRoutes(app: FastifyInstance) {
       parseLimit(q.limit),
     );
     reply.send(page);
+  });
+
+  // Zera anúncios coletados (mesmo efeito de `npm run reset-collected`).
+  // Só master; pedido explícito de operação — não é o fluxo normal.
+  app.post("/api/ops/reset-collected", async (req, reply) => {
+    await requireMaster(req);
+    await resetCollectedData(pool);
+    reply.send({ ok: true });
   });
 }

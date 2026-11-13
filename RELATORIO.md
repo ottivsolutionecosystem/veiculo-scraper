@@ -1,14 +1,13 @@
-# RELATORIO — selectolax 1.0 / Lexbor no coletor
+# RELATORIO — limpar anúncios coletados
 
 ## Feito
-- Causa do loop falhando: `from selectolax.parser import HTMLParser`
-  (Modest) quebra no selectolax ≥1.0 instalado no Nixpacks.
-- Troca para `LexborHTMLParser`; requirements/Dockerfile `selectolax>=1.0.0`.
-- Smoke: fixture busca → 20 cards.
+- `POST /api/ops/reset-collected` (só master) + botão em Fontes.
+- Script `reset-collected` passa a zerar também `ingestao_listagens`.
 
 ## Decidido por mim e por quê
-- Migrar para Lexbor (recomendação oficial) em vez de pinar 0.3.x.
+- Sem DATABASE_URL daqui; o caminho é o reset já previsto no repo,
+  exposto ao master para executar em produção.
 
 ## Pendente de decisão sua
-- Redeploy **crawler-collector** (e work se roda o coletor) após o push.
-  Log ok: `ciclo ingestao` sem ImportError; #1 processa.
+- Deploy **crawler-api** + **crawler-web**, depois Fontes →
+  “Limpar anúncios coletados”.

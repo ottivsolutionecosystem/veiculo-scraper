@@ -380,6 +380,11 @@ export function getOpsOverview(
   return apiFetch<OpsOverview>(`/api/ops/overview${qs(params)}`);
 }
 
+/** Zera anúncios coletados (só master). Mantém FIPE, fontes e config. */
+export function resetCollected() {
+  return apiFetch<{ ok: true }>("/api/ops/reset-collected", { method: "POST", body: "{}" });
+}
+
 // ---- Identidade / equipe -----------------------------------------------
 
 export function getAuthStatus() {

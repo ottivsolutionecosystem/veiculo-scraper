@@ -3,14 +3,16 @@
 import * as React from "react";
 import { Loader2, Radio } from "lucide-react";
 
-import { ApiError, getSources } from "@/lib/api";
+import { ApiError, getSources, resetCollected } from "@/lib/api";
 import type { SourceWithLastRun } from "@/lib/api-types";
 import { ACCESS_LEVEL_LABELS } from "@/lib/labels";
 import { formatDateTime } from "@/lib/format";
+import { isMaster } from "@/lib/operator";
 import { useAuth } from "@/components/auth/auth-provider";
 import { EmptyState } from "@/components/shared/empty-state";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 import { SourceToggle } from "@/components/sources/source-toggle";
 import { RunScrapeButton } from "@/components/sources/run-scrape-button";
@@ -28,6 +30,8 @@ export function SourcesBoard() {
   const { ready, operator } = useAuth();
   const [sources, setSources] = React.useState<SourceWithLastRun[] | null>(null);
   const [error, setError] = React.useState<string | null>(null);
+  const [resetBusy, setResetBusy] = React.useState(false);
+  const [resetMsg, setResetMsg] = React.useState<string | null>(null);
 
   const reload = React.useCallback(() => {
     return getSources()
@@ -45,6 +49,24 @@ export function SourcesBoard() {
     reload();
   }, [ready, operator, reload]);
 
+  async function onResetCollected() {
+    const ok = window.confirm(
+      "Apagar TODOS os anúncios e veículos coletados (fila, histórico de preço, ingestões)? FIPE, fontes e usuários ficam. Não dá para desfazer.",
+    );
+    if (!ok) return;
+    setResetBusy(true);
+    setResetMsg(null);
+    try {
+      await resetCollected();
+      setResetMsg("Lista limpa. Pode ingerir de novo.");
+      await reload();
+    } catch (err: unknown) {
+      setResetMsg(err instanceof ApiError ? err.message : "Não limpou a lista.");
+    } finally {
+      setResetBusy(false);
+    }
+  }
+
   if (!ready) return null;
   if (error && !sources) return <p className="p-6 text-sm text-destructive">{error}</p>;
   if (!sources) {
@@ -56,9 +78,28 @@ export function SourcesBoard() {
   }
 
   const sourcesWithRuns = sources.filter((s) => s.lastRun);
+  const master = isMaster(operator);
 
   return (
     <div className="space-y-4 p-4 sm:p-6">
+      {master && (
+        <div className="flex flex-wrap items-center gap-3 rounded-xl border border-destructive/30 bg-destructive/5 px-3 py-2">
+          <Button
+            type="button"
+            variant="destructive"
+            size="sm"
+            disabled={resetBusy}
+            onClick={() => void onResetCollected()}
+          >
+            {resetBusy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : null}
+            Limpar anúncios coletados
+          </Button>
+          <p className="text-xs text-muted-foreground">
+            Zera a fila e os veículos raspados. Mantém FIPE e configuração.
+          </p>
+          {resetMsg && <p className="w-full text-xs text-navy">{resetMsg}</p>}
+        </div>
+      )}
       {sources.length === 0 ? (
         <EmptyState icon={Radio} title="Nenhuma fonte configurada" description="Configure ao menos uma fonte de coleta para começar." />
       ) : (

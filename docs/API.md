@@ -353,6 +353,7 @@ Só o master. Agregados da consignação — nunca telefone.
 | GET | `/api/ops/overview` | `range?` (`today`\|`7d`\|`30d`\|`month`, padrão `7d`), `from?`, `to?` (`YYYY-MM-DD` em Brasília), `operatorId?`, `sellerType?` |
 | GET | `/api/ops/overdue` | `cursor?`, `limit?`, `operatorId?`, `sellerType?` |
 | GET | `/api/ops/visits` | `cursor?`, `limit?`, `operatorId?`, `sellerType?` |
+| POST | `/api/ops/reset-collected` | — (só master) zera anúncios/veículos coletados e filas de scrape/ingestão; mantém FIPE, fontes e config |
 
 `overview` devolve `OpsOverview` (`packages/types/domain.ts`). Listas extras
 são keyset (`deadline, id` / `data_hora_proposta, id`) — sem `OFFSET`.
