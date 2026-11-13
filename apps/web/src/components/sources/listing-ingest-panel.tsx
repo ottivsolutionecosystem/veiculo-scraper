@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { ApiError, enqueueListingIngest, getListingIngest } from "@/lib/api";
 import type { ListingIngestItem } from "@/lib/api-types";
 import { formatDateTime } from "@/lib/format";
-import { splitHtmlDocuments } from "@/lib/listing-ingest";
+import { splitHtmlDocuments, validateListingHtmlChunk } from "@/lib/listing-ingest";
 
 const MAX_PAGES = 10;
 
@@ -51,12 +51,21 @@ export function ListingIngestPanel({
     setMessage(null);
     const chunks = splitHtmlDocuments(html);
     if (chunks.length === 0) {
-      setError("Cole o HTML de pelo menos uma página de busca (Salvar como… ou Ctrl+U).");
+      setError(
+        "Cole o HTML completo da busca. No Chrome: abra a página → Ctrl+U (código-fonte) → Ctrl+A → Ctrl+C. Não copie um pedaço do inspetor (F12).",
+      );
       return;
     }
     if (chunks.length > MAX_PAGES) {
       setError(`No máximo ${MAX_PAGES} páginas por envio. Você colou ${chunks.length}.`);
       return;
+    }
+    for (let i = 0; i < chunks.length; i++) {
+      const problem = validateListingHtmlChunk(chunks[i]!);
+      if (problem) {
+        setError(`Página ${i + 1} do lote: ${problem}`);
+        return;
+      }
     }
     const start = Math.max(1, Number.parseInt(pageFrom, 10) || 1);
     setBusy(true);
@@ -83,9 +92,10 @@ export function ListingIngestPanel({
       <div>
         <p className="text-xs font-medium text-navy">Ingestão assistida (listagem)</p>
         <p className="mt-1 text-xs text-muted-foreground">
-          No Shopcar, abra a busca, salve o HTML da página (ou cole o código-fonte). Pode colar
-          várias páginas de uma vez (até {MAX_PAGES}). Sem GET automático — a Cloudflare fica no
-          seu navegador.
+          No Shopcar, abra a busca → <strong className="font-medium">Ctrl+U</strong> (código-fonte
+          da página) → Ctrl+A → Ctrl+C → cole aqui. Tem que ser a página inteira (começa com{" "}
+          <code className="text-[10px]">&lt;!DOCTYPE</code> ou <code className="text-[10px]">&lt;html</code>
+          ), não um trecho do F12. Até {MAX_PAGES} páginas por envio.
         </p>
         {pendingCount > 0 && (
           <p className="mt-1 text-xs text-amber-700">

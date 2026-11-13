@@ -1,24 +1,18 @@
-# RELATORIO — ingestão assistida de listagem Shopcar
+# RELATORIO — ingestão assistida no deploy
 
 ## Feito
-- Migration `0023_ingestao_listagens`: fila de HTML colado (sem GET na fonte).
-- Adapter Shopcar: card da busca agora lê modelo, ano, km, cor, combustível,
-  câmbio (heurística), cidade, foto, marca (URL) + `bruto_da_listagem`.
-- Runner `ingerir_html` + CLI `ingerir`; loop do coletor processa a fila
-  antes dos pedidos (funciona sem `BOT_CONTACT_*`).
-- API: `POST/GET /api/sources/shopcar/ingest-listings` (master, até 10
-  páginas/envio, body até 16 MB).
-- UI em Fontes (card Shopcar): colar HTML, número da 1ª página, fila/status.
-- Smoke local: fixture → 20 novos, 0 requisições. Migration aplicada no
-  Postgres local.
+- Commit `dc8f296` na branch `deploy` e push para
+  `origin/deploy` (ottivsolutionecosystem/veiculo-scraper).
+- Feature: fila `ingestao_listagens`, CLI `ingerir`, UI em Fontes,
+  migration `0023` (o start da api aplica migrations no boot).
 
 ## Decidido por mim e por quê
-- Não desativar ausentes na ingestão: usuário manda páginas parciais; varredura
-  completa só na coleta por rede (hoje bloqueada pela Cloudflare).
-- Continua proibido bypass de Cloudflare; este fluxo usa HTML do navegador.
-- `BOT_CONTACT_*` deixou de ser FATAL no loop — só os pedidos de rede precisam.
+- Push na `deploy` é o caminho de produção deste repo; não forcei nada.
+- Sem acesso ao painel Dokploy daqui: o redeploy depende do auto-deploy
+  ligado nos serviços api/web/work/collector.
 
 ## Pendente de decisão sua
-- Rodar migration `0023` e redeploy de api + collector/work no Dokploy
-  (API em produção ainda estava em 500).
-- Subir o coletor com `DATABASE_URL` para a fila andar a cada ~15s.
+- No Dokploy: confirmar redeploy de **api**, **web** e **work/collector**.
+- Se a api ainda estiver em 500, reiniciar e olhar o log antes de testar
+  a ingestão.
+- Depois: Fontes → colar HTML da listagem Shopcar.

@@ -51,8 +51,16 @@ async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
     headers,
   });
   if (!res.ok) {
-    const body = await res.json().catch(() => ({ error: res.statusText }));
-    throw new ApiError(res.status, body.error ?? `Erro ${res.status}`);
+    const body = (await res.json().catch(() => ({ error: res.statusText }))) as {
+      error?: string;
+      issues?: { message?: string }[];
+    };
+    const issue = body.issues?.[0]?.message;
+    const message =
+      body.error && issue && !String(body.error).includes(issue)
+        ? `${body.error} ${issue}`
+        : (body.error ?? issue ?? `Erro ${res.status}`);
+    throw new ApiError(res.status, message);
   }
   if (res.status === 204) return undefined as T;
   return res.json() as Promise<T>;

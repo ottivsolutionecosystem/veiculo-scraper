@@ -14,16 +14,26 @@ const runBody = z.object({
   limit: z.number().int().positive().optional(),
 });
 
-const MAX_HTML_CHARS = 1_500_000;
+const MAX_HTML_CHARS = 2_500_000;
 const MAX_PAGES_PER_REQUEST = 10;
 
 const ingestPage = z.object({
-  html: z.string().min(200).max(MAX_HTML_CHARS),
+  html: z
+    .string()
+    .min(500, "HTML curto demais — cole o código-fonte inteiro da página de busca.")
+    .max(MAX_HTML_CHARS, "HTML grande demais (máx. ~2,5 MB por página).")
+    .refine(
+      (h) => /buscaListagem|\/veiculos\/|busca\.php/i.test(h),
+      "HTML não parece listagem Shopcar (faltam cards /veiculos/ ou busca.php).",
+    ),
   page: z.number().int().positive().optional(),
   baseUrl: z.string().url().optional(),
 });
 const ingestBody = z.object({
-  pages: z.array(ingestPage).min(1).max(MAX_PAGES_PER_REQUEST),
+  pages: z
+    .array(ingestPage)
+    .min(1, "Envie ao menos uma página.")
+    .max(MAX_PAGES_PER_REQUEST, `No máximo ${MAX_PAGES_PER_REQUEST} páginas por envio.`),
 });
 
 // Só shopcar tem self-service de liga/desliga — webmotors/olx nascem
@@ -142,7 +152,14 @@ export async function sourceRoutes(app: FastifyInstance) {
           `"${source}" não aceita ingestão de listagem — só shopcar por enquanto.`,
         );
       }
-      const body = ingestBody.parse(req.body);
+      const parsed = ingestBody.safeParse(req.body);
+      if (!parsed.success) {
+        const first = parsed.error.issues[0];
+        const detail = first?.message ?? "Payload inválido.";
+        reply.status(400).send({ error: detail, issues: parsed.error.issues });
+        return;
+      }
+      const body = parsed.data;
       const { rows: fonteRows } = await pool.query("SELECT fonte FROM fontes WHERE fonte = $1", [source]);
       if (!fonteRows[0]) throw new NotFoundError("Fonte não encontrada.");
       const defaultBase =
