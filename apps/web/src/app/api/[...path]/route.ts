@@ -1,9 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 
+import { resetApiBaseCache, resolveApiBase } from "@/lib/api-upstream";
+
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-/** Encaminha /api/* para a Fastify em runtime (API_URL do Dokploy). */
+/** Encaminha /api/* para a Fastify (descobre hostname na rede Dokploy). */
 const HOP = new Set([
   "connection",
   "keep-alive",
@@ -17,14 +19,9 @@ const HOP = new Set([
   "content-length",
 ]);
 
-function apiBase(): string {
-  return (process.env.API_URL || "http://api:3001").replace(/\/$/, "");
-}
-
 async function proxy(req: NextRequest, ctx: { params: { path: string[] } }) {
-  const base = apiBase();
   const parts = ctx.params.path ?? [];
-  const target = `${base}/api/${parts.join("/")}${req.nextUrl.search}`;
+  const pathAndQuery = `/api/${parts.join("/")}${req.nextUrl.search}`;
 
   const headers = new Headers();
   req.headers.forEach((value, key) => {
@@ -36,19 +33,23 @@ async function proxy(req: NextRequest, ctx: { params: { path: string[] } }) {
     init.body = Buffer.from(await req.arrayBuffer());
   }
 
+  let base = "(desconhecido)";
   try {
-    const upstream = await fetch(target, init);
+    base = await resolveApiBase();
+    const upstream = await fetch(`${base}${pathAndQuery}`, init);
     const out = new Headers();
     upstream.headers.forEach((value, key) => {
       if (!HOP.has(key.toLowerCase())) out.set(key, value);
     });
     return new NextResponse(upstream.body, { status: upstream.status, headers: out });
   } catch (err) {
+    resetApiBaseCache();
     const detail = err instanceof Error ? err.message : String(err);
-    console.error("[api-proxy] falhou", { base, target, detail });
+    console.error("[api-proxy] falhou", { base, pathAndQuery, detail });
     return NextResponse.json(
       {
-        error: "API inacessível pelo painel. Confira API_URL no crawler-web.",
+        error:
+          "API inacessível pelo painel. crawler-web e crawler-api precisam estar na mesma rede Dokploy.",
         apiUrl: base,
         detail,
       },

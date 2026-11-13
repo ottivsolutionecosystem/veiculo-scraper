@@ -9,6 +9,7 @@ import type {
   TelephonySession,
   Webhook,
 } from "@veiculo/types";
+import { resolveApiBase } from "./api-upstream";
 import { API_URL } from "./env";
 import { getStoredToken } from "./session";
 import type {
@@ -35,6 +36,12 @@ export class ApiError extends Error {
   }
 }
 
+async function resolveFetchBase(): Promise<string> {
+  // Browser: mesma origem (/api → proxy). Servidor: descobre hostname Dokploy.
+  if (typeof window !== "undefined") return API_URL;
+  return resolveApiBase();
+}
+
 async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
   const headers = new Headers(init?.headers);
   if (init?.body && !headers.has("Content-Type")) {
@@ -44,7 +51,8 @@ async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
   if (token && !headers.has("Authorization")) {
     headers.set("Authorization", `Bearer ${token}`);
   }
-  const res = await fetch(`${API_URL}${path}`, {
+  const base = await resolveFetchBase();
+  const res = await fetch(`${base}${path}`, {
     ...init,
     cache: "no-store",
     credentials: "include",
@@ -208,7 +216,8 @@ export async function fetchCallRecording(interactionId: number): Promise<Blob> {
   const headers = new Headers();
   const token = getStoredToken();
   if (token) headers.set("Authorization", `Bearer ${token}`);
-  const res = await fetch(`${API_URL}/api/interactions/${interactionId}/recording`, {
+  const base = await resolveFetchBase();
+  const res = await fetch(`${base}/api/interactions/${interactionId}/recording`, {
     cache: "no-store",
     credentials: "include",
     headers,

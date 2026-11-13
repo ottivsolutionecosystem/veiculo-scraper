@@ -1,15 +1,12 @@
-# RELATORIO — API no ar, web sem alcançar
+# RELATORIO — descoberta automática do API_URL
 
 ## Feito
-- Log da api: migrations + listen `:3001` OK.
-- `/api/*` no domínio ainda 500: rewrite do Next usava
-  hostname bakeado (`http://api:3001`); no Dokploy o DNS
-  costuma ser outro (ex. `crawler-api`).
-- Proxy runtime em `app/api/[...path]` lê `API_URL` no request
-  e devolve 502 com `apiUrl`/`detail` se falhar.
+- Sem acesso ao Dokploy (login) nem SSH na VPS — não dá para
+  mudar env/rede daqui.
+- Proxy `/api` agora sonda `crawler-api`, `api` e candidatos
+  via `/health` e cacheia o que responder.
 
-## Pendente de decisão sua
-- No **crawler-web**, `API_URL` = hostname interno do api
-  (tente `http://crawler-api:3001` se o serviço se chama assim).
+## Pendente de decisão sua (1 clique)
 - Deploy **crawler-web**.
-- Fontes → Iniciar captura de novo.
+- Se ainda 502: no Dokploy, mesma rede para web+api e
+  `API_URL=http://<nome-do-serviço-api>:3001`.
