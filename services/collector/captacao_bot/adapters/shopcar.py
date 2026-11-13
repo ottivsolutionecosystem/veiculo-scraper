@@ -22,7 +22,7 @@ import re
 from collections.abc import Iterator
 from urllib.parse import parse_qs, urlencode, urljoin, urlparse, urlunparse
 
-from selectolax.parser import HTMLParser
+from selectolax.lexbor import LexborHTMLParser
 
 from ..models import AnuncioBruto, CardListagem
 from ..normalize import sem_acento
@@ -92,7 +92,7 @@ def _oferta(jsonld: dict | None) -> dict:
     return oferta if isinstance(oferta, dict) else {}
 
 
-def _tipo_pelo_anunciante(tree: HTMLParser) -> tuple[str | None, str | None]:
+def _tipo_pelo_anunciante(tree: LexborHTMLParser) -> tuple[str | None, str | None]:
     """Bloco `#anunciante`: logo `images/anunciante_particular.png` para
     particular, `/stored/lojas/<id>.png` para loja. Nada além disso conta."""
     bloco = tree.css_first("#anunciante")
@@ -136,7 +136,7 @@ def tipo_do_card(html_card: str) -> str | None:
 
 
 def detectar_tipo_anunciante(
-    tree: HTMLParser, foto_principal: str | None
+    tree: LexborHTMLParser, foto_principal: str | None
 ) -> tuple[str | None, str | None]:
     """Dois sinais independentes têm que concordar. Discordância devolve
     None: anúncio ambíguo vai para revisão, não para o balde errado."""
@@ -157,7 +157,7 @@ def _texto(node) -> str | None:
     return t or None
 
 
-def _primeiro(tree: HTMLParser, seletor: str) -> str | None:
+def _primeiro(tree: LexborHTMLParser, seletor: str) -> str | None:
     for parte in seletor.split(","):
         node = tree.css_first(parte.strip())
         if node is not None:
@@ -194,7 +194,7 @@ def _cambio_do_modelo(modelo: str | None) -> str | None:
     return None
 
 
-def extrair_jsonld(tree: HTMLParser) -> dict | None:
+def extrair_jsonld(tree: LexborHTMLParser) -> dict | None:
     """Primeiro bloco JSON-LD que descreve um veículo (não a Organization Shopcar)."""
     for script in tree.css("script[type='application/ld+json']"):
         conteudo = script.text(strip=True)
@@ -242,7 +242,7 @@ class ShopcarAdapter(Adapter):
         """Lê preço e demais campos do card. Com o preço da listagem o runner
         só abre a ficha de quem mudou; na ingestão assistida esses campos
         bastam para gravar sem GET no anúncio."""
-        tree = HTMLParser(html_listagem)
+        tree = LexborHTMLParser(html_listagem)
         cards: list[CardListagem] = []
         vistos: set[str] = set()
         nos = tree.css(SELETORES["card_anuncio"])
@@ -320,7 +320,7 @@ class ShopcarAdapter(Adapter):
     def proxima_pagina(self, html_listagem: str, base_url: str) -> str | None:
         """O 'Próxima' do Shopcar às vezes cai `tipoanuncio`. A página
         seguinte é montada a partir da URL atual, não do href do site."""
-        tree = HTMLParser(html_listagem)
+        tree = LexborHTMLParser(html_listagem)
         tem_proxima = any(
             "Próxima" in (node.text() or "") or "proxima" in (node.text() or "").lower()
             for node in tree.css(".paginacao a")
@@ -334,7 +334,7 @@ class ShopcarAdapter(Adapter):
         return urlunparse((parsed.scheme, parsed.netloc, parsed.path, "", urlencode(qs), ""))
 
     def parse_anuncio(self, html: str, url: str) -> AnuncioBruto | None:
-        tree = HTMLParser(html)
+        tree = LexborHTMLParser(html)
         jsonld = extrair_jsonld(tree)
 
         titulo = None
