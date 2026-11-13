@@ -1,21 +1,17 @@
-# RELATORIO — HTML Shopcar ok; API prod 500
+# RELATORIO — fila de ingestão ok; coletor parado
 
 ## Feito
-- HTML da busca Shopcar `pagina=1` (particulares) parseia local: **20 cards**,
-  0 GET na fonte (`ingerir` / `cards_de_listagem`).
-- Painel em Fontes já tem o campo de colar; validação aceita esse HTML.
-- Ajuste: GET `/api/sources` não quebra se `ingestao_listagens` faltar;
-  mensagem de erro da web quando a API devolve 500 em texto puro;
-  `start-api.sh` não morre se o seed falhar.
+- Página #1 enfileirada (`na fila` desde 15:10) — API/UI ok.
+- Diagnóstico: item sem `iniciado_em` = serviço **collector/work** não
+  está rodando o loop `ingerir` (não é Cloudflare nem HTML).
+- Ajuste: `COLLECTOR_ENABLED=true` sobe o loop mesmo sem `BOT_CONTACT_*`
+  (só ingestão assistida). UI avisa “Coletor parado” após ~90s.
 
 ## Decidido por mim e por quê
-- O “Payload inválido” anterior era HTML incompleto; este HTML está certo.
-- O bloqueio agora é **API inacessível** em `crawler.ottiv.io` (`/api/*` →
-  500 texto “Internal Server Error”, típico de rewrite Next sem upstream).
-  Sem api no ar, enfileirar listagem não roda.
+- O HTML já está na Postgres; sem o Python no ar a fila não anda.
+- Não inventei processamento na API (fronteira TS/Python = Postgres).
 
 ## Pendente de decisão sua
-- No Dokploy (`dokploy.ottiv.io`): **reiniciar/redeploy do serviço api**
-  (e confirmar web + collector/work). Olhar log do start (`migrations ok`).
-- Depois: Fontes → colar o HTML no campo da Shopcar (não no chat) →
-  Enfileirar. Página 1 = 20 anúncios; repetir com `pagina=2`… 
+- Dokploy: **Redeploy/Restart do serviço collector** (e/ou work com
+  `COLLECTOR_ENABLED=true` + mesmo `DATABASE_URL`). Em ~15s o #1 deve
+  sair de “na fila” para “ok: N novos…”.

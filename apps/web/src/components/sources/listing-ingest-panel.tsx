@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { Loader2, Upload } from "lucide-react";
+import { AlertTriangle, Loader2, Upload } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -12,6 +12,9 @@ import { formatDateTime } from "@/lib/format";
 import { splitHtmlDocuments, validateListingHtmlChunk } from "@/lib/listing-ingest";
 
 const MAX_PAGES = 10;
+/** Loop do coletor é ~15s; acima disso sem `startedAt` = serviço parado. */
+const STALE_MS = 90_000;
+const POLL_MS = 3000;
 
 /**
  * Cola HTML da busca Shopcar (já aberto no browser). O painel só enfileira;
@@ -32,6 +35,7 @@ export function ListingIngestPanel({
   const [message, setMessage] = React.useState<string | null>(null);
   const [error, setError] = React.useState<string | null>(null);
   const [recent, setRecent] = React.useState<ListingIngestItem[]>([]);
+  const [now, setNow] = React.useState(() => Date.now());
 
   const reloadRecent = React.useCallback(() => {
     return getListingIngest(source)
@@ -44,6 +48,26 @@ export function ListingIngestPanel({
   React.useEffect(() => {
     reloadRecent();
   }, [reloadRecent, pendingCount]);
+
+  const waiting = recent.some((item) => !item.processedAt);
+  React.useEffect(() => {
+    if (!waiting) return;
+    const tick = setInterval(() => setNow(Date.now()), POLL_MS);
+    const poll = setInterval(() => {
+      void reloadRecent();
+      void onRefresh?.();
+    }, POLL_MS);
+    return () => {
+      clearInterval(tick);
+      clearInterval(poll);
+    };
+  }, [waiting, reloadRecent, onRefresh]);
+
+  const staleWaiting = recent.some((item) => {
+    if (item.processedAt || item.startedAt) return false;
+    const t = Date.parse(item.requestedAt);
+    return Number.isFinite(t) && now - t >= STALE_MS;
+  });
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -97,10 +121,25 @@ export function ListingIngestPanel({
           <code className="text-[10px]">&lt;!DOCTYPE</code> ou <code className="text-[10px]">&lt;html</code>
           ), não um trecho do F12. Até {MAX_PAGES} páginas por envio.
         </p>
-        {pendingCount > 0 && (
+        {pendingCount > 0 && !staleWaiting && (
           <p className="mt-1 text-xs text-amber-700">
             {pendingCount} página(s) aguardando o coletor.
           </p>
+        )}
+        {staleWaiting && (
+          <div className="mt-2 space-y-1 rounded-md border border-destructive/40 bg-destructive/5 p-2">
+            <p className="flex items-start gap-2 text-xs font-medium text-destructive">
+              <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+              Coletor parado — a listagem está na fila, mas ninguém processou.
+            </p>
+            <p className="text-xs text-muted-foreground">
+              No Dokploy, reinicie o serviço <strong className="font-medium">collector</strong> (ou{" "}
+              <strong className="font-medium">work</strong> com{" "}
+              <code className="rounded bg-muted px-1">COLLECTOR_ENABLED=true</code>
+              ). Precisa do mesmo <code className="rounded bg-muted px-1">DATABASE_URL</code> da
+              api. Ingestão assistida não precisa de GET no Shopcar.
+            </p>
+          </div>
         )}
       </div>
       <form onSubmit={onSubmit} className="space-y-2">

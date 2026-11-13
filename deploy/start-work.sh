@@ -23,9 +23,10 @@ collector_should_run() {
       return 1
     ;;
     true|1|yes|YES|TRUE)
+      # Ingestão assistida (HTML colado) não precisa de BOT_CONTACT_* — só
+      # o loop GET (pedidos) exige. Sem contato, o loop ainda drena a fila.
       if [ -z "${BOT_CONTACT_URL:-}" ] || [ -z "${BOT_CONTACT_EMAIL:-}" ]; then
-        log "FATAL coletor: COLLECTOR_ENABLED=true mas BOT_CONTACT_URL/BOT_CONTACT_EMAIL ausentes."
-        return 1
+        log "coletor: sem BOT_CONTACT_* — só ingestão assistida (sem GET na fonte)."
       fi
       return 0
     ;;
