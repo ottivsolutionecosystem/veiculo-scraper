@@ -1,12 +1,11 @@
-# RELATORIO — descoberta automática do API_URL
+# RELATORIO — API_URL no Dokploy
 
 ## Feito
-- Sem acesso ao Dokploy (login) nem SSH na VPS — não dá para
-  mudar env/rede daqui.
-- Proxy `/api` agora sonda `crawler-api`, `api` e candidatos
-  via `/health` e cacheia o que responder.
+- Login Dokploy; no crawler-web faltava `API_URL`.
+- Defini `API_URL` para o domínio público da api (sslip.io)
+  e `NEXT_PUBLIC_API_URL` vazio; Reload do crawler-web.
+- `/api/auth/me` agora responde 401 de auth (não mais 502).
 
-## Pendente de decisão sua (1 clique)
-- Deploy **crawler-web**.
-- Se ainda 502: no Dokploy, mesma rede para web+api e
-  `API_URL=http://<nome-do-serviço-api>:3001`.
+## Pendente de decisão sua
+- Fontes → Iniciar captura automática de novo.
+- Trocar a senha do Dokploy (apareceu no print).
