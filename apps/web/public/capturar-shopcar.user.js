@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Ottiv — captura automática Shopcar
 // @namespace    https://crawler.ottiv.io
-// @version      1.1.0
+// @version      1.2.0
 // @description  Um botão no painel Ottiv percorre a busca do Shopcar e envia o HTML (Cloudflare no browser).
 // @author       Ottiv
 // @match        https://www.shopcar.com.br/busca.php*
@@ -26,9 +26,7 @@
   function markInstalled() {
     try {
       document.documentElement.setAttribute("data-ottiv-capture", "1");
-    } catch (_) {
-      /* ignore */
-    }
+    } catch (_) {}
   }
 
   function gmRequest(opts) {
@@ -137,7 +135,6 @@
   }
 
   if (/shopcar\.com\.br$/.test(location.hostname) && /busca\.php/i.test(location.pathname)) {
-    // Pequeno atraso para o DOM da listagem estabilizar
     setTimeout(captureShopcarPage, 1200);
   }
 })();

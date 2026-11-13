@@ -24,6 +24,7 @@ const POLL_MS = 3000;
 const DEFAULT_BASE =
   "https://www.shopcar.com.br/busca.php?tipo=1&tipoanuncio=2&pagina=1";
 
+/** Rota Next (+ rewrite .user.js) — não depende de arquivo em /public no standalone. */
 const USERSCRIPT_HREF = "/capturar-shopcar.user.js";
 
 /**

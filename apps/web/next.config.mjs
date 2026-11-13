@@ -26,10 +26,17 @@ const nextConfig = {
   },
   async rewrites() {
     const apiUrl = process.env.API_URL || "http://api:3001";
-    return [{
-      source: "/api/:path*",
-      destination: `${apiUrl}/api/:path*`,
-    }];
+    return [
+      // Tampermonkey espera .user.js; a rota App Router é /capturar-shopcar.
+      {
+        source: "/capturar-shopcar.user.js",
+        destination: "/capturar-shopcar",
+      },
+      {
+        source: "/api/:path*",
+        destination: `${apiUrl}/api/:path*`,
+      },
+    ];
   },
 };
 
