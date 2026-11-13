@@ -50,6 +50,14 @@ self.addEventListener("fetch", (event) => {
   const url = new URL(request.url);
   if (url.origin !== self.location.origin) return;
   if (url.pathname.startsWith("/api/")) return;
+  // Userscript Tampermonkey: nunca cachear / interceptar (evita 404 velho).
+  if (
+    url.pathname === "/capturar-shopcar" ||
+    url.pathname === "/capturar-shopcar.user.js" ||
+    url.pathname.endsWith(".user.js")
+  ) {
+    return;
+  }
 
   if (url.pathname.startsWith("/_next/static/")) {
     event.respondWith(cacheFirst(request));
