@@ -7,11 +7,14 @@ banco e sem rede.
 
 from __future__ import annotations
 
+import logging
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from typing import Any, Protocol
 
 from .models import VeiculoNormalizado
+
+log = logging.getLogger(__name__)
 
 
 @dataclass
@@ -57,6 +60,46 @@ class MemoryStorage:
     def __init__(self) -> None:
         self.anuncios: dict[tuple[str, str], dict] = {}
         self.execucoes: list[Any] = []
+        # Sessão de captura página a página (espelha ingestao_url_fila).
+        self.sessao_ingestao: dict[str, Any] | None = None
+
+    def abrir_sessao_ingestao(
+        self, fonte: str, tipo_anunciante: str | None = None
+    ) -> None:
+        self.sessao_ingestao = {
+            "fonte": fonte,
+            "tipo_anunciante": tipo_anunciante,
+            "ids_vistos": [],
+            "encerrada": False,
+            "varredura_feita": False,
+        }
+
+    def encerrar_sessao_ingestao(self) -> None:
+        if self.sessao_ingestao:
+            self.sessao_ingestao["encerrada"] = True
+
+    def acumular_ids_sessao_ingestao(self, fonte: str, ids: list[str]) -> None:
+        s = self.sessao_ingestao
+        if not s or s.get("fonte") != fonte or s.get("varredura_feita"):
+            return
+        vistos = set(s["ids_vistos"])
+        for i in ids:
+            if i not in vistos:
+                s["ids_vistos"].append(i)
+                vistos.add(i)
+
+    def varredura_sessoes_prontas(self, fonte: str) -> int:
+        s = self.sessao_ingestao
+        if (
+            not s
+            or s.get("fonte") != fonte
+            or not s.get("encerrada")
+            or s.get("varredura_feita")
+        ):
+            return 0
+        n = self.desativar_ausentes(fonte, s.get("tipo_anunciante"), s["ids_vistos"])
+        s["varredura_feita"] = True
+        return n
 
     def estado_do_anuncio(self, fonte: str, url: str) -> EstadoAnuncio | None:
         reg = self.anuncios.get((fonte, url))
@@ -409,3 +452,121 @@ class PostgresStorage:
                 ),
             )
         self.conn.commit()
+
+    def acumular_ids_sessao_ingestao(self, fonte: str, ids: list[str]) -> None:
+        """Une ids vistos na sessão de captura aberta ou aguardando varredura."""
+        if not ids:
+            return
+        try:
+            with self.conn.cursor() as cur:
+                cur.execute(
+                    """
+                    UPDATE ingestao_url_fila
+                       SET ids_vistos = (
+                            SELECT COALESCE(jsonb_agg(DISTINCT v), '[]'::jsonb)
+                              FROM (
+                                SELECT jsonb_array_elements_text(
+                                         COALESCE(ingestao_url_fila.ids_vistos, '[]'::jsonb)
+                                       ) AS v
+                                UNION
+                                SELECT unnest(%s::text[])
+                              ) u
+                       )
+                     WHERE id = (
+                            SELECT id FROM ingestao_url_fila
+                             WHERE fonte = %s AND varredura_em IS NULL
+                             ORDER BY criado_em DESC
+                             LIMIT 1
+                     )
+                    """,
+                    (ids, fonte),
+                )
+            self.conn.commit()
+        except Exception as exc:
+            self.conn.rollback()
+            # Migration 0025 ainda não aplicada: coleta segue sem varredura.
+            if "ids_vistos" in str(exc) or "varredura_em" in str(exc):
+                log.warning("%s: acumular ids ignorado (%s)", fonte, exc)
+                return
+            raise
+
+    def varredura_sessoes_prontas(self, fonte: str) -> int:
+        """Filas de captura encerradas, sem HTML pendente → desativa ausentes."""
+        try:
+            with self.conn.cursor() as cur:
+                cur.execute(
+                    """
+                    SELECT f.id, f.tipo_anunciante, f.ids_vistos
+                      FROM ingestao_url_fila f
+                     WHERE f.fonte = %s
+                       AND f.encerrado_em IS NOT NULL
+                       AND f.varredura_em IS NULL
+                       AND NOT EXISTS (
+                            SELECT 1 FROM ingestao_listagens i
+                             WHERE i.fonte = %s AND i.processado_em IS NULL
+                       )
+                     ORDER BY f.criado_em ASC
+                    """,
+                    (fonte, fonte),
+                )
+                filas = cur.fetchall()
+        except Exception as exc:
+            self.conn.rollback()
+            if "varredura_em" in str(exc) or "ids_vistos" in str(exc):
+                log.warning("%s: varredura ignorada (%s)", fonte, exc)
+                return 0
+            raise
+
+        total = 0
+        for fila_id, tipo, ids_json in filas:
+            ids = [str(x) for x in (ids_json or [])]
+            if not ids:
+                with self.conn.cursor() as cur:
+                    cur.execute(
+                        """
+                        UPDATE ingestao_url_fila
+                           SET varredura_em = now(), desativados = 0
+                         WHERE id = %s
+                        """,
+                        (fila_id,),
+                    )
+                self.conn.commit()
+                continue
+            n = self.desativar_ausentes(fonte, tipo, ids)
+            total += n
+            with self.conn.cursor() as cur:
+                cur.execute(
+                    """
+                    UPDATE ingestao_url_fila
+                       SET varredura_em = now(), desativados = %s
+                     WHERE id = %s
+                    """,
+                    (n, fila_id),
+                )
+                # Conta na mesma métrica que a coleta completa (scrape_runs).
+                cur.execute(
+                    """
+                    INSERT INTO scrape_runs (
+                        fonte, iniciado_em, finalizado_em, requisicoes,
+                        nao_modificados, novos, atualizados, inalterados,
+                        revisao, erros, encerrado_por,
+                        tipo_anunciante_filtro, desativados, precos_alterados,
+                        ignorados_filtro
+                    ) VALUES (
+                        %s, now(), now(), 0,
+                        0, 0, 0, 0,
+                        0, 0, 'ingestao_varredura',
+                        %s, %s, 0, 0
+                    )
+                    """,
+                    (fonte, tipo, n),
+                )
+            self.conn.commit()
+            log.info(
+                "%s: varredura página a página fila=%s sairam=%s ids=%s",
+                fonte,
+                fila_id,
+                n,
+                len(ids),
+            )
+        return total

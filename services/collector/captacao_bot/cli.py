@@ -141,6 +141,11 @@ def cmd_ingerir(args) -> None:
                 )
                 raise
 
+    if hasattr(storage, "varredura_sessoes_prontas"):
+        sairam = storage.varredura_sessoes_prontas(args.fonte)
+        if sairam:
+            print(f"[{args.fonte}] varredura página a página: sairam={sairam}")
+
 
 def cmd_pedidos(args) -> None:
     """Processa pedidos de coleta sob demanda gravados pelo botão da tela

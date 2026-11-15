@@ -156,7 +156,9 @@ class Runner:
         ao_progredir: Callable[[ResultadoColeta], None] | None = None,
     ) -> ResultadoColeta:
         """Grava anúncios a partir do HTML de uma listagem já obtida no
-        navegador. Zero GET na fonte — não desativa ausentes (página é recorte)."""
+        navegador. Zero GET na fonte. Acumula ids na sessão de captura;
+        a varredura de ausentes roda quando a fila de páginas fecha e
+        não há HTML pendente (ver ``varredura_sessoes_prontas``)."""
         res = ResultadoColeta(fonte=self.cfg.fonte)
         res.encerrado_por = "ingestao_listagem"
         res.fase = "listagem"
@@ -165,12 +167,14 @@ class Runner:
         res.paginas_listagem = 1
         self._notificar(res, ao_progredir)
 
+        ids_vistos: list[str] = []
         for indice, card in enumerate(cards):
             try:
                 bruto = self.adapter.bruto_da_listagem(card)
                 if bruto is None:
                     res.erros += 1
                     continue
+                ids_vistos.append(card.id_externo)
                 estado = self.storage.estado_do_anuncio(self.cfg.fonte, card.url)
                 if (
                     estado is not None
@@ -207,6 +211,9 @@ class Runner:
                 )
             if indice % 10 == 0:
                 self._notificar(res, ao_progredir)
+
+        if ids_vistos and hasattr(self.storage, "acumular_ids_sessao_ingestao"):
+            self.storage.acumular_ids_sessao_ingestao(self.cfg.fonte, ids_vistos)
 
         res.scrape_run_id = self.storage.registrar_execucao(res)
         self._notificar(res, ao_progredir)

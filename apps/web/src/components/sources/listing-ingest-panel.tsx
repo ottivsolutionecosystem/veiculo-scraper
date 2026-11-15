@@ -143,7 +143,7 @@ export function ListingIngestPanel({
         return;
       }
       setMessage(
-        `${queued.total} páginas — abriu a pág. ${first.page}. O capturador envia cada HTML e avança sozinho. Deixe a aba do Shopcar aberta.`,
+        `${queued.total} páginas — abriu a pág. ${first.page}. O capturador envia cada HTML e avança sozinho. Ao terminar o intervalo, anúncios que não apareceram saem da fila (fora do ar). Deixe a aba do Shopcar aberta.`,
       );
       await reloadRecent();
       await onRefresh?.();

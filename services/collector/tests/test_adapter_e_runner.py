@@ -124,6 +124,45 @@ class TestParseAnuncio:
         assert res.requisicoes == 0
         assert len(storage.anuncios) == res.novos
 
+    def test_ingerir_html_varredura_ao_encerrar_sessao(self, adapter):
+        """Captura página a página: ao fechar a sessão, desativa quem não veio."""
+        from captacao_bot.http_client import PoliteClient
+        from captacao_bot.runner import Runner
+        from captacao_bot.storage import MemoryStorage
+
+        html = (FIXTURES / "shopcar_busca.html").read_text(encoding="utf-8")
+        storage = MemoryStorage()
+        storage.abrir_sessao_ingestao("shopcar", "particular")
+        with PoliteClient(adapter.cfg) as client:
+            runner = Runner(adapter, client, storage)
+            res = runner.ingerir_html(
+                html, "https://www.shopcar.com.br/busca.php?tipo=1&tipoanuncio=2"
+            )
+        ids_na_pagina = set(storage.sessao_ingestao["ids_vistos"])
+        assert len(ids_na_pagina) == res.novos + res.inalterados
+        # Simula anúncio antigo que não está mais na listagem.
+        fantasma = next(iter(storage.anuncios.values()))["veiculo"]
+        from copy import copy
+
+        fora = copy(fantasma)
+        fora.id_externo = "fora-do-ar-999"
+        fora.url = "https://www.shopcar.com.br/veiculo/999/x"
+        storage.anuncios[("shopcar", fora.url)] = {
+            "veiculo": fora,
+            "raw": {},
+            "etag": None,
+            "last_modified": None,
+            "content_hash": "x",
+            "pendencias": [],
+            "ultima_vista_em": None,
+            "ativo": True,
+        }
+        storage.encerrar_sessao_ingestao()
+        assert storage.varredura_sessoes_prontas("shopcar") == 1
+        assert storage.anuncios[("shopcar", fora.url)]["ativo"] is False
+        # Segunda chamada não desativa de novo.
+        assert storage.varredura_sessoes_prontas("shopcar") == 0
+
     def test_html_real_anuncio_parseia(self, adapter):
         html = (FIXTURES / "shopcar_anuncio.html").read_text(encoding="utf-8")
         bruto = adapter.parse_anuncio(html, URL_PARTICULAR)

@@ -220,16 +220,26 @@ export async function sourceRoutes(app: FastifyInstance) {
       throw new ForbiddenError(`"${source}" não aceita fila de URLs.`);
     }
     const body = urlQueueBody.parse(req.body);
+    // Shopcar: tipoanuncio=2 particular, =1 loja — para a varredura não
+    // desativar o oposto ao fechar a captura página a página.
+    let tipoAnunciante: string | null = null;
+    try {
+      const t = new URL(body.urls[0]!.url).searchParams.get("tipoanuncio");
+      if (t === "2") tipoAnunciante = "particular";
+      else if (t === "1") tipoAnunciante = "loja";
+    } catch {
+      /* URL inválida já barrada pelo zod .url() */
+    }
     await pool.query(
       `UPDATE ingestao_url_fila SET encerrado_em = now()
         WHERE fonte = $1 AND encerrado_em IS NULL`,
       [source],
     );
     const { rows } = await pool.query(
-      `INSERT INTO ingestao_url_fila (fonte, urls, cursor_idx, solicitado_por)
-       VALUES ($1, $2::jsonb, 0, $3)
+      `INSERT INTO ingestao_url_fila (fonte, urls, cursor_idx, solicitado_por, tipo_anunciante)
+       VALUES ($1, $2::jsonb, 0, $3, $4)
        RETURNING id, fonte, urls, cursor_idx, criado_em`,
-      [source, JSON.stringify(body.urls), actor.login],
+      [source, JSON.stringify(body.urls), actor.login, tipoAnunciante],
     );
     const row = rows[0]!;
     const urls = row.urls as { url: string; page: number }[];
