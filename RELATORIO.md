@@ -1,13 +1,13 @@
-# RELATORIO — total nos filtros
+# RELATORIO — filtro de cidade
 
 ## Feito
-- `/api/queue` e `/api/vehicles/search` devolvem `total` (COUNT com
-  os mesmos filtros, sem cursor).
-- Fila e Busca mostram “N carros” / “N carros com esses filtros”.
+- Fila e Busca: select de cidade (catálogo CITIES).
+- API queue aceita `city`; search já tinha e agora compara com
+  `unaccent` (ignora acento/caixa).
 
 ## Decidido
-- COUNT separado (não window+LIMIT): total estável em qualquer página
-  do cursor. Índices de `fila_do_dia` (preco, km, marca) cobrem o filtro.
+- Lista fixa do catálogo (mesmo vocabulário dos mocks). Cidades
+  fora da lista não aparecem no select.
 
 ## Pendente de decisão sua
 - Nenhuma.

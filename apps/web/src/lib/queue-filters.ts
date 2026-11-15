@@ -3,6 +3,7 @@ import type { BodyTypeFilter } from "@/lib/search";
 export interface QueueListFilters {
   q?: string;
   brand?: string;
+  city?: string;
   yearMin?: number;
   yearMax?: number;
   priceMinCents?: number;
@@ -41,6 +42,7 @@ export function parseQueueListFilters(
   };
   const q = get("q")?.trim();
   const brand = get("brand")?.trim();
+  const city = get("city")?.trim();
   const yearMin = get("yearMin")?.trim();
   const yearMax = get("yearMax")?.trim();
   const kmMin = get("kmMin")?.trim();
@@ -55,6 +57,7 @@ export function parseQueueListFilters(
   return {
     q: q || undefined,
     brand: brand || undefined,
+    city: city || undefined,
     yearMin: yearMin && Number.isFinite(Number(yearMin)) ? Number(yearMin) : undefined,
     yearMax: yearMax && Number.isFinite(Number(yearMax)) ? Number(yearMax) : undefined,
     priceMinCents: reaisToCents(get("priceMin")),
@@ -73,6 +76,7 @@ export function queueFiltersActive(filters: QueueListFilters): boolean {
   return Boolean(
     filters.q ||
       filters.brand ||
+      filters.city ||
       filters.yearMin ||
       filters.yearMax ||
       filters.priceMinCents ||

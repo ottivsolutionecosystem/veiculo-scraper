@@ -46,7 +46,7 @@ tabela nova (`docs/MODELO.md`), `[W]` calculado pelo worker e persistido
 
 | Método | Rota | Params | Body |
 |---|---|---|---|
-| GET | `/api/queue` | `cursor?`, `limit?`, `sellerType?`, `scope?`, `q?`, `brand?`, `yearMin?`, `yearMax?`, `priceMinCents?`, `priceMaxCents?`, `kmMin?`, `kmMax?`, `transmission?`, `fuelType?`, `bodyType?`, `scoreBand?`, `source?` | — |
+| GET | `/api/queue` | `cursor?`, `limit?`, `sellerType?`, `scope?`, `q?`, `brand?`, `city?`, `yearMin?`, `yearMax?`, `priceMinCents?`, `priceMaxCents?`, `kmMin?`, `kmMax?`, `transmission?`, `fuelType?`, `bodyType?`, `scoreBand?`, `source?` | — |
 | POST | `/api/vehicles/:id/interactions` | — | `{ channel, outcome?, durationSeconds? }` |
 | POST | `/api/vehicles/:id/discard` | — | `{ reason: string, notes?: string }` |
 | PUT | `/api/vehicles/:id/seller` | — | `{ name: string, phone?: string }` |

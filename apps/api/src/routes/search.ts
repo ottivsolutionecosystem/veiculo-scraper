@@ -46,7 +46,7 @@ export async function searchRoutes(app: FastifyInstance) {
     if (q.vehicleId !== undefined) push("f.veiculo_id = ?", q.vehicleId);
     if (q.brand) push("f.marca = ?", q.brand);
     if (q.model) push("f.modelo ILIKE '%' || ? || '%'", q.model);
-    if (q.city) push("f.cidade = ?", q.city);
+    if (q.city) push("lower(unaccent(f.cidade)) = lower(unaccent(?))", q.city);
     if (q.yearMin !== undefined) push("f.ano_modelo >= ?", q.yearMin);
     if (q.yearMax !== undefined) push("f.ano_modelo <= ?", q.yearMax);
     if (q.priceMinCents !== undefined) push("f.preco >= ?", q.priceMinCents);

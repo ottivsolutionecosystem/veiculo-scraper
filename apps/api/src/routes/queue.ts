@@ -20,6 +20,7 @@ const querySchema = z.object({
   operator: z.string().optional(),
   q: z.string().max(80).optional(),
   brand: z.string().max(40).optional(),
+  city: z.string().max(80).optional(),
   yearMin: z.coerce.number().int().optional(),
   yearMax: z.coerce.number().int().optional(),
   priceMinCents: z.coerce.number().int().nonnegative().optional(),
@@ -53,6 +54,7 @@ function listFilterClause(
   query: {
     q?: string;
     brand?: string;
+    city?: string;
     yearMin?: number;
     yearMax?: number;
     priceMinCents?: number;
@@ -85,6 +87,10 @@ function listFilterClause(
   if (query.brand?.trim()) {
     values.push(query.brand.trim());
     parts.push(`AND upper(f.marca) = upper($${values.length})`);
+  }
+  if (query.city?.trim()) {
+    values.push(query.city.trim());
+    parts.push(`AND lower(unaccent(f.cidade)) = lower(unaccent($${values.length}))`);
   }
   if (query.yearMin !== undefined) {
     values.push(query.yearMin);

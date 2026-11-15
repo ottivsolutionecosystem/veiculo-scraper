@@ -113,6 +113,7 @@ export function getQueue(
     scope?: QueueScope;
     q?: string;
     brand?: string;
+    city?: string;
     yearMin?: number;
     yearMax?: number;
     priceMinCents?: number;

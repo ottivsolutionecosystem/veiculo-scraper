@@ -4,7 +4,7 @@ import * as React from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Search, SlidersHorizontal, X } from "lucide-react";
 
-import { BODY_TYPES, BRANDS, FUEL_TYPES, SOURCES, TRANSMISSIONS } from "@/lib/catalog";
+import { BODY_TYPES, BRANDS, CITIES, FUEL_TYPES, SOURCES, TRANSMISSIONS } from "@/lib/catalog";
 import {
   BODY_TYPE_LABELS,
   FUEL_LABELS,
@@ -33,6 +33,7 @@ const BANDS = ["quente", "boa", "morna", "fria"] as const;
 
 const FILTER_KEYS = [
   "brand",
+  "city",
   "yearMin",
   "yearMax",
   "priceMin",
@@ -53,6 +54,7 @@ type Draft = Record<FilterKey, string>;
 function emptyDraft(): Draft {
   return {
     brand: "",
+    city: "",
     yearMin: "",
     yearMax: "",
     priceMin: "",
@@ -100,6 +102,7 @@ type Chip = { id: string; keys: FilterKey[]; label: string };
 function chipsFromDraft(draft: Draft): Chip[] {
   const chips: Chip[] = [];
   if (draft.brand) chips.push({ id: "brand", keys: ["brand"], label: draft.brand });
+  if (draft.city) chips.push({ id: "city", keys: ["city"], label: draft.city });
   if (draft.yearMin || draft.yearMax) {
     const label =
       draft.yearMin && draft.yearMax
@@ -256,6 +259,22 @@ function FilterPanel({
               {BRANDS.map((b) => (
                 <SelectItem key={b} value={b}>
                   {b}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="space-y-1.5">
+          <Label className="text-navy/70">Cidade</Label>
+          <Select value={draft.city || "all"} onValueChange={(v) => onPatch("city", v === "all" ? "" : v)}>
+            <SelectTrigger aria-label="Cidade">
+              <SelectValue placeholder="Todas as cidades" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todas as cidades</SelectItem>
+              {CITIES.map((c) => (
+                <SelectItem key={`${c.city}-${c.state}`} value={c.city}>
+                  {c.city}/{c.state}
                 </SelectItem>
               ))}
             </SelectContent>

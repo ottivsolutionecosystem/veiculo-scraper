@@ -3,7 +3,7 @@
 import * as React from "react";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 
-import { BODY_TYPES, BRANDS, FUEL_TYPES, TRANSMISSIONS } from "@/lib/catalog";
+import { BODY_TYPES, BRANDS, CITIES, FUEL_TYPES, TRANSMISSIONS } from "@/lib/catalog";
 import { BODY_TYPE_LABELS, FUEL_LABELS, TRANSMISSION_LABELS } from "@/lib/labels";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -17,6 +17,7 @@ function fromParams(params: URLSearchParams) {
     vehicleId: params.get("vehicleId") ?? "",
     brand: params.get("brand") ?? "",
     model: params.get("model") ?? "",
+    city: params.get("city") ?? "",
     yearMin: params.get("yearMin") ?? "",
     yearMax: params.get("yearMax") ?? "",
     priceMin: params.get("priceMinCents") ? String(Number(params.get("priceMinCents")) / 100) : "",
@@ -94,6 +95,7 @@ export function SearchFiltersForm() {
     if (vehicleId) params.set("vehicleId", vehicleId);
     if (draft.brand) params.set("brand", draft.brand);
     if (draft.model) params.set("model", draft.model);
+    if (draft.city) params.set("city", draft.city);
     if (draft.yearMin) params.set("yearMin", draft.yearMin);
     if (draft.yearMax) params.set("yearMax", draft.yearMax);
     if (draft.priceMin) params.set("priceMinCents", String(Number(draft.priceMin) * 100));
@@ -142,13 +144,29 @@ export function SearchFiltersForm() {
             </SelectContent>
           </Select>
         </div>
-        <div className="space-y-1.5 sm:col-span-2">
+        <div className="space-y-1.5">
           <Label className="text-navy/70">Modelo</Label>
           <Input
             value={draft.model}
             placeholder="ex: onix"
             onChange={(e) => patch("model", e.target.value)}
           />
+        </div>
+        <div className="space-y-1.5">
+          <Label className="text-navy/70">Cidade</Label>
+          <Select value={draft.city || "all"} onValueChange={(v) => patch("city", v === "all" ? "" : v)}>
+            <SelectTrigger>
+              <SelectValue placeholder="Todas" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todas</SelectItem>
+              {CITIES.map((c) => (
+                <SelectItem key={`${c.city}-${c.state}`} value={c.city}>
+                  {c.city}/{c.state}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
         <RangeFields
           label="Ano"
