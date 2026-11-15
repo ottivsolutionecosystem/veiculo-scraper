@@ -47,17 +47,26 @@ export function QueueView({
   const [items, setItems] = React.useState(initial.items);
   const [cursor, setCursor] = React.useState(initial.nextCursor);
   const [loading, setLoading] = React.useState(false);
-  const [chromeHidden, setChromeHidden] = React.useState(false);
   const parentRef = React.useRef<HTMLDivElement>(null);
+  const chromeRef = React.useRef<HTMLDivElement>(null);
   const lastTop = React.useRef(0);
   const accumulated = React.useRef(0);
   const chromeHiddenRef = React.useRef(false);
 
+  /** Só DOM — setState no meio do fling re-renderiza a lista virtual e
+   * mata o momentum (sobretudo no iOS). Style inline evita purge do Tailwind. */
+  function applyChromeHidden(hidden: boolean) {
+    chromeHiddenRef.current = hidden;
+    const el = chromeRef.current;
+    if (!el) return;
+    el.style.transform = hidden ? "translateY(-100%)" : "";
+    el.style.pointerEvents = hidden ? "none" : "";
+  }
+
   React.useEffect(() => {
     setItems(initial.items);
     setCursor(initial.nextCursor);
-    setChromeHidden(false);
-    chromeHiddenRef.current = false;
+    applyChromeHidden(false);
     accumulated.current = 0;
     lastTop.current = 0;
   }, [initial]);
@@ -115,8 +124,7 @@ export function QueueView({
       );
       accumulated.current = next.accumulated;
       if (next.hidden !== chromeHiddenRef.current) {
-        chromeHiddenRef.current = next.hidden;
-        setChromeHidden(next.hidden);
+        applyChromeHidden(next.hidden);
       }
     }
 
@@ -142,10 +150,8 @@ export function QueueView({
     >
       {stickyChrome && (
         <div
-          className={cn(
-            "sticky top-0 z-20 bg-card transition-transform duration-300 ease-out will-change-transform",
-            chromeHidden && "pointer-events-none -translate-y-full",
-          )}
+          ref={chromeRef}
+          className="sticky top-0 z-20 bg-card will-change-transform"
         >
           {stickyChrome}
         </div>

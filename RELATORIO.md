@@ -1,16 +1,14 @@
-# RELATORIO — hide-on-scroll estável
+# RELATORIO — fling rápido no hide-on-scroll
 
 ## Feito
-- Topbar/bottomnav voltam ao fluxo fixo (sem hide global).
-- Na fila, só o sticky (CoverageBar + filtros) some ao descer,
-  via `translate` dentro do mesmo scroll — sem margin negativo,
-  sem encolher flex/main.
-- Busca curta (< 6 itens): sem scroll aninhado; página sobe no main.
-- Hide só com total ≥ 8 na fila + overflow ≥ 280px.
+- Hide do sticky da fila via DOM (`transform`), sem setState no scroll —
+  evita re-render da lista virtual no meio do momentum.
+- Fling grande (≥ 40px num evento) esconde/mostra na hora.
+- Revelar exige subida ≥ 56px — bounce do iOS no fling não tremia mais.
+- Sem CSS transition no sticky (animação + fling brigava com o compositor).
 
 ## Decidido
-- Esconder topbar/bottomnav encolhia o main → loop de scroll.
-  Hide fica só no sticky da fila.
+- Histerese assimétrica: esconder fácil, revelar mais difícil no meio do gesto.
 
 ## Pendente de decisão sua
 - Nenhuma.
