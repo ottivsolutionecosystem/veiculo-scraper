@@ -89,6 +89,7 @@ export function ChromeVisibilityProvider({ children }: { children: React.ReactNo
       const prevTop = lastTop.current.get(el) ?? 0;
       const delta = scrollTop - prevTop;
       lastTop.current.set(el, scrollTop);
+      const overflow = el.scrollHeight - el.clientHeight;
 
       if (locksRef.current.size > 0) {
         reveal();
@@ -97,7 +98,7 @@ export function ChromeVisibilityProvider({ children }: { children: React.ReactNo
 
       const next = reduceHideOnScroll(
         { hidden: hiddenRef.current, accumulated: accumulated.current },
-        { scrollTop, delta },
+        { scrollTop, delta, overflow },
       );
       accumulated.current = next.accumulated;
       if (next.hidden !== hiddenRef.current) {

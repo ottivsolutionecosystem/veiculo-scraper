@@ -1,14 +1,12 @@
-# RELATORIO — ocultar barras ao scrollar a fila
+# RELATORIO — scroll com poucos veículos
 
 ## Feito
-- Ao descer a lista, some: cobertura + filtros (sempre), topbar e
-  bottom nav (só telefone). Ao subir, voltam.
-- O estado `hidden` do chrome agora de fato esconde a UI (antes
-  calculava e ninguém usava).
+- Só esconde chrome se a lista tiver overflow ≥ 280px.
+- Com poucos carros (busca/fila curta), o chrome fica fixo —
+  evita o loop esconde→reflow→scrollTop 0→mostra.
 
 ## Decidido
-- Desktop mantém a topbar; só o cabeçalho da fila some para ganhar
-  área de cards.
+- Limiar alto o bastante para cobrir o cabeçalho da fila que some.
 
 ## Pendente de decisão sua
 - Nenhuma.
