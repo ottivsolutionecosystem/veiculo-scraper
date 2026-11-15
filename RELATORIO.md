@@ -1,17 +1,15 @@
-# RELATORIO — filtros ano/preço/câmbio/combustível/carroceria/km
+# RELATORIO — UX/UI dos filtros
 
 ## Feito
-- Busca e Fila: ano de–até, preço de–até, km de–até, câmbio,
-  combustível, carroceria.
-- API `/api/vehicles/search` e `/api/queue` aceitam os novos params.
-- Carroceria via tokens em título/modelo (sem coluna no banco).
-- Deploy Dokploy (`f03d42b`): crawler-api e crawler-web — Done.
+- Fila: busca com ícone, botão com badge, chips removíveis,
+  gaveta (direita no desktop / baixo no mobile).
+- Painel em seções (Veículo / Faixas / Características) com
+  faixas “de–até”; rascunho + Aplicar (não recarrega a cada tecla).
+- Busca: mesmo agrupamento visual por seções e faixas.
 
 ## Decidido
-- Carroceria por ILIKE (categoria Shopcar não é persistida).
-  Acerta Hatch/Sedan/SUV/Picape quando o texto traz o token;
-  falha em SUV sem “SUV” no título. Persistência de `categoria`
-  exigiria mexer no coletor — fora do escopo.
+- Aplicar só no botão evita refetch enquanto o usuário monta
+  o filtro; chips na barra mostram o que está ativo.
 
 ## Pendente de decisão sua
-- Quer persistir `categoria`/carroceria no coletor + migration?
+- Deploy do web (`crawler-web`) para valer em produção.
