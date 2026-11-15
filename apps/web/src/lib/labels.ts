@@ -81,6 +81,32 @@ export const SOURCE_LABELS: Record<string, string> = {
   olx: "OLX",
 };
 
+export const TRANSMISSION_LABELS: Record<string, string> = {
+  MANUAL: "Manual",
+  AUTOMATICO: "Automático",
+  AUTOMATIZADO: "Automatizado",
+};
+
+export const FUEL_LABELS: Record<string, string> = {
+  FLEX: "Flex",
+  GASOLINA: "Gasolina",
+  ALCOOL: "Álcool",
+  DIESEL: "Diesel",
+  GNV: "GNV",
+  HIBRIDO: "Híbrido",
+  ELETRICO: "Elétrico",
+};
+
+export const BODY_TYPE_LABELS: Record<string, string> = {
+  hatch: "Hatch",
+  sedan: "Sedan",
+  suv: "SUV",
+  picape: "Picape",
+  utilitario: "Utilitário",
+  van: "Van / MPV",
+  conversivel: "Conversível",
+};
+
 export function sourceLabel(source: string | null | undefined): string {
   if (!source) return "Fonte";
   return SOURCE_LABELS[source] ?? source;

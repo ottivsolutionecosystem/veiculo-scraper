@@ -33,7 +33,24 @@ export const CITIES: { city: string; state: string }[] = [
 export const COLORS = ["BRANCO", "PRATA", "PRETO", "CINZA", "VERMELHO", "AZUL"];
 
 export const TRANSMISSIONS = ["MANUAL", "AUTOMATICO", "AUTOMATIZADO"] as const;
-export const FUEL_TYPES = ["FLEX", "GASOLINA", "DIESEL", "HIBRIDO"] as const;
+export const FUEL_TYPES = [
+  "FLEX",
+  "GASOLINA",
+  "ALCOOL",
+  "DIESEL",
+  "GNV",
+  "HIBRIDO",
+  "ELETRICO",
+] as const;
+export const BODY_TYPES = [
+  "hatch",
+  "sedan",
+  "suv",
+  "picape",
+  "utilitario",
+  "van",
+  "conversivel",
+] as const;
 
 export const SOURCES = ["shopcar", "webmotors", "olx"] as const;
 

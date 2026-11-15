@@ -3,15 +3,14 @@
 import * as React from "react";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 
-import { BRANDS } from "@/lib/catalog";
+import { BODY_TYPES, BRANDS, FUEL_TYPES, TRANSMISSIONS } from "@/lib/catalog";
+import { BODY_TYPE_LABELS, FUEL_LABELS, TRANSMISSION_LABELS } from "@/lib/labels";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { SavedFilters } from "@/components/search/saved-filters";
-
-const TRANSMISSIONS = ["MANUAL", "AUTOMATICO", "AUTOMATIZADO"];
 
 function fromParams(params: URLSearchParams) {
   return {
@@ -20,9 +19,14 @@ function fromParams(params: URLSearchParams) {
     model: params.get("model") ?? "",
     yearMin: params.get("yearMin") ?? "",
     yearMax: params.get("yearMax") ?? "",
+    priceMin: params.get("priceMinCents") ? String(Number(params.get("priceMinCents")) / 100) : "",
     priceMax: params.get("priceMaxCents") ? String(Number(params.get("priceMaxCents")) / 100) : "",
+    kmMin: params.get("kmMin") ?? "",
+    kmMax: params.get("kmMax") ?? "",
     minFipeDiscountPct: params.get("minFipeDiscountPct") ?? "",
     transmission: params.get("transmission") ?? "",
+    fuelType: params.get("fuelType") ?? "",
+    bodyType: params.get("bodyType") ?? "",
     sellerType: params.get("sellerType") ?? "all",
     includeInactive: params.get("includeInactive") === "1",
     priceChanged: params.get("priceChanged") === "1",
@@ -55,9 +59,14 @@ export function SearchFiltersForm() {
     if (draft.model) params.set("model", draft.model);
     if (draft.yearMin) params.set("yearMin", draft.yearMin);
     if (draft.yearMax) params.set("yearMax", draft.yearMax);
+    if (draft.priceMin) params.set("priceMinCents", String(Number(draft.priceMin) * 100));
     if (draft.priceMax) params.set("priceMaxCents", String(Number(draft.priceMax) * 100));
+    if (draft.kmMin) params.set("kmMin", draft.kmMin);
+    if (draft.kmMax) params.set("kmMax", draft.kmMax);
     if (draft.minFipeDiscountPct) params.set("minFipeDiscountPct", draft.minFipeDiscountPct);
     if (draft.transmission) params.set("transmission", draft.transmission);
+    if (draft.fuelType) params.set("fuelType", draft.fuelType);
+    if (draft.bodyType) params.set("bodyType", draft.bodyType);
     if (draft.sellerType && draft.sellerType !== "all") params.set("sellerType", draft.sellerType);
     if (draft.includeInactive) params.set("includeInactive", "1");
     if (draft.priceChanged) params.set("priceChanged", "1");
@@ -108,30 +117,117 @@ export function SearchFiltersForm() {
         </div>
 
         <div className="space-y-1">
-          <Label>Ano mínimo</Label>
+          <Label>Ano de</Label>
           <Input
             type="number"
             value={draft.yearMin}
+            placeholder="ex: 2018"
             onChange={(e) => patch("yearMin", e.target.value)}
           />
         </div>
 
         <div className="space-y-1">
-          <Label>Ano máximo</Label>
+          <Label>Ano até</Label>
           <Input
             type="number"
             value={draft.yearMax}
+            placeholder="ex: 2024"
             onChange={(e) => patch("yearMax", e.target.value)}
           />
         </div>
 
         <div className="space-y-1">
-          <Label>Preço máximo (R$)</Label>
+          <Label>Preço de (R$)</Label>
+          <Input
+            type="number"
+            value={draft.priceMin}
+            placeholder="mínimo"
+            onChange={(e) => patch("priceMin", e.target.value)}
+          />
+        </div>
+
+        <div className="space-y-1">
+          <Label>Preço até (R$)</Label>
           <Input
             type="number"
             value={draft.priceMax}
+            placeholder="máximo"
             onChange={(e) => patch("priceMax", e.target.value)}
           />
+        </div>
+
+        <div className="space-y-1">
+          <Label>Km de</Label>
+          <Input
+            type="number"
+            value={draft.kmMin}
+            placeholder="mínimo"
+            onChange={(e) => patch("kmMin", e.target.value)}
+          />
+        </div>
+
+        <div className="space-y-1">
+          <Label>Km até</Label>
+          <Input
+            type="number"
+            value={draft.kmMax}
+            placeholder="máximo"
+            onChange={(e) => patch("kmMax", e.target.value)}
+          />
+        </div>
+
+        <div className="space-y-1">
+          <Label>Câmbio</Label>
+          <Select
+            value={draft.transmission || "all"}
+            onValueChange={(v) => patch("transmission", v === "all" ? "" : v)}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Todos" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todos</SelectItem>
+              {TRANSMISSIONS.map((t) => (
+                <SelectItem key={t} value={t}>
+                  {TRANSMISSION_LABELS[t] ?? t}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="space-y-1">
+          <Label>Combustível</Label>
+          <Select value={draft.fuelType || "all"} onValueChange={(v) => patch("fuelType", v === "all" ? "" : v)}>
+            <SelectTrigger>
+              <SelectValue placeholder="Todos" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todos</SelectItem>
+              {FUEL_TYPES.map((f) => (
+                <SelectItem key={f} value={f}>
+                  {FUEL_LABELS[f] ?? f}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="space-y-1">
+          <Label>Carroceria</Label>
+          <Select value={draft.bodyType || "all"} onValueChange={(v) => patch("bodyType", v === "all" ? "" : v)}>
+            <SelectTrigger>
+              <SelectValue placeholder="Todas" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todas</SelectItem>
+              {BODY_TYPES.map((b) => (
+                <SelectItem key={b} value={b}>
+                  {BODY_TYPE_LABELS[b] ?? b}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
 
         <div className="space-y-1">
@@ -141,23 +237,6 @@ export function SearchFiltersForm() {
             value={draft.minFipeDiscountPct}
             onChange={(e) => patch("minFipeDiscountPct", e.target.value)}
           />
-        </div>
-
-        <div className="space-y-1">
-          <Label>Câmbio</Label>
-          <Select value={draft.transmission || "all"} onValueChange={(v) => patch("transmission", v === "all" ? "" : v)}>
-            <SelectTrigger>
-              <SelectValue placeholder="Todos" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Todos</SelectItem>
-              {TRANSMISSIONS.map((t) => (
-                <SelectItem key={t} value={t}>
-                  {t}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
         </div>
 
         <div className="space-y-1">

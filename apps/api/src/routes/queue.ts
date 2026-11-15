@@ -2,6 +2,7 @@ import type { FastifyInstance } from "fastify";
 import { z } from "zod";
 
 import { pool } from "../db.js";
+import { BODY_TYPES, bodyTypeClause } from "../lib/body-type-filter.js";
 import { optionalOperator } from "../lib/current-operator.js";
 import { isMaster } from "../lib/roles.js";
 import { mapQueueRow, unmapSellerType } from "../lib/serialize.js";
@@ -19,7 +20,17 @@ const querySchema = z.object({
   operator: z.string().optional(),
   q: z.string().max(80).optional(),
   brand: z.string().max(40).optional(),
+  yearMin: z.coerce.number().int().optional(),
+  yearMax: z.coerce.number().int().optional(),
+  priceMinCents: z.coerce.number().int().nonnegative().optional(),
   priceMaxCents: z.coerce.number().int().positive().optional(),
+  kmMin: z.coerce.number().int().nonnegative().optional(),
+  kmMax: z.coerce.number().int().nonnegative().optional(),
+  transmission: z.enum(["MANUAL", "AUTOMATICO", "AUTOMATIZADO"]).optional(),
+  fuelType: z
+    .enum(["FLEX", "GASOLINA", "ALCOOL", "DIESEL", "GNV", "HIBRIDO", "ELETRICO"])
+    .optional(),
+  bodyType: z.enum(BODY_TYPES).optional(),
   scoreBand: z.enum(["quente", "boa", "morna", "fria"]).optional(),
   source: z.string().max(40).optional(),
 });
@@ -42,7 +53,15 @@ function listFilterClause(
   query: {
     q?: string;
     brand?: string;
+    yearMin?: number;
+    yearMax?: number;
+    priceMinCents?: number;
     priceMaxCents?: number;
+    kmMin?: number;
+    kmMax?: number;
+    transmission?: "MANUAL" | "AUTOMATICO" | "AUTOMATIZADO";
+    fuelType?: "FLEX" | "GASOLINA" | "ALCOOL" | "DIESEL" | "GNV" | "HIBRIDO" | "ELETRICO";
+    bodyType?: (typeof BODY_TYPES)[number];
     scoreBand?: "quente" | "boa" | "morna" | "fria";
     source?: string;
   },
@@ -67,9 +86,40 @@ function listFilterClause(
     values.push(query.brand.trim());
     parts.push(`AND upper(f.marca) = upper($${values.length})`);
   }
+  if (query.yearMin !== undefined) {
+    values.push(query.yearMin);
+    parts.push(`AND f.ano_modelo >= $${values.length}`);
+  }
+  if (query.yearMax !== undefined) {
+    values.push(query.yearMax);
+    parts.push(`AND f.ano_modelo <= $${values.length}`);
+  }
+  if (query.priceMinCents !== undefined) {
+    values.push(query.priceMinCents);
+    parts.push(`AND f.preco >= $${values.length}`);
+  }
   if (query.priceMaxCents) {
     values.push(query.priceMaxCents);
     parts.push(`AND f.preco <= $${values.length}`);
+  }
+  if (query.kmMin !== undefined) {
+    values.push(query.kmMin);
+    parts.push(`AND f.km >= $${values.length}`);
+  }
+  if (query.kmMax !== undefined) {
+    values.push(query.kmMax);
+    parts.push(`AND f.km <= $${values.length}`);
+  }
+  if (query.transmission) {
+    values.push(query.transmission);
+    parts.push(`AND f.cambio = $${values.length}`);
+  }
+  if (query.fuelType) {
+    values.push(query.fuelType);
+    parts.push(`AND f.combustivel = $${values.length}`);
+  }
+  if (query.bodyType) {
+    parts.push(bodyTypeClause(query.bodyType, values));
   }
   if (query.scoreBand) {
     values.push(query.scoreBand);

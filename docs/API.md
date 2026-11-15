@@ -46,7 +46,7 @@ tabela nova (`docs/MODELO.md`), `[W]` calculado pelo worker e persistido
 
 | Método | Rota | Params | Body |
 |---|---|---|---|
-| GET | `/api/queue` | `cursor?`, `limit?`, `sellerType?`, `scope?`, `q?`, `brand?`, `priceMaxCents?`, `scoreBand?`, `source?` | — |
+| GET | `/api/queue` | `cursor?`, `limit?`, `sellerType?`, `scope?`, `q?`, `brand?`, `yearMin?`, `yearMax?`, `priceMinCents?`, `priceMaxCents?`, `kmMin?`, `kmMax?`, `transmission?`, `fuelType?`, `bodyType?`, `scoreBand?`, `source?` | — |
 | POST | `/api/vehicles/:id/interactions` | — | `{ channel, outcome?, durationSeconds? }` |
 | POST | `/api/vehicles/:id/discard` | — | `{ reason: string, notes?: string }` |
 | PUT | `/api/vehicles/:id/seller` | — | `{ name: string, phone?: string }` |
@@ -94,7 +94,7 @@ por engano em Fase 4.
 
 | Método | Rota | Params |
 |---|---|---|
-| GET | `/api/vehicles/search` | `cursor?`, `limit?`, `vehicleId?`, `brand?`, `model?`, `city?`, `yearMin?`, `yearMax?`, `priceMaxCents?`, `minFipeDiscountPct?`, `transmission?`, `onlyActive?`, `sellerType?` |
+| GET | `/api/vehicles/search` | `cursor?`, `limit?`, `vehicleId?`, `brand?`, `model?`, `city?`, `yearMin?`, `yearMax?`, `priceMinCents?`, `priceMaxCents?`, `kmMin?`, `kmMax?`, `minFipeDiscountPct?`, `transmission?`, `fuelType?`, `bodyType?` (hatch\|sedan\|suv\|picape\|utilitario\|van\|conversivel), `includeInactive?`, `priceChanged?`, `sellerType?` |
 
 Mesmo shape de item do `/api/queue`, mesma origem (`fila_do_dia` [N]) —
 mas **sem** o filtro implícito de estado da fila: Busca mostra qualquer

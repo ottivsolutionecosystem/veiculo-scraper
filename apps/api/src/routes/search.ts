@@ -2,6 +2,7 @@ import type { FastifyInstance } from "fastify";
 import { z } from "zod";
 
 import { pool } from "../db.js";
+import { BODY_TYPES, bodyTypeClause } from "../lib/body-type-filter.js";
 import { mapQueueRow, unmapSellerType } from "../lib/serialize.js";
 import { decodeCursor, encodeCursor, parseLimit } from "../lib/pagination.js";
 
@@ -14,9 +15,16 @@ const querySchema = z.object({
   city: z.string().optional(),
   yearMin: z.coerce.number().optional(),
   yearMax: z.coerce.number().optional(),
+  priceMinCents: z.coerce.number().optional(),
   priceMaxCents: z.coerce.number().optional(),
+  kmMin: z.coerce.number().int().nonnegative().optional(),
+  kmMax: z.coerce.number().int().nonnegative().optional(),
   minFipeDiscountPct: z.coerce.number().optional(),
-  transmission: z.string().optional(),
+  transmission: z.enum(["MANUAL", "AUTOMATICO", "AUTOMATIZADO"]).optional(),
+  fuelType: z
+    .enum(["FLEX", "GASOLINA", "ALCOOL", "DIESEL", "GNV", "HIBRIDO", "ELETRICO"])
+    .optional(),
+  bodyType: z.enum(BODY_TYPES).optional(),
   includeInactive: z.coerce.boolean().optional(),
   priceChanged: z.coerce.boolean().optional(),
   sellerType: z.enum(["individual", "dealer"]).optional(),
@@ -41,9 +49,14 @@ export async function searchRoutes(app: FastifyInstance) {
     if (q.city) push("f.cidade = ?", q.city);
     if (q.yearMin !== undefined) push("f.ano_modelo >= ?", q.yearMin);
     if (q.yearMax !== undefined) push("f.ano_modelo <= ?", q.yearMax);
+    if (q.priceMinCents !== undefined) push("f.preco >= ?", q.priceMinCents);
     if (q.priceMaxCents !== undefined) push("f.preco <= ?", q.priceMaxCents);
+    if (q.kmMin !== undefined) push("f.km >= ?", q.kmMin);
+    if (q.kmMax !== undefined) push("f.km <= ?", q.kmMax);
     if (q.minFipeDiscountPct !== undefined) push("f.desconto_fipe_pct >= ?", q.minFipeDiscountPct);
     if (q.transmission) push("f.cambio = ?", q.transmission);
+    if (q.fuelType) push("f.combustivel = ?", q.fuelType);
+    if (q.bodyType) conditions.push(bodyTypeClause(q.bodyType, values).replace(/^AND\s+/, ""));
     if (q.priceChanged) conditions.push("f.preco_variacao IS NOT NULL AND f.preco_variacao <> 0");
     if (q.sellerType) push("f.tipo_anunciante = ?", unmapSellerType(q.sellerType));
     if (!q.includeInactive) conditions.push("f.ativo");

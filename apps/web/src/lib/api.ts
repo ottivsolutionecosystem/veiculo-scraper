@@ -113,7 +113,15 @@ export function getQueue(
     scope?: QueueScope;
     q?: string;
     brand?: string;
+    yearMin?: number;
+    yearMax?: number;
+    priceMinCents?: number;
     priceMaxCents?: number;
+    kmMin?: number;
+    kmMax?: number;
+    transmission?: string;
+    fuelType?: string;
+    bodyType?: string;
     scoreBand?: "quente" | "boa" | "morna" | "fria";
     source?: string;
   } = {},
@@ -149,9 +157,14 @@ export function searchVehicles(
     city?: string;
     yearMin?: number;
     yearMax?: number;
+    priceMinCents?: number;
     priceMaxCents?: number;
+    kmMin?: number;
+    kmMax?: number;
     minFipeDiscountPct?: number;
     transmission?: string;
+    fuelType?: string;
+    bodyType?: string;
     includeInactive?: boolean;
     priceChanged?: boolean;
     sellerType?: "individual" | "dealer";
