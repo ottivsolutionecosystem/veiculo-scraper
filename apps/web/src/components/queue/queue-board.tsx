@@ -8,10 +8,12 @@ import { ApiError, getQueue, getQueueStats, type QueueScope, type QueueStats } f
 import type { Page, QueueItem } from "@/lib/api-types";
 import { parseQueueListFilters, queueFiltersActive } from "@/lib/queue-filters";
 import { useAuth } from "@/components/auth/auth-provider";
+import { useChromeVisibility } from "@/components/layout/chrome-visibility";
 import { EmptyState } from "@/components/shared/empty-state";
 import { QueueView } from "@/components/queue/queue-view";
 import { QueueFilters } from "@/components/queue/queue-filters";
 import { CoverageBar } from "@/components/queue/coverage-bar";
+import { cn } from "@/lib/utils";
 
 const SCOPES: QueueScope[] = ["untouched", "mine", "followup", "price_drop", "all", "tagged"];
 
@@ -48,6 +50,7 @@ function asScope(raw: string | null): QueueScope {
 
 export function QueueBoard() {
   const { ready, operator } = useAuth();
+  const { hidden } = useChromeVisibility();
   const searchParams = useSearchParams();
   const scope = asScope(searchParams.get("scope"));
   const listFilters = parseQueueListFilters(Object.fromEntries(searchParams.entries()));
@@ -87,10 +90,19 @@ export function QueueBoard() {
 
   return (
     <div className="flex h-full min-h-0 flex-col">
-      <div className="shrink-0 space-y-2 border-b border-navy/5 bg-card/40 px-3 py-2 sm:space-y-4 sm:px-6 sm:py-5">
-            {stats && <CoverageBar initial={stats} />}
-            <QueueFilters total={loading && !page ? null : (page?.total ?? 0)} />
-          </div>
+      <div
+        className={cn(
+          "shrink-0 overflow-hidden border-b border-navy/5 bg-card/40 transition-[max-height,opacity,padding] duration-300 ease-out",
+          hidden
+            ? "max-h-0 border-transparent py-0 opacity-0"
+            : "max-h-[40rem] px-3 py-2 opacity-100 sm:space-y-4 sm:px-6 sm:py-5",
+        )}
+      >
+        <div className={cn("space-y-2", hidden && "pointer-events-none")}>
+          {stats && <CoverageBar initial={stats} />}
+          <QueueFilters total={loading && !page ? null : (page?.total ?? 0)} />
+        </div>
+      </div>
 
       {loading && !page ? (
         <div className="flex items-center gap-2 p-4 text-sm text-muted-foreground sm:p-6">

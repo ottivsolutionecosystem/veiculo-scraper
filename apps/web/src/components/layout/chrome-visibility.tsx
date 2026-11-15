@@ -5,7 +5,6 @@ import { usePathname } from "next/navigation";
 
 import { reduceHideOnScroll } from "@/lib/hide-on-scroll";
 
-const MD = 768;
 const FIELD = "input, textarea, select, [contenteditable=true]";
 
 type ChromeVisibility = {
@@ -52,16 +51,6 @@ export function ChromeVisibilityProvider({ children }: { children: React.ReactNo
   }, [pathname, reveal]);
 
   React.useEffect(() => {
-    const mq = window.matchMedia(`(min-width: ${MD}px)`);
-    const apply = () => {
-      if (mq.matches) reveal();
-    };
-    apply();
-    mq.addEventListener("change", apply);
-    return () => mq.removeEventListener("change", apply);
-  }, [reveal]);
-
-  React.useEffect(() => {
     if (locks.size > 0) reveal();
   }, [locks, reveal]);
 
@@ -101,10 +90,6 @@ export function ChromeVisibilityProvider({ children }: { children: React.ReactNo
       const delta = scrollTop - prevTop;
       lastTop.current.set(el, scrollTop);
 
-      if (typeof window !== "undefined" && window.innerWidth >= MD) {
-        reveal();
-        return;
-      }
       if (locksRef.current.size > 0) {
         reveal();
         return;

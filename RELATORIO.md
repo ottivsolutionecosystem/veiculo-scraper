@@ -1,13 +1,14 @@
-# RELATORIO — filtro de cidade
+# RELATORIO — ocultar barras ao scrollar a fila
 
 ## Feito
-- Fila e Busca: select de cidade (catálogo CITIES).
-- API queue aceita `city`; search já tinha e agora compara com
-  `unaccent` (ignora acento/caixa).
+- Ao descer a lista, some: cobertura + filtros (sempre), topbar e
+  bottom nav (só telefone). Ao subir, voltam.
+- O estado `hidden` do chrome agora de fato esconde a UI (antes
+  calculava e ninguém usava).
 
 ## Decidido
-- Lista fixa do catálogo (mesmo vocabulário dos mocks). Cidades
-  fora da lista não aparecem no select.
+- Desktop mantém a topbar; só o cabeçalho da fila some para ganhar
+  área de cards.
 
 ## Pendente de decisão sua
 - Nenhuma.
