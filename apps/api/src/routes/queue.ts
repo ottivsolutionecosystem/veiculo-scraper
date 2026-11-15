@@ -256,6 +256,20 @@ export async function queueRoutes(app: FastifyInstance) {
     const listClause = listFilterClause(query, values);
     const ativoClause = query.includeInactive ? "" : "AND f.ativo";
 
+    const filterWhere = `WHERE 1=1
+        ${NOT_STOCK_SQL}
+        ${NO_OPEN_DEAL_SQL}
+        ${ativoClause}
+        ${sellerTypeClause}
+        ${workClause}
+        ${listClause}`;
+
+    const { rows: countRows } = await pool.query(
+      `SELECT count(*)::int AS total FROM fila_do_dia f ${filterWhere}`,
+      values,
+    );
+    const total = Number(countRows[0]?.total ?? 0);
+
     let cursorClause = "";
     if (cursorParts) {
       const [score, untouched, id] = cursorParts as [number, number, number];
@@ -277,13 +291,7 @@ export async function queueRoutes(app: FastifyInstance) {
          LEFT JOIN vendedores vd ON vd.id = f.vendedor_id
          LEFT JOIN contatos_vendedor cv ON cv.vendedor_id = vd.id
          LEFT JOIN anuncios a ON a.id = f.anuncio_id
-        WHERE 1=1
-        ${NOT_STOCK_SQL}
-        ${NO_OPEN_DEAL_SQL}
-        ${ativoClause}
-        ${sellerTypeClause}
-        ${workClause}
-        ${listClause}
+        ${filterWhere}
         ${cursorClause}
         ORDER BY COALESCE(f.score_total, -1) DESC,
                  CASE WHEN f.ultimo_contato_em IS NULL THEN 1 ELSE 0 END DESC,
@@ -303,6 +311,6 @@ export async function queueRoutes(app: FastifyInstance) {
           ])
         : null;
 
-    reply.send({ items, nextCursor });
+    reply.send({ items, nextCursor, total });
   });
 }

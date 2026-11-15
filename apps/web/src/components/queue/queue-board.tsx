@@ -89,7 +89,7 @@ export function QueueBoard() {
     <div className="flex h-full min-h-0 flex-col">
       <div className="shrink-0 space-y-2 border-b border-navy/5 bg-card/40 px-3 py-2 sm:space-y-4 sm:px-6 sm:py-5">
             {stats && <CoverageBar initial={stats} />}
-            <QueueFilters />
+            <QueueFilters total={loading && !page ? null : (page?.total ?? 0)} />
           </div>
 
       {loading && !page ? (

@@ -13,7 +13,7 @@ cliente em português (texto de interface).
 params `?cursor=<opaco>&limit=<n, default 24, max 100>`. Resposta sempre:
 
 ```
-{ items: T[], nextCursor: string | null }
+{ items: T[], nextCursor: string | null, total?: number }
 ```
 
 O cursor é opaco ao cliente — internamente é o `id` (ou `(score,id)` na

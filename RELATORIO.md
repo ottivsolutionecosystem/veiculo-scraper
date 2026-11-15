@@ -1,15 +1,13 @@
-# RELATORIO — UX/UI dos filtros
+# RELATORIO — total nos filtros
 
 ## Feito
-- Fila: busca com ícone, botão com badge, chips removíveis,
-  gaveta (direita no desktop / baixo no mobile).
-- Painel em seções (Veículo / Faixas / Características) com
-  faixas “de–até”; rascunho + Aplicar (não recarrega a cada tecla).
-- Busca: mesmo agrupamento visual por seções e faixas.
+- `/api/queue` e `/api/vehicles/search` devolvem `total` (COUNT com
+  os mesmos filtros, sem cursor).
+- Fila e Busca mostram “N carros” / “N carros com esses filtros”.
 
 ## Decidido
-- Aplicar só no botão evita refetch enquanto o usuário monta
-  o filtro; chips na barra mostram o que está ativo.
+- COUNT separado (não window+LIMIT): total estável em qualquer página
+  do cursor. Índices de `fila_do_dia` (preco, km, marca) cobrem o filtro.
 
 ## Pendente de decisão sua
-- Deploy do web (`crawler-web`) para valer em produção.
+- Nenhuma.

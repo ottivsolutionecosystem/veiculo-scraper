@@ -74,6 +74,8 @@ export interface QueueItem {
 export interface Page<T> {
   items: T[];
   nextCursor: string | null;
+  /** Total que casa com os filtros (sem cursor). */
+  total?: number;
 }
 
 export interface VehicleDetailResponse {

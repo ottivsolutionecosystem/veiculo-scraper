@@ -40,9 +40,19 @@ export function ConsignadosBoard({ filters }: { filters: SearchFilters }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ready, operator, filterKey]);
 
+  const total = page?.total;
+  const hasFilters = Object.values(filters).some((v) => v !== undefined && v !== false && v !== "");
+
   return (
     <div className="space-y-4 p-4 sm:p-6">
       <SearchFiltersForm />
+      {!loading && total != null && (
+        <p className="text-sm tabular-nums text-navy/55">
+          <span className="font-semibold text-navy/80">{total.toLocaleString("pt-BR")}</span>
+          {` ${total === 1 ? "carro" : "carros"}`}
+          {hasFilters ? " com esses filtros" : " no estoque"}
+        </p>
+      )}
 
       {loading ? (
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -53,8 +63,12 @@ export function ConsignadosBoard({ filters }: { filters: SearchFilters }) {
       ) : !page || page.items.length === 0 ? (
         <EmptyState
           icon={Warehouse}
-          title="Nenhum veículo consignado"
-          description="Quando o parecer for “consignou”, o carro aparece aqui. Ficha completa, filtros e o anúncio original."
+          title={hasFilters ? "Nenhum carro com esses filtros" : "Nenhum veículo consignado"}
+          description={
+            hasFilters
+              ? "Solte os filtros ou ajuste a faixa."
+              : "Quando o parecer for “consignou”, o carro aparece aqui. Ficha completa, filtros e o anúncio original."
+          }
         />
       ) : (
         <QueueView initial={page} source="search" filters={filters} />

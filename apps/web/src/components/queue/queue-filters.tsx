@@ -400,7 +400,7 @@ function FilterPanel({
 }
 
 /** Barra enxuta + chips + gaveta com rascunho e aplicar. */
-export function QueueFilters() {
+export function QueueFilters({ total }: { total?: number | null }) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -416,6 +416,8 @@ export function QueueFilters() {
   const chips = React.useMemo(() => chipsFromDraft(applied), [applied]);
   const activeCount = countActive(applied);
   const draftCount = countActive(draft);
+  const filtered = activeCount > 0 || Boolean(q.trim());
+  const showTotal = total != null;
 
   React.useEffect(() => {
     lockChrome("queue-filters", open);
@@ -521,20 +523,35 @@ export function QueueFilters() {
         )}
       </div>
 
-      {chips.length > 0 && (
-        <div className="-mx-1 flex gap-1.5 overflow-x-auto px-1 pb-0.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-          {chips.map((chip) => (
-            <button
-              key={chip.id}
-              type="button"
-              onClick={() => removeChip(chip)}
-              className="inline-flex shrink-0 items-center gap-1 rounded-full border border-navy/10 bg-navy/[0.04] px-2.5 py-1 text-xs font-medium text-navy/80 transition-colors hover:border-navy/20 hover:bg-navy/[0.07]"
-              aria-label={`Remover filtro ${chip.label}`}
-            >
-              {chip.label}
-              <X className="h-3 w-3 text-navy/40" />
-            </button>
-          ))}
+      {(chips.length > 0 || showTotal) && (
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          {chips.length > 0 ? (
+            <div className="-mx-1 flex min-w-0 flex-1 gap-1.5 overflow-x-auto px-1 pb-0.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+              {chips.map((chip) => (
+                <button
+                  key={chip.id}
+                  type="button"
+                  onClick={() => removeChip(chip)}
+                  className="inline-flex shrink-0 items-center gap-1 rounded-full border border-navy/10 bg-navy/[0.04] px-2.5 py-1 text-xs font-medium text-navy/80 transition-colors hover:border-navy/20 hover:bg-navy/[0.07]"
+                  aria-label={`Remover filtro ${chip.label}`}
+                >
+                  {chip.label}
+                  <X className="h-3 w-3 text-navy/40" />
+                </button>
+              ))}
+            </div>
+          ) : (
+            <div className="min-w-0 flex-1" />
+          )}
+          {showTotal && (
+            <p className="shrink-0 text-sm tabular-nums text-navy/55" aria-live="polite">
+              <span className="font-semibold text-navy/80">
+                {total!.toLocaleString("pt-BR")}
+              </span>
+              {` ${total === 1 ? "carro" : "carros"}`}
+              {filtered ? " com esses filtros" : ""}
+            </p>
+          )}
         </div>
       )}
 

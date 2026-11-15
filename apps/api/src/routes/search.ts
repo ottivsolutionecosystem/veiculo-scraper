@@ -61,6 +61,16 @@ export async function searchRoutes(app: FastifyInstance) {
     if (q.sellerType) push("f.tipo_anunciante = ?", unmapSellerType(q.sellerType));
     if (!q.includeInactive) conditions.push("f.ativo");
 
+    const filterConditions = [...conditions];
+    const filterValues = [...values];
+    const { rows: countRows } = await pool.query(
+      `SELECT count(*)::int AS total
+         FROM fila_do_dia f
+        WHERE ${filterConditions.join(" AND ")}`,
+      filterValues,
+    );
+    const total = Number(countRows[0]?.total ?? 0);
+
     const cursorParts = decodeCursor(q.cursor);
     if (cursorParts) {
       const [score, id] = cursorParts as [number, number];
@@ -92,6 +102,6 @@ export async function searchRoutes(app: FastifyInstance) {
         ? encodeCursor([Number(last.score_total ?? -1), Number(last.veiculo_id)])
         : null;
 
-    reply.send({ items, nextCursor });
+    reply.send({ items, nextCursor, total });
   });
 }
