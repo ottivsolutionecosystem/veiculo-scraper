@@ -5,7 +5,7 @@
   combustível, carroceria.
 - API `/api/vehicles/search` e `/api/queue` aceitam os novos params.
 - Carroceria via tokens em título/modelo (sem coluna no banco).
-- Testes: `body-type-filter`, `search`, `queue-filters`.
+- Deploy Dokploy (`f03d42b`): crawler-api e crawler-web — Done.
 
 ## Decidido
 - Carroceria por ILIKE (categoria Shopcar não é persistida).
@@ -15,4 +15,3 @@
 
 ## Pendente de decisão sua
 - Quer persistir `categoria`/carroceria no coletor + migration?
-- Deploy api + web no Dokploy para valer em produção.

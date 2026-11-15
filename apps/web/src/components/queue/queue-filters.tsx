@@ -15,6 +15,7 @@ import {
 import { useChromeVisibility } from "@/components/layout/chrome-visibility";
 import { useVisualViewportHeight } from "@/lib/visual-viewport";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
@@ -46,7 +47,7 @@ function apply(pathname: string, current: URLSearchParams, patch: Record<string,
   return qs ? `${pathname}?${qs}` : pathname;
 }
 
-function FilterFields({
+function FilterPanel({
   yearMin,
   yearMax,
   priceMin,
@@ -88,142 +89,180 @@ function FilterFields({
   onGo: (patch: Record<string, string | null>) => void;
 }) {
   return (
-    <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:flex lg:flex-wrap lg:items-center">
-      <Select value={brand || "all"} onValueChange={(v) => onGo({ brand: v === "all" ? null : v })}>
-        <SelectTrigger aria-label="Marca" className="lg:w-40">
-          <SelectValue placeholder="Marca" />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value="all">Todas as marcas</SelectItem>
-          {BRANDS.map((b) => (
-            <SelectItem key={b} value={b}>
-              {b}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
-      <Input
-        type="number"
-        min={0}
-        value={yearMin}
-        onChange={(e) => onYearMin(e.target.value)}
-        placeholder="Ano de"
-        aria-label="Ano mínimo"
-        className="lg:w-24"
-      />
-      <Input
-        type="number"
-        min={0}
-        value={yearMax}
-        onChange={(e) => onYearMax(e.target.value)}
-        placeholder="Ano até"
-        aria-label="Ano máximo"
-        className="lg:w-24"
-      />
-      <Input
-        type="number"
-        min={0}
-        value={priceMin}
-        onChange={(e) => onPriceMin(e.target.value)}
-        placeholder="De R$"
-        aria-label="Preço mínimo"
-        className="lg:w-28"
-      />
-      <Input
-        type="number"
-        min={0}
-        value={priceMax}
-        onChange={(e) => onPriceMax(e.target.value)}
-        placeholder="Até R$"
-        aria-label="Preço máximo"
-        className="lg:w-28"
-      />
-      <Input
-        type="number"
-        min={0}
-        value={kmMin}
-        onChange={(e) => onKmMin(e.target.value)}
-        placeholder="Km de"
-        aria-label="Km mínimo"
-        className="lg:w-28"
-      />
-      <Input
-        type="number"
-        min={0}
-        value={kmMax}
-        onChange={(e) => onKmMax(e.target.value)}
-        placeholder="Km até"
-        aria-label="Km máximo"
-        className="lg:w-28"
-      />
-      <Select
-        value={transmission || "all"}
-        onValueChange={(v) => onGo({ transmission: v === "all" ? null : v })}
-      >
-        <SelectTrigger aria-label="Câmbio" className="lg:w-36">
-          <SelectValue placeholder="Câmbio" />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value="all">Qualquer câmbio</SelectItem>
-          {TRANSMISSIONS.map((t) => (
-            <SelectItem key={t} value={t}>
-              {TRANSMISSION_LABELS[t] ?? t}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
-      <Select value={fuelType || "all"} onValueChange={(v) => onGo({ fuelType: v === "all" ? null : v })}>
-        <SelectTrigger aria-label="Combustível" className="lg:w-36">
-          <SelectValue placeholder="Combustível" />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value="all">Qualquer combustível</SelectItem>
-          {FUEL_TYPES.map((f) => (
-            <SelectItem key={f} value={f}>
-              {FUEL_LABELS[f] ?? f}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
-      <Select value={bodyType || "all"} onValueChange={(v) => onGo({ bodyType: v === "all" ? null : v })}>
-        <SelectTrigger aria-label="Carroceria" className="lg:w-36">
-          <SelectValue placeholder="Carroceria" />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value="all">Qualquer carroceria</SelectItem>
-          {BODY_TYPES.map((b) => (
-            <SelectItem key={b} value={b}>
-              {BODY_TYPE_LABELS[b] ?? b}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
-      <Select value={scoreBand || "all"} onValueChange={(v) => onGo({ scoreBand: v === "all" ? null : v })}>
-        <SelectTrigger aria-label="Score" className="lg:w-36">
-          <SelectValue placeholder="Score" />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value="all">Qualquer score</SelectItem>
-          {BANDS.map((band) => (
-            <SelectItem key={band} value={band}>
-              {SCORE_BAND_LABELS[band]}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
-      <Select value={source || "all"} onValueChange={(v) => onGo({ source: v === "all" ? null : v })}>
-        <SelectTrigger aria-label="Fonte" className="lg:w-36">
-          <SelectValue placeholder="Fonte" />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value="all">Todas as fontes</SelectItem>
-          {SOURCES.map((item) => (
-            <SelectItem key={item} value={item}>
-              {sourceLabel(item)}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
+    <div className="grid grid-cols-2 gap-3">
+      <div className="col-span-2 space-y-1">
+        <Label>Marca</Label>
+        <Select value={brand || "all"} onValueChange={(v) => onGo({ brand: v === "all" ? null : v })}>
+          <SelectTrigger aria-label="Marca">
+            <SelectValue placeholder="Marca" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todas as marcas</SelectItem>
+            {BRANDS.map((b) => (
+              <SelectItem key={b} value={b}>
+                {b}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
+      <div className="space-y-1">
+        <Label>Ano de</Label>
+        <Input
+          type="number"
+          min={0}
+          value={yearMin}
+          onChange={(e) => onYearMin(e.target.value)}
+          placeholder="ex: 2018"
+          aria-label="Ano mínimo"
+        />
+      </div>
+      <div className="space-y-1">
+        <Label>Ano até</Label>
+        <Input
+          type="number"
+          min={0}
+          value={yearMax}
+          onChange={(e) => onYearMax(e.target.value)}
+          placeholder="ex: 2024"
+          aria-label="Ano máximo"
+        />
+      </div>
+
+      <div className="space-y-1">
+        <Label>Preço de (R$)</Label>
+        <Input
+          type="number"
+          min={0}
+          value={priceMin}
+          onChange={(e) => onPriceMin(e.target.value)}
+          placeholder="mínimo"
+          aria-label="Preço mínimo"
+        />
+      </div>
+      <div className="space-y-1">
+        <Label>Preço até (R$)</Label>
+        <Input
+          type="number"
+          min={0}
+          value={priceMax}
+          onChange={(e) => onPriceMax(e.target.value)}
+          placeholder="máximo"
+          aria-label="Preço máximo"
+        />
+      </div>
+
+      <div className="space-y-1">
+        <Label>Km de</Label>
+        <Input
+          type="number"
+          min={0}
+          value={kmMin}
+          onChange={(e) => onKmMin(e.target.value)}
+          placeholder="mínimo"
+          aria-label="Km mínimo"
+        />
+      </div>
+      <div className="space-y-1">
+        <Label>Km até</Label>
+        <Input
+          type="number"
+          min={0}
+          value={kmMax}
+          onChange={(e) => onKmMax(e.target.value)}
+          placeholder="máximo"
+          aria-label="Km máximo"
+        />
+      </div>
+
+      <div className="space-y-1">
+        <Label>Câmbio</Label>
+        <Select
+          value={transmission || "all"}
+          onValueChange={(v) => onGo({ transmission: v === "all" ? null : v })}
+        >
+          <SelectTrigger aria-label="Câmbio">
+            <SelectValue placeholder="Câmbio" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Qualquer</SelectItem>
+            {TRANSMISSIONS.map((t) => (
+              <SelectItem key={t} value={t}>
+                {TRANSMISSION_LABELS[t] ?? t}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
+      <div className="space-y-1">
+        <Label>Combustível</Label>
+        <Select value={fuelType || "all"} onValueChange={(v) => onGo({ fuelType: v === "all" ? null : v })}>
+          <SelectTrigger aria-label="Combustível">
+            <SelectValue placeholder="Combustível" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Qualquer</SelectItem>
+            {FUEL_TYPES.map((f) => (
+              <SelectItem key={f} value={f}>
+                {FUEL_LABELS[f] ?? f}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
+      <div className="space-y-1">
+        <Label>Carroceria</Label>
+        <Select value={bodyType || "all"} onValueChange={(v) => onGo({ bodyType: v === "all" ? null : v })}>
+          <SelectTrigger aria-label="Carroceria">
+            <SelectValue placeholder="Carroceria" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Qualquer</SelectItem>
+            {BODY_TYPES.map((b) => (
+              <SelectItem key={b} value={b}>
+                {BODY_TYPE_LABELS[b] ?? b}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
+      <div className="space-y-1">
+        <Label>Score</Label>
+        <Select value={scoreBand || "all"} onValueChange={(v) => onGo({ scoreBand: v === "all" ? null : v })}>
+          <SelectTrigger aria-label="Score">
+            <SelectValue placeholder="Score" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Qualquer</SelectItem>
+            {BANDS.map((band) => (
+              <SelectItem key={band} value={band}>
+                {SCORE_BAND_LABELS[band]}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
+      <div className="col-span-2 space-y-1">
+        <Label>Fonte</Label>
+        <Select value={source || "all"} onValueChange={(v) => onGo({ source: v === "all" ? null : v })}>
+          <SelectTrigger aria-label="Fonte">
+            <SelectValue placeholder="Fonte" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todas as fontes</SelectItem>
+            {SOURCES.map((item) => (
+              <SelectItem key={item} value={item}>
+                {sourceLabel(item)}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
     </div>
   );
 }
@@ -247,7 +286,7 @@ function useDebouncedParam(
   }, [value]);
 }
 
-/** Filtros da fila: no telefone viram uma folha; no desktop ficam na linha. */
+/** Barra enxuta: busca + botão; o restante abre numa folha. */
 export function QueueFilters() {
   const router = useRouter();
   const pathname = usePathname();
@@ -303,7 +342,7 @@ export function QueueFilters() {
   const sheetActive = SHEET_KEYS.filter((key) => searchParams.get(key)).length;
   const anyActive = sheetActive + (searchParams.get("q") ? 1 : 0);
 
-  function limparSheet() {
+  function limparFiltros() {
     setYearMin("");
     setYearMax("");
     setPriceMin("");
@@ -347,58 +386,51 @@ export function QueueFilters() {
   };
 
   return (
-    <>
-      <div className="hidden md:flex md:flex-wrap md:items-center md:gap-2">
+    <div className="flex items-center gap-2">
+      <div className="min-w-0 flex-1 md:max-w-xs">
         <Input
           value={q}
           onChange={(e) => setQ(e.target.value)}
           placeholder="Nome ou #número"
           aria-label="Nome ou número do veículo"
-          className="lg:w-48"
         />
-        <FilterFields {...fieldProps} />
-        {anyActive > 0 && (
-          <Button type="button" variant="ghost" size="sm" onClick={limparTudo}>
-            <X className="h-4 w-4" />
-            Limpar
-          </Button>
-        )}
       </div>
-
-      <div className="flex items-center gap-2 md:hidden">
-        <div className="min-w-0 flex-1">
-          <Input
-            value={q}
-            onChange={(e) => setQ(e.target.value)}
-            placeholder="Nome ou #número"
-            aria-label="Nome ou número do veículo"
-          />
-        </div>
-        <Button type="button" variant="outline" className="min-w-[7rem] shrink-0" onClick={() => setOpen(true)}>
-          <SlidersHorizontal />
-          Filtros{sheetActive > 0 ? ` (${sheetActive})` : ""}
+      <Button type="button" variant="outline" className="shrink-0" onClick={() => setOpen(true)}>
+        <SlidersHorizontal />
+        Filtros{sheetActive > 0 ? ` (${sheetActive})` : ""}
+      </Button>
+      {anyActive > 0 && (
+        <Button type="button" variant="ghost" size="sm" className="shrink-0" onClick={limparTudo}>
+          <X className="h-4 w-4" />
+          Limpar
         </Button>
-        <Sheet open={open} onOpenChange={setOpen}>
-          <SheetContent
-            side="bottom"
-            className="overflow-y-auto pb-[var(--safe-bottom)]"
-            style={{ maxHeight: viewportHeight ? Math.round(viewportHeight * 0.85) : "85dvh" }}
-          >
-            <SheetHeader>
-              <SheetTitle>Filtros da fila</SheetTitle>
-            </SheetHeader>
-            <div className="mt-4 space-y-3">
-              <FilterFields {...fieldProps} />
+      )}
+
+      <Sheet open={open} onOpenChange={setOpen}>
+        <SheetContent
+          side="bottom"
+          className="overflow-y-auto pb-[var(--safe-bottom)]"
+          style={{ maxHeight: viewportHeight ? Math.round(viewportHeight * 0.85) : "85dvh" }}
+        >
+          <SheetHeader>
+            <SheetTitle>Filtros da fila</SheetTitle>
+          </SheetHeader>
+          <div className="mt-4 space-y-4">
+            <FilterPanel {...fieldProps} />
+            <div className="flex gap-2">
               {sheetActive > 0 && (
-                <Button type="button" variant="ghost" className="w-full" onClick={limparSheet}>
+                <Button type="button" variant="ghost" className="flex-1" onClick={limparFiltros}>
                   <X className="h-4 w-4" />
-                  Limpar
+                  Limpar filtros
                 </Button>
               )}
+              <Button type="button" className="flex-1" onClick={() => setOpen(false)}>
+                Ver resultados
+              </Button>
             </div>
-          </SheetContent>
-        </Sheet>
-      </div>
-    </>
+          </div>
+        </SheetContent>
+      </Sheet>
+    </div>
   );
 }
