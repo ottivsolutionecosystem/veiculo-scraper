@@ -1,12 +1,16 @@
-# RELATORIO — scroll com poucos veículos
+# RELATORIO — hide-on-scroll estável
 
 ## Feito
-- Só esconde chrome se a lista tiver overflow ≥ 280px.
-- Com poucos carros (busca/fila curta), o chrome fica fixo —
-  evita o loop esconde→reflow→scrollTop 0→mostra.
+- Topbar/bottomnav voltam ao fluxo fixo (sem hide global).
+- Na fila, só o sticky (CoverageBar + filtros) some ao descer,
+  via `translate` dentro do mesmo scroll — sem margin negativo,
+  sem encolher flex/main.
+- Busca curta (< 6 itens): sem scroll aninhado; página sobe no main.
+- Hide só com total ≥ 8 na fila + overflow ≥ 280px.
 
 ## Decidido
-- Limiar alto o bastante para cobrir o cabeçalho da fila que some.
+- Esconder topbar/bottomnav encolhia o main → loop de scroll.
+  Hide fica só no sticky da fila.
 
 ## Pendente de decisão sua
 - Nenhuma.

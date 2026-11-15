@@ -62,7 +62,7 @@ function MobileNav({
 export function Topbar() {
   const pathname = usePathname();
   const { isMaster } = useOperator();
-  const { hidden, lockChrome } = useChromeVisibility();
+  const { lockChrome } = useChromeVisibility();
   const [open, setOpen] = React.useState(false);
   const groups = navGroupsFor(isMaster);
   const items = groups.flatMap((g) => g.items);
@@ -75,15 +75,7 @@ export function Topbar() {
   }, [open, lockChrome]);
 
   return (
-    <header
-      className={cn(
-        "flex shrink-0 items-center gap-2 overflow-hidden border-b bg-card/80 px-3 backdrop-blur-md transition-[max-height,opacity,padding,border] duration-300 ease-out sm:gap-3 sm:px-6",
-        // No telefone some ao descer a lista; no desktop a topbar fica.
-        hidden
-          ? "max-h-0 min-h-0 border-transparent py-0 opacity-0 md:max-h-none md:min-h-14 md:border-b md:py-1.5 md:opacity-100"
-          : "min-h-14 py-1.5 opacity-100",
-      )}
-    >
+    <header className="flex min-h-14 shrink-0 items-center gap-2 border-b bg-card/80 px-3 py-1.5 backdrop-blur-md sm:gap-3 sm:px-6">
       <Sheet open={open} onOpenChange={setOpen}>
         <SheetTrigger asChild>
           <Button variant="ghost" size="icon" className="md:hidden">

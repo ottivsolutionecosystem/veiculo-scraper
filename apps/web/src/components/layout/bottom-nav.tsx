@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
-import { useChromeVisibility } from "@/components/layout/chrome-visibility";
 import { PRIMARY_NAV } from "@/lib/nav";
 import { cn } from "@/lib/utils";
 
@@ -17,7 +16,6 @@ function isActive(pathname: string, href: string) {
  * tem como cobrir o conteúdo de nenhuma página. */
 export function BottomNav() {
   const pathname = usePathname();
-  const { hidden } = useChromeVisibility();
   const activeIndex = Math.max(
     0,
     PRIMARY_NAV.findIndex((item) => isActive(pathname, item.href)),
@@ -25,14 +23,8 @@ export function BottomNav() {
 
   return (
     <nav
-      className={cn(
-        "relative z-30 shrink-0 overflow-hidden border-0 shadow-none transition-[max-height,opacity,padding] duration-300 ease-out md:hidden",
-        hidden ? "max-h-0 opacity-0" : "max-h-24 opacity-100",
-      )}
-      style={{
-        backgroundColor: "#F7F4F2",
-        paddingBottom: hidden ? 0 : "var(--safe-bottom)",
-      }}
+      className="relative z-30 shrink-0 border-0 shadow-none md:hidden"
+      style={{ backgroundColor: "#F7F4F2", paddingBottom: "var(--safe-bottom)" }}
     >
       <ul className="relative grid grid-cols-3">
         <span

@@ -9,8 +9,9 @@ import type { SearchFilters } from "@/lib/search";
 import type { QueueListFilters } from "@/lib/queue-filters";
 import { getQueue, searchVehicles, type QueueScope } from "@/lib/api";
 import { useOperator } from "@/lib/operator";
-import { useChromeVisibility } from "@/components/layout/chrome-visibility";
 import { QueueCard } from "@/components/queue/queue-card";
+import { reduceHideOnScroll } from "@/lib/hide-on-scroll";
+import { cn } from "@/lib/utils";
 
 const ROW_HEIGHT = 132;
 const ROW_GAP = 12;
@@ -27,6 +28,8 @@ export function QueueView({
   scope,
   listFilters,
   fill = false,
+  stickyChrome,
+  hideChromeOnScroll = false,
 }: {
   initial: Page<QueueItem>;
   source: "queue" | "search";
@@ -35,17 +38,28 @@ export function QueueView({
   scope?: QueueScope;
   listFilters?: QueueListFilters;
   fill?: boolean;
+  /** Cabeçalho sticky dentro do mesmo scroll — some sem mudar o flex externo. */
+  stickyChrome?: React.ReactNode;
+  /** Só esconde o sticky quando a lista é longa o bastante. */
+  hideChromeOnScroll?: boolean;
 }) {
   const { operatorId } = useOperator();
-  const { onScrollFrame } = useChromeVisibility();
   const [items, setItems] = React.useState(initial.items);
   const [cursor, setCursor] = React.useState(initial.nextCursor);
   const [loading, setLoading] = React.useState(false);
+  const [chromeHidden, setChromeHidden] = React.useState(false);
   const parentRef = React.useRef<HTMLDivElement>(null);
+  const lastTop = React.useRef(0);
+  const accumulated = React.useRef(0);
+  const chromeHiddenRef = React.useRef(false);
 
   React.useEffect(() => {
     setItems(initial.items);
     setCursor(initial.nextCursor);
+    setChromeHidden(false);
+    chromeHiddenRef.current = false;
+    accumulated.current = 0;
+    lastTop.current = 0;
   }, [initial]);
 
   const listKey = JSON.stringify(listFilters ?? {});
@@ -61,7 +75,6 @@ export function QueueView({
     return () => {
       cancelled = true;
     };
-    // listKey serializa os filtros; listFilters entra pelo spread acima
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [source, scope, operatorId, sellerType, listKey]);
 
@@ -90,11 +103,30 @@ export function QueueView({
 
   function onScroll(e: React.UIEvent<HTMLDivElement>) {
     const el = e.currentTarget;
-    onScrollFrame(el);
+    const scrollTop = el.scrollTop;
+    const delta = scrollTop - lastTop.current;
+    lastTop.current = scrollTop;
+
+    if (hideChromeOnScroll && stickyChrome) {
+      const overflow = el.scrollHeight - el.clientHeight;
+      const next = reduceHideOnScroll(
+        { hidden: chromeHiddenRef.current, accumulated: accumulated.current },
+        { scrollTop, delta, overflow },
+      );
+      accumulated.current = next.accumulated;
+      if (next.hidden !== chromeHiddenRef.current) {
+        chromeHiddenRef.current = next.hidden;
+        setChromeHidden(next.hidden);
+      }
+    }
+
     if (el.scrollHeight - el.scrollTop - el.clientHeight < ROW_HEIGHT * 4) {
       void loadMore();
     }
   }
+
+  // Busca com poucos itens: sem caixa de scroll aninhada — a página sobe/desce.
+  const nestedScroll = fill || items.length >= 6;
 
   return (
     <div
@@ -102,11 +134,26 @@ export function QueueView({
       onScroll={onScroll}
       className={
         fill
-          ? "h-full min-h-0 overflow-y-auto overscroll-y-contain pb-3"
-          : "max-h-[70dvh] min-h-[16rem] overflow-y-auto overscroll-y-contain"
+          ? "h-full min-h-0 overflow-y-auto overscroll-y-contain"
+          : nestedScroll
+            ? "max-h-[70dvh] min-h-[16rem] overflow-y-auto overscroll-y-contain"
+            : "overflow-visible"
       }
     >
-      <div className="relative w-full" style={{ height: virtualizer.getTotalSize() }}>
+      {stickyChrome && (
+        <div
+          className={cn(
+            "sticky top-0 z-20 bg-card transition-transform duration-300 ease-out will-change-transform",
+            chromeHidden && "pointer-events-none -translate-y-full",
+          )}
+        >
+          {stickyChrome}
+        </div>
+      )}
+      <div
+        className={cn("relative w-full", fill && "px-3 pb-3 sm:px-6")}
+        style={{ height: virtualizer.getTotalSize() }}
+      >
         {virtualizer.getVirtualItems().map((virtualRow) => {
           const item = items[virtualRow.index]!;
           return (
