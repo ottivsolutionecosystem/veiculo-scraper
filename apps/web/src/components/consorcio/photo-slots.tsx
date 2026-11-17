@@ -42,33 +42,43 @@ export function PhotoSlots({
   onChange: (next: ConsorcioOffer) => void;
 }) {
   const [error, setError] = React.useState<string | null>(null);
+  const photosRef = React.useRef(offer.photos);
+  const hasDamageRef = React.useRef(offer.hasDamage);
+  photosRef.current = offer.photos;
+  hasDamageRef.current = offer.hasDamage;
+
   const damage = offer.photos.filter((p) => p.slot === "damage");
   const damageAnswer: boolean | null =
     offer.hasDamage === true || damage.length > 0 ? true : offer.hasDamage;
+
+  function emit(photos: ConsorcioPhoto[], hasDamage: boolean | null) {
+    photosRef.current = photos;
+    hasDamageRef.current = hasDamage;
+    onChange({ ...offer, photos, hasDamage });
+  }
 
   async function addRequired(slot: ConsorcioRequiredPhotoSlot, file: File) {
     setError(null);
     try {
       const url = await fileToDataUrl(file);
-      onChange({ ...offer, photos: withRequiredPhoto(offer.photos, slot, url) });
+      emit(withRequiredPhoto(photosRef.current, slot, url), hasDamageRef.current);
     } catch {
-      setError("Não deu pra ler a foto.");
+      setError("Não deu pra ler a foto. Tente outra imagem ou tire de novo.");
     }
   }
 
   async function addDamage(file: File) {
-    if (damage.length >= MAX_DAMAGE_PHOTOS) {
+    const currentDamage = photosRef.current.filter((p) => p.slot === "damage");
+    if (currentDamage.length >= MAX_DAMAGE_PHOTOS) {
       setError(`No máximo ${MAX_DAMAGE_PHOTOS} fotos de avaria.`);
       return;
     }
     setError(null);
     try {
       const url = await fileToDataUrl(file);
-      onChange({
-        ...offer,
-        hasDamage: true,
-        photos: [
-          ...offer.photos,
+      emit(
+        [
+          ...photosRef.current,
           {
             id: uid(),
             slot: "damage",
@@ -77,27 +87,30 @@ export function PhotoSlots({
             createdAt: new Date().toISOString(),
           },
         ],
-      });
+        true,
+      );
     } catch {
-      setError("Não deu pra ler a foto.");
+      setError("Não deu pra ler a foto. Tente outra imagem ou tire de novo.");
     }
   }
 
   function remove(photoId: string) {
-    onChange({ ...offer, photos: offer.photos.filter((p) => p.id !== photoId) });
+    emit(
+      photosRef.current.filter((p) => p.id !== photoId),
+      hasDamageRef.current,
+    );
   }
 
   function chooseDamage(answer: boolean) {
     setError(null);
     if (!answer) {
-      onChange({
-        ...offer,
-        hasDamage: false,
-        photos: offer.photos.filter((p) => p.slot !== "damage"),
-      });
+      emit(
+        photosRef.current.filter((p) => p.slot !== "damage"),
+        false,
+      );
       return;
     }
-    onChange({ ...offer, hasDamage: true });
+    emit(photosRef.current, true);
   }
 
   return (

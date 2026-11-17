@@ -1,7 +1,6 @@
 "use client";
 
 import * as React from "react";
-import Link from "next/link";
 import { Check, Copy, Loader2, Search, Send, Share2, Store } from "lucide-react";
 
 import type { ConsorcioOffer } from "@veiculo/types";
@@ -10,7 +9,6 @@ import { PhotoSlots } from "@/components/consorcio/photo-slots";
 import { TireFields } from "@/components/consorcio/tire-fields";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -20,7 +18,6 @@ import { lookupFipeByPlate, type PlateFipeCandidate } from "@/lib/consorcio/fipe
 import { canListOffer, missingRequiredPhotos } from "@/lib/consorcio/offer-rules";
 import { formatPlate, isValidPlate, normalizePlate } from "@/lib/consorcio/plate";
 import { REQUIRED_PHOTO_LABEL } from "@/lib/consorcio/labels";
-import { AVALIACAO_TERMS_PATH } from "@/lib/consorcio/terms";
 import { cn } from "@/lib/utils";
 
 function parseMoneyToCents(raw: string): number | null {
@@ -66,6 +63,78 @@ function Section({
   );
 }
 
+/** Campo de texto local — tipa à vontade; grava no blur / debounce sem brigar com a API. */
+function SoftTextField({
+  id,
+  label,
+  value,
+  disabled,
+  placeholder,
+  inputMode,
+  autoComplete,
+  className,
+  onCommit,
+}: {
+  id: string;
+  label: string;
+  value: string;
+  disabled?: boolean;
+  placeholder?: string;
+  inputMode?: React.HTMLAttributes<HTMLInputElement>["inputMode"];
+  autoComplete?: string;
+  className?: string;
+  onCommit: (next: string) => void;
+}) {
+  const [text, setText] = React.useState(value);
+  const debounceRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+  const valueRef = React.useRef(value);
+
+  React.useEffect(() => {
+    if (value !== valueRef.current) {
+      valueRef.current = value;
+      setText(value);
+    }
+  }, [value]);
+
+  React.useEffect(() => {
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+    };
+  }, []);
+
+  function flush(next: string) {
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = null;
+    if (next !== valueRef.current) {
+      valueRef.current = next;
+      onCommit(next);
+    }
+  }
+
+  function schedule(next: string) {
+    setText(next);
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => flush(next), 450);
+  }
+
+  return (
+    <div className="space-y-1.5">
+      <Label htmlFor={id}>{label}</Label>
+      <Input
+        id={id}
+        value={text}
+        disabled={disabled}
+        placeholder={placeholder}
+        inputMode={inputMode}
+        autoComplete={autoComplete}
+        className={className}
+        onChange={(e) => schedule(e.target.value)}
+        onBlur={() => flush(text)}
+      />
+    </div>
+  );
+}
+
 export function OfferEditor({
   offer,
   mode,
@@ -90,18 +159,24 @@ export function OfferEditor({
   onMessage?: (msg: string | null) => void;
 }) {
   const publicMode = mode === "public";
+  const offerRef = React.useRef(offer);
+  offerRef.current = offer;
   const [bidText, setBidText] = React.useState(
     offer.bidCents !== null ? String(Math.round(offer.bidCents / 100)) : "",
   );
   const [payoffText, setPayoffText] = React.useState(
     offer.payoffCents !== null ? String(Math.round(offer.payoffCents / 100)) : "",
   );
+  const [notesText, setNotesText] = React.useState(offer.notes ?? "");
   const [copied, setCopied] = React.useState(false);
   const [msg, setMsg] = React.useState<string | null>(null);
   const [plateCandidates, setPlateCandidates] = React.useState<PlateFipeCandidate[] | null>(null);
   const [plateLookupBusy, setPlateLookupBusy] = React.useState(false);
   const [plateLookupError, setPlateLookupError] = React.useState<string | null>(null);
   const [plateColor, setPlateColor] = React.useState<string | null>(null);
+  const bidDebounceRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+  const payoffDebounceRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+  const notesDebounceRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
 
   React.useEffect(() => {
     setBidText(offer.bidCents !== null ? String(Math.round(offer.bidCents / 100)) : "");
@@ -112,10 +187,22 @@ export function OfferEditor({
   }, [offer.id, offer.payoffCents]);
 
   React.useEffect(() => {
+    setNotesText(offer.notes ?? "");
+  }, [offer.id, offer.notes]);
+
+  React.useEffect(() => {
     setPlateCandidates(null);
     setPlateLookupError(null);
     setPlateColor(null);
   }, [offer.id]);
+
+  React.useEffect(() => {
+    return () => {
+      if (bidDebounceRef.current) clearTimeout(bidDebounceRef.current);
+      if (payoffDebounceRef.current) clearTimeout(payoffDebounceRef.current);
+      if (notesDebounceRef.current) clearTimeout(notesDebounceRef.current);
+    };
+  }, []);
 
   function setFeedback(next: string | null) {
     setMsg(next);
@@ -125,6 +212,13 @@ export function OfferEditor({
   async function persist(patch: Partial<ConsorcioOffer>) {
     setFeedback(null);
     await onPersist(patch);
+  }
+
+  function patchLocal(patch: Partial<ConsorcioOffer>) {
+    const next = { ...offerRef.current, ...patch };
+    offerRef.current = next;
+    onChange(next);
+    return next;
   }
 
   async function handleConsultPlate() {
@@ -140,8 +234,8 @@ export function OfferEditor({
       const res = await lookupFipeByPlate(plate);
       setPlateCandidates(res.candidates);
       setPlateColor(res.color);
-      if (res.color && res.color !== offer.color) {
-        onChange({ ...offer, color: res.color });
+      if (res.color && res.color !== offerRef.current.color) {
+        patchLocal({ color: res.color });
         void persist({ color: res.color });
       }
     } catch (err: unknown) {
@@ -236,8 +330,60 @@ export function OfferEditor({
   const plateLocked = readOnlyListed && publicMode;
   const canConsult = isValidPlate(offer.plate) && !plateLocked && !plateLookupBusy;
 
+  function commitOwnerName(raw: string) {
+    const ownerName = raw.trim() || null;
+    patchLocal({ ownerName });
+    void persist({ ownerName });
+  }
+
+  function commitOwnerPhone(raw: string) {
+    const ownerPhone = raw.trim() || null;
+    patchLocal({ ownerPhone });
+    void persist({ ownerPhone });
+  }
+
+  function commitBid(raw: string) {
+    const bidCents = parseMoneyToCents(raw);
+    patchLocal({ bidCents });
+    void persist({ bidCents });
+  }
+
+  function commitPayoff(raw: string) {
+    const payoffCents = parseMoneyToCents(raw);
+    patchLocal({ financed: true, payoffCents });
+    void persist({ financed: true, payoffCents });
+  }
+
+  function commitNotes(raw: string) {
+    const notes = raw.trim() || null;
+    patchLocal({ notes });
+    void persist({ notes });
+  }
+
+  const contactFields = (
+    <div className="grid gap-3 sm:grid-cols-2">
+      <SoftTextField
+        id="owner-name"
+        label={publicMode ? "Seu nome" : "Nome do dono"}
+        value={offer.ownerName ?? ""}
+        autoComplete="name"
+        placeholder={publicMode ? "Como prefere ser chamado" : undefined}
+        onCommit={commitOwnerName}
+      />
+      <SoftTextField
+        id="owner-phone"
+        label="Telefone / WhatsApp"
+        value={offer.ownerPhone ?? ""}
+        inputMode="tel"
+        autoComplete="tel"
+        placeholder="(11) 99999-0000"
+        onCommit={commitOwnerPhone}
+      />
+    </div>
+  );
+
   return (
-    <div className={cn("space-y-4", publicMode && "pb-28")}>
+    <div className={cn("space-y-4")}>
       {mode === "internal" && publicUrl ? (
         <Section
           publicMode={false}
@@ -264,23 +410,31 @@ export function OfferEditor({
 
       <Section
         publicMode={publicMode}
-        title="Placa e contato"
-        hint="Digite a placa e toque em Consultar veículo. O km aparece na foto do painel com o carro ligado."
+        title={publicMode ? "Placa do veículo" : "Placa e contato"}
+        hint={
+          publicMode
+            ? "Digite a placa e toque em Consultar veículo. O km aparece na foto do painel com o carro ligado."
+            : "Digite a placa e toque em Consultar veículo. O km aparece na foto do painel com o carro ligado."
+        }
       >
         <div className="space-y-3">
           <div className="space-y-1.5">
-            <Label>Placa</Label>
+            <Label htmlFor="plate">Placa</Label>
             <div className="flex flex-col gap-2 sm:flex-row">
               <Input
+                id="plate"
                 value={formatPlate(offer.plate)}
                 disabled={plateLocked}
+                autoComplete="off"
+                autoCapitalize="characters"
                 onChange={(e) => {
                   const plate = normalizePlate(e.target.value);
                   setPlateCandidates(null);
                   setPlateLookupError(null);
                   setPlateColor(null);
+                  const current = offerRef.current;
                   const cleared =
-                    offer.fipe || offer.brand || offer.model || offer.modelYear
+                    current.fipe || current.brand || current.model || current.modelYear
                       ? {
                           plate,
                           fipe: null,
@@ -289,7 +443,7 @@ export function OfferEditor({
                           modelYear: null,
                         }
                       : { plate };
-                  onChange({ ...offer, ...cleared });
+                  patchLocal(cleared);
                   void persist(cleared);
                 }}
                 placeholder="ABC1D23"
@@ -313,30 +467,7 @@ export function OfferEditor({
               <p className="text-xs text-muted-foreground">Cor na consulta: {plateColor}</p>
             ) : null}
           </div>
-          <div className="grid gap-3 sm:grid-cols-2">
-            <div className="space-y-1.5">
-              <Label>{publicMode ? "Seu nome" : "Nome do dono"}</Label>
-              <Input
-                value={offer.ownerName ?? ""}
-                onChange={(e) => {
-                  const ownerName = e.target.value || null;
-                  onChange({ ...offer, ownerName });
-                  void persist({ ownerName });
-                }}
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label>Telefone / WhatsApp</Label>
-              <Input
-                value={offer.ownerPhone ?? ""}
-                onChange={(e) => {
-                  const ownerPhone = e.target.value || null;
-                  onChange({ ...offer, ownerPhone });
-                  void persist({ ownerPhone });
-                }}
-              />
-            </div>
-          </div>
+          {!publicMode ? contactFields : null}
         </div>
       </Section>
 
@@ -357,9 +488,9 @@ export function OfferEditor({
               brand: fipe?.brand ?? null,
               model: fipe?.model ?? null,
               modelYear: fipe?.modelYear ?? null,
-              color: plateColor ?? offer.color,
+              color: plateColor ?? offerRef.current.color,
             };
-            onChange({ ...offer, ...patch });
+            patchLocal(patch);
             void persist(patch);
           }}
         />
@@ -371,15 +502,20 @@ export function OfferEditor({
         hint="Quanto você precisa receber neste oferecimento."
       >
         <div className="space-y-1.5">
-          <Label>Valor do lance (R$)</Label>
+          <Label htmlFor="bid">Valor do lance (R$)</Label>
           <Input
+            id="bid"
             inputMode="numeric"
             value={bidText}
             onChange={(e) => {
-              setBidText(e.target.value);
-              const bidCents = parseMoneyToCents(e.target.value);
-              onChange({ ...offer, bidCents });
-              void persist({ bidCents });
+              const raw = e.target.value;
+              setBidText(raw);
+              if (bidDebounceRef.current) clearTimeout(bidDebounceRef.current);
+              bidDebounceRef.current = setTimeout(() => commitBid(raw), 450);
+            }}
+            onBlur={() => {
+              if (bidDebounceRef.current) clearTimeout(bidDebounceRef.current);
+              commitBid(bidText);
             }}
             placeholder="45000"
           />
@@ -405,7 +541,7 @@ export function OfferEditor({
               variant={offer.financed === true ? "default" : "outline"}
               className="h-11 rounded-xl"
               onClick={() => {
-                onChange({ ...offer, financed: true });
+                patchLocal({ financed: true });
                 void persist({ financed: true });
               }}
             >
@@ -417,7 +553,7 @@ export function OfferEditor({
               className="h-11 rounded-xl"
               onClick={() => {
                 setPayoffText("");
-                onChange({ ...offer, financed: false, payoffCents: null });
+                patchLocal({ financed: false, payoffCents: null });
                 void persist({ financed: false, payoffCents: null });
               }}
             >
@@ -433,15 +569,20 @@ export function OfferEditor({
 
           {offer.financed === true ? (
             <div className="space-y-1.5 rounded-2xl border border-coral/30 bg-coral/[0.05] p-3">
-              <Label>Valor da quitação (R$)</Label>
+              <Label htmlFor="payoff">Valor da quitação (R$)</Label>
               <Input
+                id="payoff"
                 inputMode="numeric"
                 value={payoffText}
                 onChange={(e) => {
-                  setPayoffText(e.target.value);
-                  const payoffCents = parseMoneyToCents(e.target.value);
-                  onChange({ ...offer, financed: true, payoffCents });
-                  void persist({ financed: true, payoffCents });
+                  const raw = e.target.value;
+                  setPayoffText(raw);
+                  if (payoffDebounceRef.current) clearTimeout(payoffDebounceRef.current);
+                  payoffDebounceRef.current = setTimeout(() => commitPayoff(raw), 450);
+                }}
+                onBlur={() => {
+                  if (payoffDebounceRef.current) clearTimeout(payoffDebounceRef.current);
+                  commitPayoff(payoffText);
                 }}
                 placeholder="18500"
               />
@@ -467,7 +608,7 @@ export function OfferEditor({
         <TireFields
           value={offer.tires}
           onChange={(tires) => {
-            onChange({ ...offer, tires });
+            patchLocal({ tires });
             void persist({ tires });
           }}
         />
@@ -481,24 +622,43 @@ export function OfferEditor({
         <PhotoSlots
           offer={offer}
           onChange={(next) => {
-            onChange(next);
-            void persist({ photos: next.photos, hasDamage: next.hasDamage });
+            const merged = patchLocal({
+              photos: next.photos,
+              hasDamage: next.hasDamage,
+            });
+            void persist({ photos: merged.photos, hasDamage: merged.hasDamage });
           }}
         />
       </Section>
 
       <Section publicMode={publicMode} title="Observações" hint="Opcional.">
         <Textarea
-          value={offer.notes ?? ""}
+          id="notes"
+          value={notesText}
           onChange={(e) => {
-            const notes = e.target.value || null;
-            onChange({ ...offer, notes });
-            void persist({ notes });
+            const raw = e.target.value;
+            setNotesText(raw);
+            if (notesDebounceRef.current) clearTimeout(notesDebounceRef.current);
+            notesDebounceRef.current = setTimeout(() => commitNotes(raw), 450);
+          }}
+          onBlur={() => {
+            if (notesDebounceRef.current) clearTimeout(notesDebounceRef.current);
+            commitNotes(notesText);
           }}
           rows={3}
           placeholder="Algo que o lojista precise saber"
         />
       </Section>
+
+      {publicMode ? (
+        <Section
+          publicMode
+          title="Seus dados"
+          hint="Para o consignador entrar em contato sobre a proposta."
+        >
+          {contactFields}
+        </Section>
+      ) : null}
 
       {!hideActions && (
         <div className="flex flex-wrap gap-2">
@@ -517,69 +677,6 @@ export function OfferEditor({
         </div>
       )}
       {msg && !onMessage && <p className="text-sm text-navy">{msg}</p>}
-    </div>
-  );
-}
-
-export function PublicSubmitBar({
-  ready,
-  busy,
-  onSubmit,
-  message,
-  termsAccepted,
-  onTermsAcceptedChange,
-}: {
-  ready: boolean;
-  busy: boolean;
-  onSubmit: () => void;
-  message?: string | null;
-  termsAccepted: boolean;
-  onTermsAcceptedChange: (next: boolean) => void;
-}) {
-  const canSend = ready && termsAccepted;
-  return (
-    <div className="fixed inset-x-0 bottom-0 z-40 border-t border-white/10 bg-navy-deep/95 px-4 py-3 backdrop-blur-xl">
-      <div
-        className="mx-auto flex w-full max-w-3xl flex-col gap-3"
-        style={{ paddingBottom: "max(0.25rem, env(safe-area-inset-bottom, 0px))" }}
-      >
-        <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-white/10 bg-white/[0.06] px-3 py-2.5">
-          <Checkbox
-            checked={termsAccepted}
-            onCheckedChange={(v) => onTermsAcceptedChange(v === true)}
-            className="mt-0.5 border-white/40 data-[state=checked]:border-coral data-[state=checked]:bg-coral"
-            aria-describedby="termos-avaliacao-desc"
-          />
-          <span id="termos-avaliacao-desc" className="text-xs leading-relaxed text-white/75">
-            Declaro que todas as informações são verdadeiras e completas. Li e aceito os{" "}
-            <Link
-              href={AVALIACAO_TERMS_PATH}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="font-semibold text-coral underline underline-offset-2"
-              onClick={(e) => e.stopPropagation()}
-            >
-              termos
-            </Link>
-            .
-          </span>
-        </label>
-        {message ? <p className="text-center text-xs text-coral">{message}</p> : null}
-        <Button
-          type="button"
-          size="lg"
-          className="h-12 w-full rounded-xl text-base"
-          disabled={busy || !canSend}
-          onClick={onSubmit}
-        >
-          {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-          {!ready
-            ? "Complete os passos acima"
-            : !termsAccepted
-              ? "Aceite os termos para enviar"
-              : "Enviar avaliação completa"}
-        </Button>
-      </div>
     </div>
   );
 }

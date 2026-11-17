@@ -4,7 +4,8 @@ import * as React from "react";
 import { CheckCircle2, Loader2 } from "lucide-react";
 
 import type { ConsorcioOffer } from "@veiculo/types";
-import { OfferEditor, PublicSubmitBar } from "@/components/consorcio/offer-editor";
+import { OfferEditor } from "@/components/consorcio/offer-editor";
+import { PublicClosing } from "@/components/consorcio/public-closing";
 import { PublicProgress } from "@/components/consorcio/public-progress";
 import { PublicShell } from "@/components/consorcio/public-shell";
 import { ApiError } from "@/lib/api";
@@ -19,12 +20,15 @@ export function PublicUpload({ token }: { token: string }) {
   const [feedback, setFeedback] = React.useState<string | null>(null);
   const [done, setDone] = React.useState(false);
   const [termsAccepted, setTermsAccepted] = React.useState(false);
+  const offerRef = React.useRef<ConsorcioOffer | null>(null);
+  const saveChain = React.useRef(Promise.resolve());
 
   React.useEffect(() => {
     let cancelled = false;
     void getPublicConsorcioOffer(token)
       .then((o) => {
         if (!cancelled) {
+          offerRef.current = o;
           setOffer(o);
           if (o.termsAcceptedAt) setTermsAccepted(true);
           if (
@@ -71,19 +75,30 @@ export function PublicUpload({ token }: { token: string }) {
     );
   }
 
-  async function persist(patch: Partial<ConsorcioOffer>) {
-    try {
-      const next = await patchPublicConsorcioOffer(token, patch);
-      setOffer(next);
-      setError(null);
-    } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Não salvou.");
-    }
+  function applyLocal(next: ConsorcioOffer) {
+    offerRef.current = next;
+    setOffer(next);
+  }
+
+  /** Autosave em fila — não substitui o rascunho local pela resposta (evita sumir foto/texto). */
+  function persist(patch: Partial<ConsorcioOffer>) {
+    saveChain.current = saveChain.current
+      .catch(() => undefined)
+      .then(async () => {
+        try {
+          await patchPublicConsorcioOffer(token, patch);
+          setError(null);
+        } catch (err) {
+          setError(err instanceof ApiError ? err.message : "Não salvou.");
+        }
+      });
+    return saveChain.current;
   }
 
   async function submit() {
-    if (!offer) return;
-    if (!canListOffer(offer)) {
+    const snapshot = offerRef.current;
+    if (!snapshot) return;
+    if (!canListOffer(snapshot)) {
       setFeedback("Complete todos os passos do progresso antes de enviar.");
       return;
     }
@@ -91,10 +106,10 @@ export function PublicUpload({ token }: { token: string }) {
       setFeedback("Marque a declaração de veracidade e aceite os termos para enviar.");
       return;
     }
-    const snapshot = offer;
     setBusy(true);
     setFeedback(null);
     try {
+      await saveChain.current.catch(() => undefined);
       const next = await patchPublicConsorcioOffer(token, {
         plate: snapshot.plate,
         fipe: snapshot.fipe,
@@ -111,9 +126,11 @@ export function PublicUpload({ token }: { token: string }) {
         brand: snapshot.brand,
         model: snapshot.model,
         modelYear: snapshot.modelYear,
+        color: snapshot.color,
         acceptTerms: true,
         termsVersion: AVALIACAO_TERMS_VERSION,
       });
+      offerRef.current = next;
       setOffer(next);
       setDone(true);
     } catch (err) {
@@ -149,22 +166,32 @@ export function PublicUpload({ token }: { token: string }) {
   return (
     <PublicShell
       title="Conte sobre o seu carro"
-      subtitle="Leva poucos minutos: placa, FIPE, lance, financiamento, pneus, fotos e avarias. Salvamos conforme você preenche."
+      subtitle="Leva poucos minutos: placa, FIPE, lance, financiamento, pneus, fotos, contato e termos. Salvamos conforme você preenche."
     >
-      <div className="space-y-4 pb-44">
+      <div className="space-y-4 pb-10">
         <PublicProgress offer={offer} />
 
         <div className="rounded-[1.5rem] border border-white/10 bg-[hsl(var(--background))] p-3 shadow-[0_40px_80px_-28px_rgba(0,0,0,0.55)] sm:p-5">
-          <OfferEditor
-            offer={offer}
-            mode="public"
-            busy={busy}
-            hideActions
-            onChange={setOffer}
-            onPersist={persist}
-            onSubmitPublic={submit}
-            onMessage={setFeedback}
-          />
+          <div className="space-y-4">
+            <OfferEditor
+              offer={offer}
+              mode="public"
+              busy={busy}
+              hideActions
+              onChange={applyLocal}
+              onPersist={persist}
+              onSubmitPublic={submit}
+              onMessage={setFeedback}
+            />
+            <PublicClosing
+              ready={canListOffer(offer)}
+              busy={busy}
+              termsAccepted={termsAccepted}
+              onTermsAcceptedChange={setTermsAccepted}
+              onSubmit={() => void submit()}
+              message={feedback}
+            />
+          </div>
         </div>
 
         {error ? (
@@ -173,15 +200,6 @@ export function PublicUpload({ token }: { token: string }) {
           </p>
         ) : null}
       </div>
-
-      <PublicSubmitBar
-        ready={canListOffer(offer)}
-        busy={busy}
-        onSubmit={() => void submit()}
-        message={feedback}
-        termsAccepted={termsAccepted}
-        onTermsAcceptedChange={setTermsAccepted}
-      />
     </PublicShell>
   );
 }

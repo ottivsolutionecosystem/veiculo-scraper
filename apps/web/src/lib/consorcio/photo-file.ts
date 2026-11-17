@@ -1,7 +1,7 @@
 /** Redimensiona imagem pra data URL (mock local sem storage remoto). */
 
-const MAX_EDGE = 1280;
-const QUALITY = 0.72;
+const MAX_EDGE = 1024;
+const QUALITY = 0.64;
 
 export async function fileToDataUrl(file: File): Promise<string> {
   const bitmap = await createImageBitmap(file);

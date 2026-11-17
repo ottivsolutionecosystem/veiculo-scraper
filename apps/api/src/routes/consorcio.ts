@@ -200,15 +200,20 @@ export async function consorcioRoutes(app: FastifyInstance) {
     reply.send(offer);
   });
 
-  app.patch("/api/consorcio/offers/:id", async (req, reply) => {
-    await requireOperator(req);
-    const { id } = req.params as { id: string };
-    const body = patchSchema.parse(req.body);
-    const current = await loadById(id);
-    if (!current) throw new NotFoundError("Oferecimento não encontrado.");
-    const next = await persist(applyPatch(current, body));
-    reply.send(next);
-  });
+  // Fotos vão como data URL no JSON — precisa de teto maior que o default 1MB.
+  app.patch(
+    "/api/consorcio/offers/:id",
+    { bodyLimit: 16 * 1024 * 1024 },
+    async (req, reply) => {
+      await requireOperator(req);
+      const { id } = req.params as { id: string };
+      const body = patchSchema.parse(req.body);
+      const current = await loadById(id);
+      if (!current) throw new NotFoundError("Oferecimento não encontrado.");
+      const next = await persist(applyPatch(current, body));
+      reply.send(next);
+    },
+  );
 
   app.post("/api/consorcio/offers/:id/list", async (req, reply) => {
     await requireOperator(req);
@@ -256,15 +261,19 @@ export async function consorcioRoutes(app: FastifyInstance) {
     reply.send(offer);
   });
 
-  app.patch("/api/consorcio/public/:token", async (req, reply) => {
-    const { token } = req.params as { token: string };
-    const body = patchSchema.parse(req.body);
-    const current = await loadByToken(token);
-    if (!current) throw new NotFoundError("Link inválido ou expirado.");
-    if (current.status === "closed") {
-      throw new ValidationError("Esta avaliação já foi encerrada.");
-    }
-    const next = await persist(applyPatch(current, body));
-    reply.send(next);
-  });
+  app.patch(
+    "/api/consorcio/public/:token",
+    { bodyLimit: 16 * 1024 * 1024 },
+    async (req, reply) => {
+      const { token } = req.params as { token: string };
+      const body = patchSchema.parse(req.body);
+      const current = await loadByToken(token);
+      if (!current) throw new NotFoundError("Link inválido ou expirado.");
+      if (current.status === "closed") {
+        throw new ValidationError("Esta avaliação já foi encerrada.");
+      }
+      const next = await persist(applyPatch(current, body));
+      reply.send(next);
+    },
+  );
 }
