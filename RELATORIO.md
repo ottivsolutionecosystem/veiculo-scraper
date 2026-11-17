@@ -1,16 +1,13 @@
-# RELATORIO — link público: fotos, contato e termos
+# RELATORIO — deploy avaliação pública
 
 ## Feito
-- Autosave não substitui mais o rascunho local pela resposta da API (fotos/nome/telefone paravam de “sumir”).
-- Nome, telefone, lance, quitação e notas: digitação local + debounce/blur.
-- Fotos: fila de refs + compressão um pouco maior; API consórcio com `bodyLimit` 16MB.
-- Termos saíram da barra fixa; checkbox + enviar ficam no final (após “Seus dados”).
-- Contato no público movido para o fim do fluxo, antes dos termos.
+- Commit `3fa21fd` na branch `deploy` (push ok).
+- **crawler-web** Done no `3fa21fd`.
+- **crawler-api** Done no `3fa21fd` (bodyLimit 16MB).
+- Webhook bare POST dá "Branch Not Match"; com payload `refs/heads/deploy` funciona.
 
 ## Decidido
-- Estado local é a fonte da verdade no preenchimento; só o envio final sincroniza o offer completo da API.
-- Sem barra sticky no público — atrapalhava o teclado/visualização no celular.
+- Deploy manual/redeploy quando o webhook simples falha.
 
 ## Pendente de você
-- Deploy de **crawler-api** + **crawler-web** pra valer em prod.
-- Smoke no link: anexar 2 fotos, digitar nome/telefone, rolar até o checkbox no fim e enviar.
+- Smoke no link: fotos, nome/telefone e termos no final.
