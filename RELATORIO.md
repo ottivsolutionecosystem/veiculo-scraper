@@ -1,15 +1,13 @@
-# RELATORIO — dropdown lojista na ingestão
+# RELATORIO — um card Shopcar + dropdown de loja
 
 ## Feito
-- No painel de ingestão do card Shopcar: dropdown
-  Shopcar (mercado) / Teca / Barbosa / P12.
-- A captura grava na fonte escolhida (mesmo HTML Shopcar).
-- Cards dos parceiros apontam para esse dropdown.
+- Cards Teca/Barbosa/P12 saem da grade de Fontes.
+- Só Shopcar mostra a ingestão, com dropdown **Loja**
+  (mercado / Teca / Barbosa / P12).
+- Parceiros seguem como fonte no banco (filtro na fila).
 
 ## Decidido
-- Um único painel de captura (no Shopcar) + destino no dropdown —
-  evita três formulários iguais.
+- UI única no Shopcar; sem card por parceiro.
 
 ## Pendente de decisão sua
-- Redeploy no Dokploy (api + web + collector): produção ainda sem
-  `teca`/`barbosa`/`p12` no `/api/sources`.
+- Redeploy api+web+collector no Dokploy.

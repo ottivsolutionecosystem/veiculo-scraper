@@ -22,8 +22,8 @@ import { cn } from "@/lib/utils";
 
 /** OLX/Webmotors: sem toggle nem coleta pela UI. */
 const TOGGLE_LOCKED = new Set(["webmotors", "olx"]);
-/** Parceiros: toggle ok; sem “Rodar coleta” (só ingestão assistida). */
-const SCRAPE_LOCKED = new Set(["webmotors", "olx", "teca", "barbosa", "p12"]);
+/** Sem “Rodar coleta” automática — só Shopcar marketplace. */
+const SCRAPE_LOCKED = new Set(["webmotors", "olx"]);
 
 const SELLER_TYPE_LABELS: Record<"individual" | "dealer", string> = {
   individual: "Particular",
@@ -81,6 +81,9 @@ export function SourcesBoard() {
     );
   }
 
+  // Parceiros (teca/barbosa/p12) não ganham card próprio — escolhe a loja
+  // no dropdown da ingestão do Shopcar. Continuam como fonte no banco/fila.
+  const visibleSources = sources.filter((s) => !isShopcarPartnerSource(s.source));
   const sourcesWithRuns = sources.filter((s) => s.lastRun);
   const master = isMaster(operator);
 
@@ -104,13 +107,19 @@ export function SourcesBoard() {
           {resetMsg && <p className="w-full text-xs text-navy">{resetMsg}</p>}
         </div>
       )}
-      {sources.length === 0 ? (
+      {visibleSources.length === 0 ? (
         <EmptyState icon={Radio} title="Nenhuma fonte configurada" description="Configure ao menos uma fonte de coleta para começar." />
       ) : (
         <div className="grid gap-3 sm:grid-cols-3">
-          {sources.map((source) => {
+          {visibleSources.map((source) => {
             const toggleLocked = TOGGLE_LOCKED.has(source.source);
             const scrapeLocked = SCRAPE_LOCKED.has(source.source);
+            const shopcarPending =
+              source.source === SHOPCAR_MARKET_SOURCE
+                ? sources
+                    .filter((s) => s.source === SHOPCAR_MARKET_SOURCE || isShopcarPartnerSource(s.source))
+                    .reduce((n, s) => n + (s.pendingListingIngest ?? 0), 0)
+                : (source.pendingListingIngest ?? 0);
             return (
               <Card key={source.source} className="card-lift relative overflow-hidden">
                 {source.active && (
@@ -187,22 +196,14 @@ export function SourcesBoard() {
                       locked={scrapeLocked}
                       pendingRequest={source.pendingRequest}
                       onRefresh={reload}
-                      ingestOnly={isShopcarPartnerSource(source.source)}
                     />
                   </div>
                   {source.source === SHOPCAR_MARKET_SOURCE && (
                     <ListingIngestPanel
                       source={source.source}
-                      pendingCount={source.pendingListingIngest ?? 0}
+                      pendingCount={shopcarPending}
                       onRefresh={reload}
                     />
-                  )}
-                  {isShopcarPartnerSource(source.source) && (
-                    <p className="border-t border-navy/[0.06] pt-3 text-xs text-muted-foreground">
-                      Para raspar a vitrine, use a ingestão no card <span className="font-medium text-navy">Shopcar</span>{" "}
-                      e escolha <span className="font-medium text-navy">{sourceLabel(source.source)}</span> no
-                      dropdown Lojista.
-                    </p>
                   )}
                 </CardContent>
               </Card>

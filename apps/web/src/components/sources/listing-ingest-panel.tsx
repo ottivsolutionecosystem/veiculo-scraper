@@ -235,20 +235,20 @@ export function ListingIngestPanel({
       <div>
         <p className="text-xs font-medium text-navy">Ingestão assistida (listagem)</p>
         <p className="mt-1 text-xs text-muted-foreground">
-          Escolha o lojista, cole o link da vitrine e as páginas. A captura roda no seu Chrome.
+          Selecione a loja, cole o link e as páginas. A captura roda no seu Chrome.
         </p>
       </div>
 
       <label className="block space-y-1">
         <span className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
-          Lojista / destino
+          Loja
         </span>
         <Select value={targetSource} onValueChange={onSelectTarget}>
           <SelectTrigger className="h-9 min-h-9 w-full md:max-w-sm">
-            <SelectValue placeholder="Escolha o lojista" />
+            <SelectValue placeholder="Selecione a loja" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value={SHOPCAR_MARKET_SOURCE}>Shopcar (mercado)</SelectItem>
+            <SelectItem value={SHOPCAR_MARKET_SOURCE}>Shopcar (mercado / particular)</SelectItem>
             {SHOPCAR_FAMILY_SOURCES.filter((s) => s !== SHOPCAR_MARKET_SOURCE).map((s) => (
               <SelectItem key={s} value={s}>
                 {sourceLabel(s)}
