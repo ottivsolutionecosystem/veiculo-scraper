@@ -272,6 +272,10 @@ Resposta: `{ plate, confidence, color, candidates[] }` (cada candidato =
 seleção FIPE + `principal`). Sem token → 400. Placa inválida → 400.
 Sem FIPE → 404. Não loga placa/chassi.
 
+`PATCH /api/consorcio/public/:token` aceita `acceptTerms: true` +
+`termsVersion` (grava `terms_accepted_at` / `terms_version` uma vez).
+Página estática de texto: `/termos-avaliacao`.
+
 ## 9. Fontes (`/fontes`)
 
 

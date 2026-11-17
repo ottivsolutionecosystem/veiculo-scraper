@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import Link from "next/link";
 import { Check, Copy, Loader2, Search, Send, Share2, Store } from "lucide-react";
 
 import type { ConsorcioOffer } from "@veiculo/types";
@@ -9,6 +10,7 @@ import { PhotoSlots } from "@/components/consorcio/photo-slots";
 import { TireFields } from "@/components/consorcio/tire-fields";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -18,6 +20,7 @@ import { lookupFipeByPlate, type PlateFipeCandidate } from "@/lib/consorcio/fipe
 import { canListOffer, missingRequiredPhotos } from "@/lib/consorcio/offer-rules";
 import { formatPlate, isValidPlate, normalizePlate } from "@/lib/consorcio/plate";
 import { REQUIRED_PHOTO_LABEL } from "@/lib/consorcio/labels";
+import { AVALIACAO_TERMS_PATH } from "@/lib/consorcio/terms";
 import { cn } from "@/lib/utils";
 
 function parseMoneyToCents(raw: string): number | null {
@@ -512,28 +515,58 @@ export function PublicSubmitBar({
   busy,
   onSubmit,
   message,
+  termsAccepted,
+  onTermsAcceptedChange,
 }: {
   ready: boolean;
   busy: boolean;
   onSubmit: () => void;
   message?: string | null;
+  termsAccepted: boolean;
+  onTermsAcceptedChange: (next: boolean) => void;
 }) {
+  const canSend = ready && termsAccepted;
   return (
     <div className="fixed inset-x-0 bottom-0 z-40 border-t border-white/10 bg-navy-deep/95 px-4 py-3 backdrop-blur-xl">
       <div
-        className="mx-auto flex w-full max-w-3xl flex-col gap-2"
+        className="mx-auto flex w-full max-w-3xl flex-col gap-3"
         style={{ paddingBottom: "max(0.25rem, env(safe-area-inset-bottom, 0px))" }}
       >
+        <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-white/10 bg-white/[0.06] px-3 py-2.5">
+          <Checkbox
+            checked={termsAccepted}
+            onCheckedChange={(v) => onTermsAcceptedChange(v === true)}
+            className="mt-0.5 border-white/40 data-[state=checked]:border-coral data-[state=checked]:bg-coral"
+            aria-describedby="termos-avaliacao-desc"
+          />
+          <span id="termos-avaliacao-desc" className="text-xs leading-relaxed text-white/75">
+            Declaro que todas as informações são verdadeiras e completas. Li e aceito os{" "}
+            <Link
+              href={AVALIACAO_TERMS_PATH}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="font-semibold text-coral underline underline-offset-2"
+              onClick={(e) => e.stopPropagation()}
+            >
+              termos
+            </Link>
+            .
+          </span>
+        </label>
         {message ? <p className="text-center text-xs text-coral">{message}</p> : null}
         <Button
           type="button"
           size="lg"
           className="h-12 w-full rounded-xl text-base"
-          disabled={busy || !ready}
+          disabled={busy || !canSend}
           onClick={onSubmit}
         >
           {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-          {ready ? "Enviar avaliação completa" : "Complete os passos acima"}
+          {!ready
+            ? "Complete os passos acima"
+            : !termsAccepted
+              ? "Aceite os termos para enviar"
+              : "Enviar avaliação completa"}
         </Button>
       </div>
     </div>

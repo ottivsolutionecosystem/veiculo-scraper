@@ -40,6 +40,8 @@ function base(): ConsorcioOffer {
     ownerName: null,
     ownerPhone: null,
     notes: null,
+    termsAcceptedAt: null,
+    termsVersion: null,
     createdBy: null,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),

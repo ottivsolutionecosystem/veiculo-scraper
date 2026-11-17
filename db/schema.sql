@@ -121,6 +121,8 @@ CREATE TABLE IF NOT EXISTS consorcio_oferecimentos (
     owner_name      text,
     owner_phone     text,
     notes           text,
+    terms_accepted_at timestamptz,
+    terms_version   text,
     created_by      text,
     created_at      timestamptz NOT NULL DEFAULT now(),
     updated_at      timestamptz NOT NULL DEFAULT now(),

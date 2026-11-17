@@ -87,7 +87,12 @@ export function getPublicConsorcioOffer(token: string) {
   );
 }
 
-export function patchPublicConsorcioOffer(token: string, body: Partial<ConsorcioOffer>) {
+export type PublicConsorcioPatch = Partial<Omit<ConsorcioOffer, "termsVersion">> & {
+  acceptTerms?: boolean;
+  termsVersion?: string | null;
+};
+
+export function patchPublicConsorcioOffer(token: string, body: PublicConsorcioPatch) {
   return consorcioFetch<ConsorcioOffer>(
     `/api/consorcio/public/${encodeURIComponent(token)}`,
     { method: "PATCH", body: JSON.stringify(body) },

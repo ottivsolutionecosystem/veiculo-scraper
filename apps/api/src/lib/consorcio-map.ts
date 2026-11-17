@@ -39,6 +39,10 @@ export function mapConsorcioRow(row: Record<string, unknown>): ConsorcioOffer {
     ownerName: (row.owner_name as string | null) ?? null,
     ownerPhone: (row.owner_phone as string | null) ?? null,
     notes: (row.notes as string | null) ?? null,
+    termsAcceptedAt: row.terms_accepted_at
+      ? new Date(String(row.terms_accepted_at)).toISOString()
+      : null,
+    termsVersion: (row.terms_version as string | null) ?? null,
     createdBy: (row.created_by as string | null) ?? null,
     createdAt: new Date(String(row.created_at)).toISOString(),
     updatedAt: new Date(String(row.updated_at)).toISOString(),

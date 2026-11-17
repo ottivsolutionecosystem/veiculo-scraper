@@ -65,6 +65,9 @@ const patchSchema = z.object({
   ownerName: z.string().max(120).nullable().optional(),
   ownerPhone: z.string().max(40).nullable().optional(),
   notes: z.string().max(4000).nullable().optional(),
+  /** true = grava aceite dos termos de veracidade (só avança, não desfaz). */
+  acceptTerms: z.boolean().optional(),
+  termsVersion: z.string().max(32).optional(),
 });
 
 const proposalSchema = z.object({
@@ -97,7 +100,8 @@ async function persist(offer: ReturnType<typeof mapConsorcioRow>) {
       fipe = $9::jsonb, bid_cents = $10, financed = $11, payoff_cents = $12,
       has_damage = $13, tires = $14::jsonb, photos = $15::jsonb,
       owner_name = $16, owner_phone = $17, notes = $18, updated_at = now(),
-      listed_at = $19, proposals = $20::jsonb
+      listed_at = $19, proposals = $20::jsonb,
+      terms_accepted_at = $21, terms_version = $22
      WHERE id = $1`,
     [
       offer.id,
@@ -120,6 +124,8 @@ async function persist(offer: ReturnType<typeof mapConsorcioRow>) {
       offer.notes,
       offer.listedAt,
       JSON.stringify(offer.proposals),
+      offer.termsAcceptedAt,
+      offer.termsVersion,
     ],
   );
   return loadById(offer.id);
@@ -152,6 +158,14 @@ function applyPatch(
     ownerName: body.ownerName !== undefined ? body.ownerName : offer.ownerName,
     ownerPhone: body.ownerPhone !== undefined ? body.ownerPhone : offer.ownerPhone,
     notes: body.notes !== undefined ? body.notes : offer.notes,
+    termsAcceptedAt:
+      body.acceptTerms === true
+        ? (offer.termsAcceptedAt ?? new Date().toISOString())
+        : offer.termsAcceptedAt,
+    termsVersion:
+      body.acceptTerms === true
+        ? (body.termsVersion?.trim() || offer.termsVersion || "2026-03-17")
+        : offer.termsVersion,
   };
 }
 

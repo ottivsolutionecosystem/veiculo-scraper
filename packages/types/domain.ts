@@ -618,6 +618,10 @@ export interface ConsorcioOffer {
   ownerName: string | null;
   ownerPhone: string | null;
   notes: string | null;
+  /** Aceite da declaração de veracidade no link público (ISO). */
+  termsAcceptedAt: string | null;
+  /** Versão do texto de termos aceito (ex.: 2026-03-17). */
+  termsVersion: string | null;
   createdBy: string | null;
   createdAt: string;
   updatedAt: string;

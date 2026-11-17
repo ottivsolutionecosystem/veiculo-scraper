@@ -10,6 +10,7 @@ import { PublicShell } from "@/components/consorcio/public-shell";
 import { ApiError } from "@/lib/api";
 import { getPublicConsorcioOffer, patchPublicConsorcioOffer } from "@/lib/consorcio/api";
 import { canListOffer } from "@/lib/consorcio/offer-rules";
+import { AVALIACAO_TERMS_VERSION } from "@/lib/consorcio/terms";
 
 export function PublicUpload({ token }: { token: string }) {
   const [offer, setOffer] = React.useState<ConsorcioOffer | null | undefined>(undefined);
@@ -17,6 +18,7 @@ export function PublicUpload({ token }: { token: string }) {
   const [error, setError] = React.useState<string | null>(null);
   const [feedback, setFeedback] = React.useState<string | null>(null);
   const [done, setDone] = React.useState(false);
+  const [termsAccepted, setTermsAccepted] = React.useState(false);
 
   React.useEffect(() => {
     let cancelled = false;
@@ -24,8 +26,10 @@ export function PublicUpload({ token }: { token: string }) {
       .then((o) => {
         if (!cancelled) {
           setOffer(o);
+          if (o.termsAcceptedAt) setTermsAccepted(true);
           if (
             canListOffer(o) &&
+            o.termsAcceptedAt &&
             (o.status === "ready" || o.status === "listed" || o.status === "proposed")
           ) {
             setDone(true);
@@ -83,6 +87,10 @@ export function PublicUpload({ token }: { token: string }) {
       setFeedback("Complete todos os passos do progresso antes de enviar.");
       return;
     }
+    if (!termsAccepted) {
+      setFeedback("Marque a declaração de veracidade e aceite os termos para enviar.");
+      return;
+    }
     const snapshot = offer;
     setBusy(true);
     setFeedback(null);
@@ -103,6 +111,8 @@ export function PublicUpload({ token }: { token: string }) {
         brand: snapshot.brand,
         model: snapshot.model,
         modelYear: snapshot.modelYear,
+        acceptTerms: true,
+        termsVersion: AVALIACAO_TERMS_VERSION,
       });
       setOffer(next);
       setDone(true);
@@ -141,7 +151,7 @@ export function PublicUpload({ token }: { token: string }) {
       title="Conte sobre o seu carro"
       subtitle="Leva poucos minutos: placa, FIPE, lance, financiamento, pneus, fotos e avarias. Salvamos conforme você preenche."
     >
-      <div className="space-y-4 pb-28">
+      <div className="space-y-4 pb-44">
         <PublicProgress offer={offer} />
 
         <div className="rounded-[1.5rem] border border-white/10 bg-[hsl(var(--background))] p-3 shadow-[0_40px_80px_-28px_rgba(0,0,0,0.55)] sm:p-5">
@@ -169,6 +179,8 @@ export function PublicUpload({ token }: { token: string }) {
         busy={busy}
         onSubmit={() => void submit()}
         message={feedback}
+        termsAccepted={termsAccepted}
+        onTermsAcceptedChange={setTermsAccepted}
       />
     </PublicShell>
   );
