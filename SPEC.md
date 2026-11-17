@@ -241,8 +241,8 @@ Fluxo paralelo à consignação de classificados. **Não amarra carta** na v1.
    preencher no painel.
 3. Fotos obrigatórias: frente, traseira, lateral D/E, painel, velocímetro
    (carro ligado, km visível). Avarias: até 15 fotos.
-4. FIPE via consulta pública (BrasilAPI marcas + cascade Parallelum / mesma
-   tabela FIPE). Se houver mais de um ano/combustível, escolhe-se o certo.
+4. FIPE via proxy `/api/fipe/*` (servidor → Parallelum v2, tabela FIPE).
+   Se houver mais de um ano/combustível, escolhe-se o certo.
 5. Campo **lance** = quanto a pessoa precisa.
 6. **Financiado?** Se sim, informar **valor da quitação**; se não, segue.
 7. Consignador libera na **vitrine do lojista**; lojista registra proposta.

@@ -1,12 +1,11 @@
-# RELATORIO — progresso com todos os passos
+# RELATORIO — proxy FIPE Parallelum
 
 ## Feito
-- Progresso com 7 passos: Placa, FIPE, Lance, Financiamento, Pneus, Fotos,
-  Avarias.
-- `hasDamage` persistido (migration 0029); pneus e avarias entram no envio.
+- Rotas públicas `/api/fipe/*` (marcas→modelos→anos→preço) via Parallelum v2.
+- Cascade do web deixa de chamar Parallelum/BrasilAPI no browser.
 
 ## Decidido
-- Avarias “sim” exige ao menos 1 foto; pneus exigem os 4 cantos informados.
+- Fonte gratuita: Parallelum (500 req/dia sem token). Cota no servidor.
 
 ## Pendente de decisão sua
-- Nenhuma.
+- Cadastrar token gratuito Parallelum (1.000/dia) se o volume subir?

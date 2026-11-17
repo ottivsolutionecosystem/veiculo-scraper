@@ -1,9 +1,11 @@
 /**
- * Consulta FIPE gratuita.
- * BrasilAPI expõe marcas; o cascade marca→modelo→ano→preço usa a API pública
- * Parallelum (mesma tabela FIPE) enquanto `/fipe/precos` da BrasilAPI estiver
- * indisponível (404/500 em 2026-11).
+ * Cascade FIPE via proxy da nossa API (`/api/fipe/*` → Parallelum no servidor).
+ * O browser não fala direto com Parallelum/BrasilAPI.
  */
+
+import { ApiError } from "@/lib/api";
+import { resolveApiBase } from "@/lib/api-upstream";
+import { API_URL } from "@/lib/env";
 
 export type FipeVehicleType = "carros" | "motos" | "caminhoes";
 
@@ -23,45 +25,46 @@ export interface FipePriceResult {
   vehicleType: FipeVehicleType;
 }
 
-const BRASIL_API = "https://brasilapi.com.br/api/fipe";
-const PARALLELUM = "https://parallelum.com.br/fipe/api/v1";
-
-function parseBrlToCents(valor: string): number {
-  const digits = valor.replace(/[^\d]/g, "");
-  return Number.parseInt(digits || "0", 10);
+async function resolveFetchBase(): Promise<string> {
+  if (typeof window !== "undefined") return API_URL;
+  return resolveApiBase();
 }
 
-async function getJson<T>(url: string): Promise<T> {
-  const res = await fetch(url);
+async function fipeFetch<T>(path: string): Promise<T> {
+  const base = await resolveFetchBase();
+  const res = await fetch(`${base}${path}`, { cache: "no-store" });
   if (!res.ok) {
-    throw new Error(`FIPE indisponível (${res.status}). Tente de novo em instantes.`);
+    const raw = await res.text();
+    let message = `FIPE indisponível (${res.status}).`;
+    try {
+      const body = JSON.parse(raw) as { error?: string };
+      if (body.error) message = body.error;
+    } catch {
+      if (raw) message = raw.slice(0, 180);
+    }
+    throw new ApiError(res.status, message);
   }
   return (await res.json()) as T;
 }
 
-/** Marcas — tenta BrasilAPI; cai no Parallelum. */
+function withType(type: FipeVehicleType, path: string): string {
+  const sep = path.includes("?") ? "&" : "?";
+  return `${path}${sep}type=${encodeURIComponent(type)}`;
+}
+
 export async function listFipeBrands(type: FipeVehicleType): Promise<FipeOption[]> {
-  try {
-    const rows = await getJson<Array<{ nome: string; valor: string }>>(
-      `${BRASIL_API}/marcas/v1/${type}`,
-    );
-    return rows.map((r) => ({ code: String(r.valor), name: r.nome }));
-  } catch {
-    const rows = await getJson<Array<{ codigo: string; nome: string }>>(
-      `${PARALLELUM}/${type}/marcas`,
-    );
-    return rows.map((r) => ({ code: String(r.codigo), name: r.nome }));
-  }
+  const data = await fipeFetch<{ items: FipeOption[] }>(withType(type, "/api/fipe/brands"));
+  return data.items;
 }
 
 export async function listFipeModels(
   type: FipeVehicleType,
   brandCode: string,
 ): Promise<FipeOption[]> {
-  const data = await getJson<{ modelos: Array<{ codigo: number | string; nome: string }> }>(
-    `${PARALLELUM}/${type}/marcas/${encodeURIComponent(brandCode)}/modelos`,
+  const data = await fipeFetch<{ items: FipeOption[] }>(
+    withType(type, `/api/fipe/brands/${encodeURIComponent(brandCode)}/models`),
   );
-  return (data.modelos ?? []).map((m) => ({ code: String(m.codigo), name: m.nome }));
+  return data.items;
 }
 
 export async function listFipeYears(
@@ -69,10 +72,13 @@ export async function listFipeYears(
   brandCode: string,
   modelCode: string,
 ): Promise<FipeOption[]> {
-  const rows = await getJson<Array<{ codigo: string; nome: string }>>(
-    `${PARALLELUM}/${type}/marcas/${encodeURIComponent(brandCode)}/modelos/${encodeURIComponent(modelCode)}/anos`,
+  const data = await fipeFetch<{ items: FipeOption[] }>(
+    withType(
+      type,
+      `/api/fipe/brands/${encodeURIComponent(brandCode)}/models/${encodeURIComponent(modelCode)}/years`,
+    ),
   );
-  return rows.map((r) => ({ code: String(r.codigo), name: r.nome }));
+  return data.items;
 }
 
 export async function fetchFipePrice(
@@ -81,57 +87,10 @@ export async function fetchFipePrice(
   modelCode: string,
   yearCode: string,
 ): Promise<FipePriceResult> {
-  const raw = await getJson<{
-    Valor: string;
-    Marca: string;
-    Modelo: string;
-    AnoModelo: number;
-    Combustivel: string;
-    CodigoFipe: string;
-    MesReferencia: string;
-  }>(
-    `${PARALLELUM}/${type}/marcas/${encodeURIComponent(brandCode)}/modelos/${encodeURIComponent(modelCode)}/anos/${encodeURIComponent(yearCode)}`,
+  return fipeFetch<FipePriceResult>(
+    withType(
+      type,
+      `/api/fipe/brands/${encodeURIComponent(brandCode)}/models/${encodeURIComponent(modelCode)}/years/${encodeURIComponent(yearCode)}`,
+    ),
   );
-
-  return {
-    code: raw.CodigoFipe,
-    brand: raw.Marca,
-    model: raw.Modelo,
-    modelYear: raw.AnoModelo,
-    fuel: raw.Combustivel,
-    priceCents: parseBrlToCents(raw.Valor),
-    referenceMonth: raw.MesReferencia,
-    vehicleType: type,
-  };
-}
-
-/** Preço direto por código FIPE via BrasilAPI (quando a rota voltar). */
-export async function fetchFipePriceByCode(code: string): Promise<FipePriceResult | null> {
-  try {
-    const rows = await getJson<
-      Array<{
-        valor: string;
-        marca: string;
-        modelo: string;
-        anoModelo: number;
-        combustivel: string;
-        codigoFipe: string;
-        mesReferencia: string;
-      }>
-    >(`${BRASIL_API}/precos/v1/${encodeURIComponent(code)}`);
-    const raw = rows[0];
-    if (!raw) return null;
-    return {
-      code: raw.codigoFipe,
-      brand: raw.marca,
-      model: raw.modelo,
-      modelYear: raw.anoModelo,
-      fuel: raw.combustivel,
-      priceCents: parseBrlToCents(raw.valor),
-      referenceMonth: raw.mesReferencia,
-      vehicleType: "carros",
-    };
-  } catch {
-    return null;
-  }
 }

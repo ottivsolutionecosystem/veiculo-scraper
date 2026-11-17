@@ -23,6 +23,7 @@ import { operatorRoutes } from "./routes/operators.js";
 import { opsRoutes } from "./routes/ops.js";
 import { telephonyRoutes } from "./routes/telephony.js";
 import { consorcioRoutes } from "./routes/consorcio.js";
+import { fipeLookupRoutes } from "./routes/fipe-lookup.js";
 
 export function buildServer() {
   const app = Fastify({ logger: true, trustProxy: true });
@@ -78,6 +79,7 @@ export function buildServer() {
   app.register(webhookRoutes);
   app.register(telephonyRoutes);
   app.register(consorcioRoutes);
+  app.register(fipeLookupRoutes);
 
   app.get("/health", async () => ({ ok: true }));
 

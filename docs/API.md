@@ -251,7 +251,23 @@ até 3 candidatos vêm calculados e persistidos no momento da normalização
 (seção 8: marca por dicionário → modelo por trigram → versão por token →
 filtro ano/combustível), não recalculados na hora do GET.
 
+## 8b. Cascade FIPE pública (oferecimento / link `/o/:token`)
+
+Proxy Parallelum v2 — **sem login**. Query `type=carros|motos|caminhoes`
+(default `carros`).
+
+| Método | Rota |
+|---|---|
+| GET | `/api/fipe/brands` |
+| GET | `/api/fipe/brands/:brand/models` |
+| GET | `/api/fipe/brands/:brand/models/:model/years` |
+| GET | `/api/fipe/brands/:brand/models/:model/years/:year` |
+
+Respostas: listas `{ items: [{ code, name }] }`; preço com `code`, `brand`,
+`model`, `modelYear`, `fuel`, `priceCents`, `referenceMonth`, `vehicleType`.
+
 ## 9. Fontes (`/fontes`)
+
 
 | Método | Rota | Body |
 |---|---|---|
