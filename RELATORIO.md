@@ -1,13 +1,12 @@
-# RELATORIO — um card Shopcar + dropdown de loja
+# RELATORIO — sem cards das lojas parceiras
 
 ## Feito
-- Cards Teca/Barbosa/P12 saem da grade de Fontes.
-- Só Shopcar mostra a ingestão, com dropdown **Loja**
-  (mercado / Teca / Barbosa / P12).
-- Parceiros seguem como fonte no banco (filtro na fila).
+- Fontes: grade e tabela “última execução” só com shopcar/olx/webmotors.
+- Teca/Barbosa/P12 só no dropdown Loja da ingestão do Shopcar.
 
 ## Decidido
-- UI única no Shopcar; sem card por parceiro.
+- API já tem as 3 fontes (pra gravar/filtrar); a UI não lista card delas.
 
 ## Pendente de decisão sua
-- Redeploy api+web+collector no Dokploy.
+- Redeploy do serviço **web** no Dokploy (api já tem as fontes; o front
+  antigo ainda desenha os cards).

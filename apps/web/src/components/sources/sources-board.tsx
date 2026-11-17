@@ -81,10 +81,10 @@ export function SourcesBoard() {
     );
   }
 
-  // Parceiros (teca/barbosa/p12) não ganham card próprio — escolhe a loja
-  // no dropdown da ingestão do Shopcar. Continuam como fonte no banco/fila.
+  // Parceiros (teca/barbosa/p12): sem card e sem linha na tabela — a loja
+  // escolhe-se só no dropdown da ingestão do Shopcar.
   const visibleSources = sources.filter((s) => !isShopcarPartnerSource(s.source));
-  const sourcesWithRuns = sources.filter((s) => s.lastRun);
+  const sourcesWithRuns = visibleSources.filter((s) => s.lastRun);
   const master = isMaster(operator);
 
   return (
