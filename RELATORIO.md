@@ -1,10 +1,7 @@
-# RELATORIO — FIPE só pela placa
+# RELATORIO — nav fixa do consórcio + deploy
 
 ## Feito
-- Removido cascade manual (marca → modelo → ano).
-- FIPE apenas após Consultar veículo + escolha entre candidatos.
-- Trocar placa limpa a FIPE selecionada.
-- Commit local — sem push/deploy.
-
-## Pendente de decisão sua
-- Pedir deploy quando quiser.
+- Barra sticky: Oferecimentos | Vitrine | Cartas + Novo.
+- Layout `/consorcio` — abas não somem ao navegar.
+- Removidos botões soltos de cada tela.
+- Push/deploy dos commits pendentes (termos, FIPE placa, nav).

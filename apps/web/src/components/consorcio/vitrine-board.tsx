@@ -1,7 +1,6 @@
 "use client";
 
 import * as React from "react";
-import Link from "next/link";
 import { Loader2, Store } from "lucide-react";
 
 import type { ConsorcioOffer } from "@veiculo/types";
@@ -83,16 +82,9 @@ export function VitrineBoard() {
 
   return (
     <div className="space-y-4 p-4 sm:p-6">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h2 className="text-lg font-semibold text-navy">Vitrine do lojista</h2>
-          <p className="text-sm text-muted-foreground">
-            Veículos liberados para proposta.
-          </p>
-        </div>
-        <Button asChild variant="outline" size="sm">
-          <Link href="/consorcio/oferecimentos">Oferecimentos</Link>
-        </Button>
+      <div>
+        <h2 className="text-lg font-semibold text-navy">Vitrine do lojista</h2>
+        <p className="text-sm text-muted-foreground">Veículos liberados para proposta.</p>
       </div>
 
       {msg && <p className="text-sm text-navy">{msg}</p>}

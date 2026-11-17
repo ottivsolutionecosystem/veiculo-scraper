@@ -2,11 +2,10 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { Handshake, Loader2, Plus } from "lucide-react";
+import { Handshake, Loader2 } from "lucide-react";
 
 import type { ConsorcioOffer } from "@veiculo/types";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { EmptyState } from "@/components/shared/empty-state";
 import { ApiError } from "@/lib/api";
@@ -45,26 +44,11 @@ export function OffersBoard() {
 
   return (
     <div className="space-y-4 p-4 sm:p-6">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h2 className="text-lg font-semibold tracking-tight text-navy">Oferecimentos</h2>
-          <p className="text-sm text-muted-foreground">
-            Crie o link e mande pro cliente completar a avaliação (placa, FIPE, fotos, lance).
-          </p>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <Button asChild variant="outline" size="sm">
-            <Link href="/consorcio/vitrine">Vitrine do lojista</Link>
-          </Button>
-          <Button asChild variant="outline" size="sm">
-            <Link href="/consorcio/cartas">Cartas</Link>
-          </Button>
-          <Button asChild size="sm">
-            <Link href="/consorcio/oferecimentos/novo">
-              <Plus className="h-4 w-4" /> Novo
-            </Link>
-          </Button>
-        </div>
+      <div>
+        <h2 className="text-lg font-semibold tracking-tight text-navy">Oferecimentos</h2>
+        <p className="text-sm text-muted-foreground">
+          Crie o link e mande pro cliente completar a avaliação (placa, FIPE, fotos, lance).
+        </p>
       </div>
 
       {error && <p className="text-sm text-destructive">{error}</p>}

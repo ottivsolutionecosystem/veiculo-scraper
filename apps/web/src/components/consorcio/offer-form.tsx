@@ -1,12 +1,10 @@
 "use client";
 
 import * as React from "react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 
 import type { ConsorcioOffer } from "@veiculo/types";
 import { OfferEditor } from "@/components/consorcio/offer-editor";
-import { Button } from "@/components/ui/button";
 import { ApiError } from "@/lib/api";
 import { listConsorcioOffer, patchConsorcioOffer } from "@/lib/consorcio/api";
 
@@ -46,21 +44,11 @@ export function OfferForm({ initial }: { initial: ConsorcioOffer }) {
 
   return (
     <div className="mx-auto max-w-3xl space-y-4 p-4 sm:p-6">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <div>
-          <h2 className="text-lg font-semibold text-navy">Oferecimento</h2>
-          <p className="text-sm text-muted-foreground">
-            Preencha aqui ou mande o link pro cliente fazer a avaliação completa.
-          </p>
-        </div>
-        <div className="flex gap-2">
-          <Button asChild variant="outline" size="sm">
-            <Link href="/consorcio/vitrine">Vitrine</Link>
-          </Button>
-          <Button asChild variant="outline" size="sm">
-            <Link href="/consorcio/oferecimentos">Voltar</Link>
-          </Button>
-        </div>
+      <div>
+        <h2 className="text-lg font-semibold text-navy">Oferecimento</h2>
+        <p className="text-sm text-muted-foreground">
+          Preencha aqui ou mande o link pro cliente fazer a avaliação completa.
+        </p>
       </div>
 
       <OfferEditor
