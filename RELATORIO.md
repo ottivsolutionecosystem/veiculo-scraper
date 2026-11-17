@@ -1,15 +1,15 @@
-# RELATORIO — fontes parceiras Shopcar
+# RELATORIO — dropdown lojista na ingestão
 
 ## Feito
-- Fontes `teca`, `barbosa`, `p12` no banco (migration 0026) e no coletor.
-- Mesmo adapter Shopcar; anúncios gravados com a fonte do parceiro.
-- Painel Fontes: card + ingestão (link da vitrine + de/até página).
-- Sem coleta automática GET nos parceiros (só shopcar marketplace).
-- Loop do coletor drena ingestão das 4 fontes da família Shopcar.
+- No painel de ingestão do card Shopcar: dropdown
+  Shopcar (mercado) / Teca / Barbosa / P12.
+- A captura grava na fonte escolhida (mesmo HTML Shopcar).
+- Cards dos parceiros apontam para esse dropdown.
 
 ## Decidido
-- Parceiro = fonte própria no dropdown (não subfiltro do shopcar).
-- URL da vitrine é apontada pelo operador — não inventamos id de loja.
+- Um único painel de captura (no Shopcar) + destino no dropdown —
+  evita três formulários iguais.
 
 ## Pendente de decisão sua
-- Nenhuma.
+- Redeploy no Dokploy (api + web + collector): produção ainda sem
+  `teca`/`barbosa`/`p12` no `/api/sources`.

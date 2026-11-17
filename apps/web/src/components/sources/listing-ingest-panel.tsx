@@ -6,6 +6,7 @@ import { AlertTriangle, Loader2, Play, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ApiError, enqueueListingIngest, enqueueListingUrlQueue, getListingIngest } from "@/lib/api";
 import type { ListingIngestItem } from "@/lib/api-types";
 import { formatDateTime } from "@/lib/format";
@@ -17,7 +18,12 @@ import {
   validateListingHtmlChunk,
 } from "@/lib/listing-ingest";
 import { sourceLabel } from "@/lib/labels";
-import { isShopcarPartnerSource } from "@/lib/shopcar-family";
+import {
+  isShopcarPartnerSource,
+  SHOPCAR_FAMILY_SOURCES,
+  SHOPCAR_MARKET_SOURCE,
+  type ShopcarFamilySource,
+} from "@/lib/shopcar-family";
 
 const MAX_PAGES = 10;
 const STALE_MS = 90_000;
@@ -26,12 +32,17 @@ const POLL_MS = 3000;
 const DEFAULT_MARKET_BASE =
   "https://www.shopcar.com.br/busca.php?tipo=1&tipoanuncio=2&pagina=1";
 
-/** Rota Next (+ rewrite .user.js) — não depende de arquivo em /public no standalone. */
 const USERSCRIPT_HREF = "/capturar-shopcar.user.js";
 
+function asFamilySource(source: string): ShopcarFamilySource {
+  return (SHOPCAR_FAMILY_SOURCES as readonly string[]).includes(source)
+    ? (source as ShopcarFamilySource)
+    : SHOPCAR_MARKET_SOURCE;
+}
+
 /**
- * Captura automática: userscript (instala 1×) + um botão que percorre as páginas
- * no browser do usuário (Cloudflare). Colar HTML continua como fallback.
+ * Captura no browser do usuário (Cloudflare). Dropdown escolhe se grava no
+ * marketplace Shopcar ou na fonte do lojista parceiro (teca/barbosa/p12).
  */
 export function ListingIngestPanel({
   source,
@@ -42,6 +53,9 @@ export function ListingIngestPanel({
   pendingCount?: number;
   onRefresh?: () => void | Promise<unknown>;
 }) {
+  const [targetSource, setTargetSource] = React.useState<ShopcarFamilySource>(() => asFamilySource(source));
+  const partner = isShopcarPartnerSource(targetSource);
+
   const [showHtml, setShowHtml] = React.useState(false);
   const [html, setHtml] = React.useState("");
   const [pageFrom, setPageFrom] = React.useState("1");
@@ -52,19 +66,33 @@ export function ListingIngestPanel({
   const [now, setNow] = React.useState(() => Date.now());
   const [scriptOk, setScriptOk] = React.useState(false);
 
-  const partner = isShopcarPartnerSource(source);
   const [baseUrl, setBaseUrl] = React.useState(partner ? "" : DEFAULT_MARKET_BASE);
   const [rangeFrom, setRangeFrom] = React.useState("1");
   const [rangeTo, setRangeTo] = React.useState(partner ? "3" : "10");
   const [pastedLinks, setPastedLinks] = React.useState("");
 
+  React.useEffect(() => {
+    setTargetSource(asFamilySource(source));
+  }, [source]);
+
+  function onSelectTarget(next: string) {
+    const family = asFamilySource(next);
+    setTargetSource(family);
+    setError(null);
+    setMessage(null);
+    const nextPartner = isShopcarPartnerSource(family);
+    setBaseUrl(nextPartner ? "" : DEFAULT_MARKET_BASE);
+    setRangeTo(nextPartner ? "3" : "10");
+    setPastedLinks("");
+  }
+
   const reloadRecent = React.useCallback(() => {
-    return getListingIngest(source)
+    return getListingIngest(targetSource)
       .then((res) => setRecent(res.items.slice(0, 8)))
       .catch(() => {
         /* silencioso */
       });
-  }, [source]);
+  }, [targetSource]);
 
   React.useEffect(() => {
     reloadRecent();
@@ -91,6 +119,9 @@ export function ListingIngestPanel({
       clearInterval(poll);
     };
   }, [waiting, reloadRecent, onRefresh]);
+
+  const pendingForTarget = recent.filter((item) => !item.processedAt).length;
+  const displayPending = targetSource === source ? pendingCount : pendingForTarget;
 
   const staleWaiting = recent.some((item) => {
     if (item.processedAt || item.startedAt) return false;
@@ -128,13 +159,13 @@ export function ListingIngestPanel({
         return;
       }
       setBusy(true);
-      const queued = await enqueueListingUrlQueue(source, urls);
+      const queued = await enqueueListingUrlQueue(targetSource, urls);
       localStorage.setItem(
         "ottiv-capture-arm",
         JSON.stringify({
           token,
           api: window.location.origin,
-          source,
+          source: targetSource,
           active: true,
           armedAt: Date.now(),
         }),
@@ -150,7 +181,7 @@ export function ListingIngestPanel({
         return;
       }
       setMessage(
-        `${queued.total} páginas — abriu a pág. ${first.page}. O capturador envia cada HTML e avança sozinho. Ao terminar o intervalo, anúncios que não apareceram saem da fila (fora do ar). Deixe a aba do Shopcar aberta.`,
+        `${queued.total} páginas → ${sourceLabel(targetSource)}. Abriu a pág. ${first.page}. Deixe a aba do Shopcar aberta.`,
       );
       await reloadRecent();
       await onRefresh?.();
@@ -185,11 +216,11 @@ export function ListingIngestPanel({
     setBusy(true);
     try {
       const res = await enqueueListingIngest(
-        source,
+        targetSource,
         chunks.map((doc, i) => ({ html: doc, page: start + i })),
       );
       setHtml("");
-      setMessage(`${res.queued} página(s) na fila do coletor.`);
+      setMessage(`${res.queued} página(s) na fila de ${sourceLabel(targetSource)}.`);
       await reloadRecent();
       await onRefresh?.();
     } catch (err) {
@@ -202,17 +233,30 @@ export function ListingIngestPanel({
   return (
     <div className="space-y-3 border-t border-navy/[0.06] pt-3">
       <div>
-        <p className="text-xs font-medium text-navy">
-          {partner
-            ? `Ingestão — ${sourceLabel(source)}`
-            : "Ingestão assistida (listagem)"}
-        </p>
+        <p className="text-xs font-medium text-navy">Ingestão assistida (listagem)</p>
         <p className="mt-1 text-xs text-muted-foreground">
-          {partner
-            ? "Cole o link da vitrine no Shopcar e diga de qual até qual página raspar. A captura roda no seu Chrome."
-            : "Um botão percorre as páginas no seu Chrome (passa na Cloudflare). Instale o capturador uma vez."}
+          Escolha o lojista, cole o link da vitrine e as páginas. A captura roda no seu Chrome.
         </p>
       </div>
+
+      <label className="block space-y-1">
+        <span className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+          Lojista / destino
+        </span>
+        <Select value={targetSource} onValueChange={onSelectTarget}>
+          <SelectTrigger className="h-9 min-h-9 w-full md:max-w-sm">
+            <SelectValue placeholder="Escolha o lojista" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value={SHOPCAR_MARKET_SOURCE}>Shopcar (mercado)</SelectItem>
+            {SHOPCAR_FAMILY_SOURCES.filter((s) => s !== SHOPCAR_MARKET_SOURCE).map((s) => (
+              <SelectItem key={s} value={s}>
+                {sourceLabel(s)}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </label>
 
       {!scriptOk && (
         <div className="space-y-2 rounded-md border border-amber-500/40 bg-amber-500/5 p-2 text-xs">
@@ -305,11 +349,13 @@ export function ListingIngestPanel({
         onClick={() => void startAutomaticCapture()}
       >
         {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Play className="h-4 w-4" />}
-        Iniciar captura automática
+        Iniciar captura — {sourceLabel(targetSource)}
       </Button>
 
-      {pendingCount > 0 && !staleWaiting && (
-        <p className="text-xs text-amber-700">{pendingCount} página(s) aguardando o coletor.</p>
+      {displayPending > 0 && !staleWaiting && (
+        <p className="text-xs text-amber-700">
+          {displayPending} página(s) aguardando o coletor ({sourceLabel(targetSource)}).
+        </p>
       )}
       {staleWaiting && (
         <div className="space-y-1 rounded-md border border-destructive/40 bg-destructive/5 p-2">

@@ -17,7 +17,7 @@ import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@
 import { SourceToggle } from "@/components/sources/source-toggle";
 import { RunScrapeButton } from "@/components/sources/run-scrape-button";
 import { ListingIngestPanel } from "@/components/sources/listing-ingest-panel";
-import { isShopcarFamilySource, isShopcarPartnerSource } from "@/lib/shopcar-family";
+import { isShopcarPartnerSource, SHOPCAR_MARKET_SOURCE } from "@/lib/shopcar-family";
 import { cn } from "@/lib/utils";
 
 /** OLX/Webmotors: sem toggle nem coleta pela UI. */
@@ -190,12 +190,19 @@ export function SourcesBoard() {
                       ingestOnly={isShopcarPartnerSource(source.source)}
                     />
                   </div>
-                  {isShopcarFamilySource(source.source) && (
+                  {source.source === SHOPCAR_MARKET_SOURCE && (
                     <ListingIngestPanel
                       source={source.source}
                       pendingCount={source.pendingListingIngest ?? 0}
                       onRefresh={reload}
                     />
+                  )}
+                  {isShopcarPartnerSource(source.source) && (
+                    <p className="border-t border-navy/[0.06] pt-3 text-xs text-muted-foreground">
+                      Para raspar a vitrine, use a ingestão no card <span className="font-medium text-navy">Shopcar</span>{" "}
+                      e escolha <span className="font-medium text-navy">{sourceLabel(source.source)}</span> no
+                      dropdown Lojista.
+                    </p>
                   )}
                 </CardContent>
               </Card>
