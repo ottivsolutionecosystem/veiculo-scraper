@@ -1,12 +1,12 @@
-# RELATORIO — scroll do link público
+# RELATORIO — pergunta explícita de avarias
 
 ## Feito
-- Shell `/o/:token` vira o container de scroll (`h-dvh` + `overflow-y-auto`).
-- `html/body` com `overflow: hidden` só nessa rota — evita travar no mobile.
-- Padding extra no formulário para não ficar atrás do CTA fixo.
+- Bloco de avarias com pergunta clara: tem batida/arranhão/pintura?
+- Sim → pede foto de cada local; Não → declara limpo.
+- Destaque visual pra não passar batido.
 
 ## Decidido
-- Scroll no shell, não no documento (padrão do painel).
+- Sem campo novo no banco: resposta na UI; fotos de avaria continuam opcionais.
 
 ## Pendente de decisão sua
-- Nenhuma.
+- Exigir resposta Sim/Não (ou foto) pra liberar o envio?

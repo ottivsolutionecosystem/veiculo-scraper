@@ -266,7 +266,7 @@ export function OfferEditor({
       <Section
         publicMode={publicMode}
         title="Fotos do veículo"
-        hint="Frente, traseira, laterais, painel e velocímetro ligado. Avarias à parte (até 15)."
+        hint="Obrigatórias: frente, traseira, laterais, painel e velocímetro ligado. Em seguida, diga se há batida, arranhão ou detalhe de pintura."
       >
         {mode === "internal" && publicUrl && (
           <div className="mb-3 flex flex-wrap items-center gap-2 rounded-xl border border-dashed border-navy/15 bg-navy/[0.02] px-3 py-2 text-xs">
