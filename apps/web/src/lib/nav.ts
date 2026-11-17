@@ -9,6 +9,7 @@ import {
   ScrollText,
   Users,
   LayoutDashboard,
+  Handshake,
 } from "lucide-react";
 
 export interface NavItem {
@@ -32,6 +33,12 @@ export const NAV_GROUPS: NavGroup[] = [
       { href: "/", label: "Fila de trabalho", shortLabel: "Fila", icon: Flame },
       { href: "/solicitacoes", label: "Kanban", shortLabel: "Kanban", icon: Columns3 },
       { href: "/busca", label: "Veículos consignados", shortLabel: "Estoque", icon: Search },
+      {
+        href: "/consorcio/oferecimentos",
+        label: "Consórcio",
+        shortLabel: "Consórcio",
+        icon: Handshake,
+      },
     ],
   },
   {

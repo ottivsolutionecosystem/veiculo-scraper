@@ -535,3 +535,97 @@ export interface OpsOverview {
   collection: OpsCollection;
 }
 
+
+// ---------------------------------------------------------------------------
+// Consórcio — oferecimento de veículo ao lojista (vistoria remota + FIPE)
+// ---------------------------------------------------------------------------
+
+export type ConsorcioOfferStatus =
+  | "draft"
+  | "awaiting_photos"
+  | "ready"
+  | "listed"
+  | "proposed"
+  | "closed";
+
+export type ConsorcioRequiredPhotoSlot =
+  | "front"
+  | "rear"
+  | "side_right"
+  | "side_left"
+  | "dashboard"
+  | "odometer";
+
+export type TireCondition = "good" | "fair" | "poor" | "unknown";
+
+export interface ConsorcioTireReport {
+  frontLeft: TireCondition;
+  frontRight: TireCondition;
+  rearLeft: TireCondition;
+  rearRight: TireCondition;
+  notes: string | null;
+}
+
+export interface ConsorcioPhoto {
+  id: string;
+  slot: ConsorcioRequiredPhotoSlot | "damage";
+  /** data URL ou URL remota — v1 mock usa data URL local */
+  url: string;
+  caption: string | null;
+  createdAt: string;
+}
+
+export interface ConsorcioFipeSelection {
+  code: string;
+  brand: string;
+  model: string;
+  modelYear: number;
+  fuel: string;
+  priceCents: number;
+  referenceMonth: string;
+  vehicleType: "carros" | "motos" | "caminhoes";
+}
+
+export interface ConsorcioDealerProposal {
+  id: string;
+  dealerName: string;
+  amountCents: number;
+  notes: string | null;
+  createdAt: string;
+}
+
+export interface ConsorcioOffer {
+  id: string;
+  publicToken: string;
+  status: ConsorcioOfferStatus;
+  plate: string;
+  brand: string | null;
+  model: string | null;
+  modelYear: number | null;
+  color: string | null;
+  km: number | null;
+  fipe: ConsorcioFipeSelection | null;
+  /** Lance (centavos) — o que o dono precisa no consórcio */
+  bidCents: number | null;
+  tires: ConsorcioTireReport;
+  photos: ConsorcioPhoto[];
+  ownerName: string | null;
+  ownerPhone: string | null;
+  notes: string | null;
+  createdBy: string | null;
+  createdAt: string;
+  updatedAt: string;
+  listedAt: string | null;
+  proposals: ConsorcioDealerProposal[];
+}
+
+export interface ContemplatedLetter {
+  id: string;
+  externalId: string;
+  administrator: string;
+  groupCode: string | null;
+  creditCents: number;
+  installmentCents: number | null;
+  status: string;
+  syncedAt: string | null;
+}

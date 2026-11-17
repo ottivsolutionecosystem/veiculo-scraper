@@ -27,10 +27,12 @@ cliente interessado — organiza a vinda do veículo até a loja.
 **Dentro**: coleta multi-fonte; normalização; dedupe; match FIPE; histórico de
 preço; score de oportunidade; fila de trabalho; discador; cadastro de clientes
 compradores e seus interesses; casamento automático carro × interesse;
-solicitação de veículo na loja; administração completa; export e webhooks.
+solicitação de veículo na loja; módulo de consórcio (oferecimento de veículo ao
+lojista com vistoria remota); administração completa; export e webhooks.
 
 **Fora (v1)**: app mobile nativo; billing multi-tenant; precificação de venda ao
-consumidor final; contrato e financeiro.
+consumidor final; contrato e financeiro; sync de cartas contempladas (API
+pendente).
 
 ## 4. Acesso às fontes
 
@@ -229,6 +231,22 @@ proposta_feita → fechado | recusado | nao_compareceu`
 - `nao_compareceu` devolve o veículo à fila com etiqueta e cooldown.
 - Cada transição emite evento no webhook de saída (seção 13).
 
+## 11b. Consórcio — oferecimento ao lojista
+
+Fluxo paralelo à consignação de classificados. **Não amarra carta** na v1.
+
+1. Consignador cria **oferecimento** (placa, FIPE, lance, pneus, fotos).
+2. Link público `/o/:token` permite o dono do carro enviar as fotos.
+3. Fotos obrigatórias: frente, traseira, lateral D/E, painel, velocímetro
+   (carro ligado, km visível). Avarias: até 15 fotos.
+4. FIPE via consulta pública (BrasilAPI marcas + cascade Parallelum / mesma
+   tabela FIPE). Se houver mais de um ano/combustível, o consignador escolhe.
+5. Campo **lance** = quanto a pessoa precisa.
+6. Ao completar, libera na **vitrine do lojista**; lojista registra proposta.
+7. **Cartas contempladas**: tela reservada; sync via API externa ainda pendente.
+
+Persistência v1: mock em `localStorage` no web até migrations/API (fase seguinte).
+
 ## 12. Contato e discador
 
 - Telefone mascarado por padrão; "revelar" gera auditoria.
@@ -286,6 +304,12 @@ ou busca.
 10. **Ajustes** — pesos, faixas, motivos e gatilhos de descarte, cadência, curva
     de km, templates, horários, unidades, webhooks.
 11. **Auditoria** — quem revelou contato, quem descartou, quem mudou peso.
+12. **Consórcio / oferecimentos** — placa, cascade FIPE (seleção se houver mais
+    de um ano/combustível), lance, estado dos pneus, 6 fotos obrigatórias + até
+    15 de avaria; link público de upload; liberação na vitrine do lojista com
+    proposta. Cartas contempladas: tela placeholder até API externa.
+13. **Vitrine do lojista** — veículos liberados + registro de proposta.
+14. **Link público `/o/:token`** — só envio de fotos (fora do login).
 
 Todas com estado vazio, loading (skeleton) e erro.
 
