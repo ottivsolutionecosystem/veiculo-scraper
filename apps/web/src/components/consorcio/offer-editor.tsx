@@ -147,7 +147,7 @@ export function OfferEditor({
     } catch (err: unknown) {
       setPlateCandidates(null);
       if (err instanceof ApiError && /não configurada/i.test(err.message)) {
-        setPlateLookupError("Consulta por placa indisponível. Escolha a FIPE manualmente abaixo.");
+        setPlateLookupError("Consulta por placa indisponível no momento. Tente de novo em instantes.");
         return;
       }
       setPlateLookupError(
@@ -279,8 +279,18 @@ export function OfferEditor({
                   setPlateCandidates(null);
                   setPlateLookupError(null);
                   setPlateColor(null);
-                  onChange({ ...offer, plate });
-                  void persist({ plate });
+                  const cleared =
+                    offer.fipe || offer.brand || offer.model || offer.modelYear
+                      ? {
+                          plate,
+                          fipe: null,
+                          brand: null,
+                          model: null,
+                          modelYear: null,
+                        }
+                      : { plate };
+                  onChange({ ...offer, ...cleared });
+                  void persist(cleared);
                 }}
                 placeholder="ABC1D23"
                 className="font-mono uppercase tracking-wider sm:flex-1"
@@ -333,13 +343,14 @@ export function OfferEditor({
       <Section
         publicMode={publicMode}
         title="Versão FIPE"
-        hint="Depois de consultar a placa, escolha a versão correta. Se a consulta falhar, dá para marcar marca, modelo e ano."
+        hint="Só pela placa: consulte o veículo e escolha a versão que bate com o documento."
       >
         <FipeCascade
           value={offer.fipe}
           plateCandidates={plateCandidates}
           plateLookupBusy={plateLookupBusy}
           plateLookupError={plateLookupError}
+          hasValidPlate={isValidPlate(offer.plate)}
           onChange={(fipe) => {
             const patch = {
               fipe,
