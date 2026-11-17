@@ -14,14 +14,21 @@ import {
   listFipeYears,
   type FipeOption,
   type FipeVehicleType,
+  type PlateFipeCandidate,
 } from "@/lib/consorcio/fipe-client";
 
 export function FipeCascade({
   value,
   onChange,
+  plateCandidates = null,
+  plateLookupBusy = false,
+  plateLookupError = null,
 }: {
   value: ConsorcioFipeSelection | null;
   onChange: (next: ConsorcioFipeSelection | null) => void;
+  plateCandidates?: PlateFipeCandidate[] | null;
+  plateLookupBusy?: boolean;
+  plateLookupError?: string | null;
 }) {
   const [type, setType] = React.useState<FipeVehicleType>(value?.vehicleType ?? "carros");
   const [brands, setBrands] = React.useState<FipeOption[]>([]);
@@ -32,8 +39,12 @@ export function FipeCascade({
   const [year, setYear] = React.useState("");
   const [busy, setBusy] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
+  const [manual, setManual] = React.useState(false);
+
+  const fromPlate = Boolean(plateCandidates && plateCandidates.length > 0);
 
   React.useEffect(() => {
+    if (fromPlate && !manual) return;
     let cancelled = false;
     setBusy(true);
     setError(null);
@@ -50,7 +61,7 @@ export function FipeCascade({
     return () => {
       cancelled = true;
     };
-  }, [type]);
+  }, [type, fromPlate, manual]);
 
   async function onBrand(code: string) {
     setBrand(code);
@@ -99,75 +110,123 @@ export function FipeCascade({
     }
   }
 
+  function pickCandidate(code: string) {
+    const found = plateCandidates?.find((c) => c.code === code);
+    if (!found) return;
+    const { principal: _p, ...fipe } = found;
+    onChange(fipe);
+  }
+
   return (
     <div className="space-y-3">
-      <div className="grid gap-3 sm:grid-cols-2">
-        <Field label="Tipo">
-          <Select
-            value={type}
-            onValueChange={(v) => {
-              setType(v as FipeVehicleType);
-              setBrand("");
-              setModel("");
-              setYear("");
-              setModels([]);
-              setYears([]);
-              onChange(null);
-            }}
-          >
+      {plateLookupBusy ? (
+        <p className="flex items-center gap-2 text-xs text-muted-foreground">
+          <Loader2 className="h-3.5 w-3.5 animate-spin" /> Consultando FIPE pela placa…
+        </p>
+      ) : null}
+      {plateLookupError ? <p className="text-xs text-destructive">{plateLookupError}</p> : null}
+
+      {fromPlate ? (
+        <div className="space-y-1.5">
+          <Label>Versão FIPE pela placa</Label>
+          <Select value={value?.code || undefined} onValueChange={pickCandidate}>
             <SelectTrigger>
-              <SelectValue />
+              <SelectValue placeholder="Escolha a versão que bate com o CRLV" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="carros">Carro</SelectItem>
-              <SelectItem value="motos">Moto</SelectItem>
-              <SelectItem value="caminhoes">Caminhão</SelectItem>
-            </SelectContent>
-          </Select>
-        </Field>
-        <Field label="Marca">
-          <Select value={brand || undefined} onValueChange={onBrand} disabled={!brands.length}>
-            <SelectTrigger>
-              <SelectValue placeholder="Selecione" />
-            </SelectTrigger>
-            <SelectContent>
-              {brands.map((b) => (
-                <SelectItem key={b.code} value={b.code}>
-                  {b.name}
+              {plateCandidates!.map((c) => (
+                <SelectItem key={c.code} value={c.code}>
+                  {c.principal ? "★ " : ""}
+                  {c.model} · {c.modelYear} · {formatCents(c.priceCents)}
                 </SelectItem>
               ))}
             </SelectContent>
           </Select>
-        </Field>
-        <Field label="Modelo">
-          <Select value={model || undefined} onValueChange={onModel} disabled={!models.length}>
-            <SelectTrigger>
-              <SelectValue placeholder="Selecione" />
-            </SelectTrigger>
-            <SelectContent>
-              {models.map((m) => (
-                <SelectItem key={m.code} value={m.code}>
-                  {m.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </Field>
-        <Field label="Ano / combustível (FIPE)">
-          <Select value={year || undefined} onValueChange={onYear} disabled={!years.length}>
-            <SelectTrigger>
-              <SelectValue placeholder="Se houver mais de um, escolha o certo" />
-            </SelectTrigger>
-            <SelectContent>
-              {years.map((y) => (
-                <SelectItem key={y.code} value={y.code}>
-                  {y.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </Field>
-      </div>
+          <p className="text-xs text-muted-foreground">
+            Se houver mais de uma versão, confira no documento do veículo.
+          </p>
+          {!manual ? (
+            <button
+              type="button"
+              className="text-xs font-medium text-primary underline-offset-2 hover:underline"
+              onClick={() => setManual(true)}
+            >
+              Escolher manualmente (marca → modelo → ano)
+            </button>
+          ) : null}
+        </div>
+      ) : null}
+
+      {(!fromPlate || manual) && (
+        <div className="grid gap-3 sm:grid-cols-2">
+          <Field label="Tipo">
+            <Select
+              value={type}
+              onValueChange={(v) => {
+                setType(v as FipeVehicleType);
+                setBrand("");
+                setModel("");
+                setYear("");
+                setModels([]);
+                setYears([]);
+                onChange(null);
+              }}
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="carros">Carro</SelectItem>
+                <SelectItem value="motos">Moto</SelectItem>
+                <SelectItem value="caminhoes">Caminhão</SelectItem>
+              </SelectContent>
+            </Select>
+          </Field>
+          <Field label="Marca">
+            <Select value={brand || undefined} onValueChange={onBrand} disabled={!brands.length}>
+              <SelectTrigger>
+                <SelectValue placeholder="Selecione" />
+              </SelectTrigger>
+              <SelectContent>
+                {brands.map((b) => (
+                  <SelectItem key={b.code} value={b.code}>
+                    {b.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </Field>
+          <Field label="Modelo">
+            <Select value={model || undefined} onValueChange={onModel} disabled={!models.length}>
+              <SelectTrigger>
+                <SelectValue placeholder="Selecione" />
+              </SelectTrigger>
+              <SelectContent>
+                {models.map((m) => (
+                  <SelectItem key={m.code} value={m.code}>
+                    {m.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </Field>
+          <Field label="Ano / combustível (FIPE)">
+            <Select value={year || undefined} onValueChange={onYear} disabled={!years.length}>
+              <SelectTrigger>
+                <SelectValue placeholder="Se houver mais de um, escolha o certo" />
+              </SelectTrigger>
+              <SelectContent>
+                {years.map((y) => (
+                  <SelectItem key={y.code} value={y.code}>
+                    {y.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </Field>
+        </div>
+      )}
+
       {busy && (
         <p className="flex items-center gap-2 text-xs text-muted-foreground">
           <Loader2 className="h-3.5 w-3.5 animate-spin" /> Consultando FIPE…

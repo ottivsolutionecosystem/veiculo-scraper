@@ -28,4 +28,8 @@ export const env = {
   /** Vazio = fallback `tel:`. Nunca logar. */
   wavoipDeviceToken: process.env.WAVOIP_DEVICE_TOKEN ?? "",
   wavoipWebhookSecret: process.env.WAVOIP_WEBHOOK_SECRET ?? "",
+  /** Token Bearer APIBrasil (consulta FIPE por placa). Vazio = desligado. Nunca logar. */
+  apiBrasilToken: process.env.APIBRASIL_TOKEN ?? "",
+  /** true = body homolog (sem cobrança). Só use em homologação. */
+  apiBrasilHomolog: process.env.APIBRASIL_HOMOLOG === "true",
 };

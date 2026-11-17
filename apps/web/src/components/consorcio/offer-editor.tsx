@@ -12,7 +12,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { ApiError } from "@/lib/api";
 import { formatCents } from "@/lib/format";
+import { lookupFipeByPlate, type PlateFipeCandidate } from "@/lib/consorcio/fipe-client";
 import { canListOffer, missingRequiredPhotos } from "@/lib/consorcio/offer-rules";
 import { formatPlate, isValidPlate, normalizePlate } from "@/lib/consorcio/plate";
 import { REQUIRED_PHOTO_LABEL } from "@/lib/consorcio/labels";
@@ -93,6 +95,10 @@ export function OfferEditor({
   );
   const [copied, setCopied] = React.useState(false);
   const [msg, setMsg] = React.useState<string | null>(null);
+  const [plateCandidates, setPlateCandidates] = React.useState<PlateFipeCandidate[] | null>(null);
+  const [plateLookupBusy, setPlateLookupBusy] = React.useState(false);
+  const [plateLookupError, setPlateLookupError] = React.useState<string | null>(null);
+  const lastLookedUpPlate = React.useRef<string | null>(null);
 
   React.useEffect(() => {
     setBidText(offer.bidCents !== null ? String(Math.round(offer.bidCents / 100)) : "");
@@ -170,6 +176,65 @@ export function OfferEditor({
   const readOnlyListed =
     offer.status === "listed" || offer.status === "proposed" || offer.status === "closed";
 
+  React.useEffect(() => {
+    if (!isValidPlate(offer.plate) || (readOnlyListed && publicMode)) {
+      if (!isValidPlate(offer.plate)) lastLookedUpPlate.current = null;
+      setPlateCandidates(null);
+      setPlateLookupError(null);
+      setPlateLookupBusy(false);
+      return;
+    }
+    const plate = normalizePlate(offer.plate);
+    if (lastLookedUpPlate.current === plate) return;
+    // Já tinha FIPE ao abrir o formulário — não cobra de novo.
+    if (offer.fipe && lastLookedUpPlate.current === null) {
+      lastLookedUpPlate.current = plate;
+      return;
+    }
+    let cancelled = false;
+    const timer = window.setTimeout(() => {
+      setPlateLookupBusy(true);
+      setPlateLookupError(null);
+      void lookupFipeByPlate(plate)
+        .then((res) => {
+          if (cancelled) return;
+          lastLookedUpPlate.current = plate;
+          setPlateCandidates(res.candidates);
+          const principal = res.candidates.find((c) => c.principal) ?? res.candidates[0];
+          if (!principal) return;
+          const { principal: _p, ...fipe } = principal;
+          const patch: Partial<ConsorcioOffer> = {
+            fipe,
+            brand: fipe.brand,
+            model: fipe.model,
+            modelYear: fipe.modelYear,
+            color: res.color ?? offer.color,
+          };
+          onChange({ ...offer, ...patch });
+          void persist(patch);
+        })
+        .catch((err: unknown) => {
+          if (cancelled) return;
+          setPlateCandidates(null);
+          if (err instanceof ApiError && /não configurada/i.test(err.message)) {
+            setPlateLookupError(null);
+            return;
+          }
+          setPlateLookupError(
+            err instanceof Error ? err.message : "Não consultou a FIPE pela placa.",
+          );
+        })
+        .finally(() => {
+          if (!cancelled) setPlateLookupBusy(false);
+        });
+    }, 650);
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- só reage à placa válida
+  }, [offer.plate, offer.id, publicMode, readOnlyListed]);
+
   return (
     <div className={cn("space-y-4", publicMode && "pb-28")}>
       <Section
@@ -232,10 +297,13 @@ export function OfferEditor({
       <Section
         publicMode={publicMode}
         title="FIPE do veículo"
-        hint="Escolha marca, modelo e o ano/combustível que bate com o seu carro."
+        hint="Com a placa válida preenchemos sozinho. Se não bater, escolha a versão no documento."
       >
         <FipeCascade
           value={offer.fipe}
+          plateCandidates={plateCandidates}
+          plateLookupBusy={plateLookupBusy}
+          plateLookupError={plateLookupError}
           onChange={(fipe) => {
             const patch = {
               fipe,

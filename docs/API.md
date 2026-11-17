@@ -262,9 +262,15 @@ Proxy Parallelum v2 — **sem login**. Query `type=carros|motos|caminhoes`
 | GET | `/api/fipe/brands/:brand/models` |
 | GET | `/api/fipe/brands/:brand/models/:model/years` |
 | GET | `/api/fipe/brands/:brand/models/:model/years/:year` |
+| GET | `/api/fipe/by-plate/:plate` |
 
 Respostas: listas `{ items: [{ code, name }] }`; preço com `code`, `brand`,
 `model`, `modelYear`, `fuel`, `priceCents`, `referenceMonth`, `vehicleType`.
+
+`GET /api/fipe/by-plate/:plate` — FIPE via APIBrasil (`APIBRASIL_TOKEN`).
+Resposta: `{ plate, confidence, color, candidates[] }` (cada candidato =
+seleção FIPE + `principal`). Sem token → 400. Placa inválida → 400.
+Sem FIPE → 404. Não loga placa/chassi.
 
 ## 9. Fontes (`/fontes`)
 

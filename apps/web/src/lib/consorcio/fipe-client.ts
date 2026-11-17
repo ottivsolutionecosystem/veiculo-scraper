@@ -94,3 +94,19 @@ export async function fetchFipePrice(
     ),
   );
 }
+
+export interface PlateFipeCandidate extends FipePriceResult {
+  principal: boolean;
+}
+
+export interface PlateFipeLookup {
+  plate: string;
+  confidence: "alta" | "media" | "baixa";
+  color: string | null;
+  candidates: PlateFipeCandidate[];
+}
+
+/** FIPE a partir da placa (APIBrasil no servidor). */
+export async function lookupFipeByPlate(plate: string): Promise<PlateFipeLookup> {
+  return fipeFetch<PlateFipeLookup>(`/api/fipe/by-plate/${encodeURIComponent(plate)}`);
+}
