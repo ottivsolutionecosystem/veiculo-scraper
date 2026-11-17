@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { Check, Copy, Loader2, Send, Store } from "lucide-react";
+import { Check, Copy, Loader2, Search, Send, Store } from "lucide-react";
 
 import type { ConsorcioOffer } from "@veiculo/types";
 import { FipeCascade } from "@/components/consorcio/fipe-cascade";
@@ -98,7 +98,7 @@ export function OfferEditor({
   const [plateCandidates, setPlateCandidates] = React.useState<PlateFipeCandidate[] | null>(null);
   const [plateLookupBusy, setPlateLookupBusy] = React.useState(false);
   const [plateLookupError, setPlateLookupError] = React.useState<string | null>(null);
-  const lastLookedUpPlate = React.useRef<string | null>(null);
+  const [plateColor, setPlateColor] = React.useState<string | null>(null);
 
   React.useEffect(() => {
     setBidText(offer.bidCents !== null ? String(Math.round(offer.bidCents / 100)) : "");
@@ -108,6 +108,12 @@ export function OfferEditor({
     setPayoffText(offer.payoffCents !== null ? String(Math.round(offer.payoffCents / 100)) : "");
   }, [offer.id, offer.payoffCents]);
 
+  React.useEffect(() => {
+    setPlateCandidates(null);
+    setPlateLookupError(null);
+    setPlateColor(null);
+  }, [offer.id]);
+
   function setFeedback(next: string | null) {
     setMsg(next);
     onMessage?.(next);
@@ -116,6 +122,37 @@ export function OfferEditor({
   async function persist(patch: Partial<ConsorcioOffer>) {
     setFeedback(null);
     await onPersist(patch);
+  }
+
+  async function handleConsultPlate() {
+    if (!isValidPlate(offer.plate)) {
+      setPlateLookupError("Informe uma placa válida antes de consultar.");
+      return;
+    }
+    const plate = normalizePlate(offer.plate);
+    setPlateLookupBusy(true);
+    setPlateLookupError(null);
+    setPlateCandidates(null);
+    try {
+      const res = await lookupFipeByPlate(plate);
+      setPlateCandidates(res.candidates);
+      setPlateColor(res.color);
+      if (res.color && res.color !== offer.color) {
+        onChange({ ...offer, color: res.color });
+        void persist({ color: res.color });
+      }
+    } catch (err: unknown) {
+      setPlateCandidates(null);
+      if (err instanceof ApiError && /não configurada/i.test(err.message)) {
+        setPlateLookupError("Consulta por placa indisponível. Escolha a FIPE manualmente abaixo.");
+        return;
+      }
+      setPlateLookupError(
+        err instanceof Error ? err.message : "Não consultou o veículo pela placa.",
+      );
+    } finally {
+      setPlateLookupBusy(false);
+    }
   }
 
   async function copyLink() {
@@ -175,129 +212,83 @@ export function OfferEditor({
 
   const readOnlyListed =
     offer.status === "listed" || offer.status === "proposed" || offer.status === "closed";
-
-  React.useEffect(() => {
-    if (!isValidPlate(offer.plate) || (readOnlyListed && publicMode)) {
-      if (!isValidPlate(offer.plate)) lastLookedUpPlate.current = null;
-      setPlateCandidates(null);
-      setPlateLookupError(null);
-      setPlateLookupBusy(false);
-      return;
-    }
-    const plate = normalizePlate(offer.plate);
-    if (lastLookedUpPlate.current === plate) return;
-    // Já tinha FIPE ao abrir o formulário — não cobra de novo.
-    if (offer.fipe && lastLookedUpPlate.current === null) {
-      lastLookedUpPlate.current = plate;
-      return;
-    }
-    let cancelled = false;
-    const timer = window.setTimeout(() => {
-      setPlateLookupBusy(true);
-      setPlateLookupError(null);
-      void lookupFipeByPlate(plate)
-        .then((res) => {
-          if (cancelled) return;
-          lastLookedUpPlate.current = plate;
-          setPlateCandidates(res.candidates);
-          const principal = res.candidates.find((c) => c.principal) ?? res.candidates[0];
-          if (!principal) return;
-          const { principal: _p, ...fipe } = principal;
-          const patch: Partial<ConsorcioOffer> = {
-            fipe,
-            brand: fipe.brand,
-            model: fipe.model,
-            modelYear: fipe.modelYear,
-            color: res.color ?? offer.color,
-          };
-          onChange({ ...offer, ...patch });
-          void persist(patch);
-        })
-        .catch((err: unknown) => {
-          if (cancelled) return;
-          setPlateCandidates(null);
-          if (err instanceof ApiError && /não configurada/i.test(err.message)) {
-            setPlateLookupError(null);
-            return;
-          }
-          setPlateLookupError(
-            err instanceof Error ? err.message : "Não consultou a FIPE pela placa.",
-          );
-        })
-        .finally(() => {
-          if (!cancelled) setPlateLookupBusy(false);
-        });
-    }, 650);
-    return () => {
-      cancelled = true;
-      window.clearTimeout(timer);
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- só reage à placa válida
-  }, [offer.plate, offer.id, publicMode, readOnlyListed]);
+  const plateLocked = readOnlyListed && publicMode;
+  const canConsult = isValidPlate(offer.plate) && !plateLocked && !plateLookupBusy;
 
   return (
     <div className={cn("space-y-4", publicMode && "pb-28")}>
       <Section
         publicMode={publicMode}
         title="Placa e contato"
-        hint="Use a placa do documento. O km deve aparecer no velocímetro com o carro ligado."
+        hint="Digite a placa e toque em Consultar veículo. O km aparece na foto do painel com o carro ligado."
       >
-        <div className="grid gap-3 sm:grid-cols-2">
+        <div className="space-y-3">
           <div className="space-y-1.5">
             <Label>Placa</Label>
-            <Input
-              value={formatPlate(offer.plate)}
-              disabled={readOnlyListed && publicMode}
-              onChange={(e) => {
-                const plate = normalizePlate(e.target.value);
-                onChange({ ...offer, plate });
-                void persist({ plate });
-              }}
-              placeholder="ABC1D23"
-              className="font-mono uppercase tracking-wider"
-            />
+            <div className="flex flex-col gap-2 sm:flex-row">
+              <Input
+                value={formatPlate(offer.plate)}
+                disabled={plateLocked}
+                onChange={(e) => {
+                  const plate = normalizePlate(e.target.value);
+                  setPlateCandidates(null);
+                  setPlateLookupError(null);
+                  setPlateColor(null);
+                  onChange({ ...offer, plate });
+                  void persist({ plate });
+                }}
+                placeholder="ABC1D23"
+                className="font-mono uppercase tracking-wider sm:flex-1"
+              />
+              <Button
+                type="button"
+                className="h-10 shrink-0 rounded-xl sm:min-w-[11rem]"
+                disabled={!canConsult}
+                onClick={() => void handleConsultPlate()}
+              >
+                {plateLookupBusy ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Search className="h-4 w-4" />
+                )}
+                Consultar veículo
+              </Button>
+            </div>
+            {plateColor ? (
+              <p className="text-xs text-muted-foreground">Cor na consulta: {plateColor}</p>
+            ) : null}
           </div>
-          <div className="space-y-1.5">
-            <Label>Km (do velocímetro)</Label>
-            <Input
-              type="number"
-              value={offer.km ?? ""}
-              onChange={(e) => {
-                const km = e.target.value ? Number.parseInt(e.target.value, 10) : null;
-                onChange({ ...offer, km });
-                void persist({ km });
-              }}
-            />
-          </div>
-          <div className="space-y-1.5">
-            <Label>{publicMode ? "Seu nome" : "Nome do dono"}</Label>
-            <Input
-              value={offer.ownerName ?? ""}
-              onChange={(e) => {
-                const ownerName = e.target.value || null;
-                onChange({ ...offer, ownerName });
-                void persist({ ownerName });
-              }}
-            />
-          </div>
-          <div className="space-y-1.5">
-            <Label>Telefone / WhatsApp</Label>
-            <Input
-              value={offer.ownerPhone ?? ""}
-              onChange={(e) => {
-                const ownerPhone = e.target.value || null;
-                onChange({ ...offer, ownerPhone });
-                void persist({ ownerPhone });
-              }}
-            />
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div className="space-y-1.5">
+              <Label>{publicMode ? "Seu nome" : "Nome do dono"}</Label>
+              <Input
+                value={offer.ownerName ?? ""}
+                onChange={(e) => {
+                  const ownerName = e.target.value || null;
+                  onChange({ ...offer, ownerName });
+                  void persist({ ownerName });
+                }}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Telefone / WhatsApp</Label>
+              <Input
+                value={offer.ownerPhone ?? ""}
+                onChange={(e) => {
+                  const ownerPhone = e.target.value || null;
+                  onChange({ ...offer, ownerPhone });
+                  void persist({ ownerPhone });
+                }}
+              />
+            </div>
           </div>
         </div>
       </Section>
 
       <Section
         publicMode={publicMode}
-        title="FIPE do veículo"
-        hint="Com a placa válida preenchemos sozinho. Se não bater, escolha a versão no documento."
+        title="Versão FIPE"
+        hint="Depois de consultar a placa, escolha a versão correta. Se a consulta falhar, dá para marcar marca, modelo e ano."
       >
         <FipeCascade
           value={offer.fipe}
@@ -310,6 +301,7 @@ export function OfferEditor({
               brand: fipe?.brand ?? null,
               model: fipe?.model ?? null,
               modelYear: fipe?.modelYear ?? null,
+              color: plateColor ?? offer.color,
             };
             onChange({ ...offer, ...patch });
             void persist(patch);

@@ -1,15 +1,9 @@
-# RELATORIO — FIPE por placa (APIBrasil)
+# RELATORIO — consultar placa + opções FIPE
 
 ## Feito
-- Provider `plate-lookup` + testes; env `APIBRASIL_TOKEN` / `APIBRASIL_HOMOLOG`.
-- Rota pública `GET /api/fipe/by-plate/:plate`.
-- Offer editor: debounce na placa → preenche FIPE/cor; lista candidatos;
-  cascade manual como fallback.
-- Docs API.md + `.env.example` (api / nixpacks).
+- Botão **Consultar veículo** (sem auto-consulta ao digitar).
+- Resultados FIPE em cartões clicáveis; escolha explícita da versão.
+- Removido campo de km digitável — km fica na foto do painel/velocímetro.
 
 ## Decidido
-- APIBrasil tipo `fipe` (~R$0,06/consulta) atrás da API; Parallelum segue
-  para cascade manual. Sem token = só cascade (sem erro barulhento na UI).
-
-## Pendente de decisão sua
-- Colocar `APIBRASIL_TOKEN` no Dokploy (serviço api) e redeploy.
+- Não cobra APIBrasil até o usuário pedir; menos gasto e fluxo mais claro.
