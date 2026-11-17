@@ -1,8 +1,8 @@
 const MIN_HTML_CHARS = 500;
 
-/** HTML de listagem Shopcar tem cards `/veiculos/` ou o bloco da busca. */
+/** HTML de listagem Shopcar: busca, vitrine loja.php ou cards `/veiculos/`. */
 export function looksLikeShopcarListingHtml(html: string): boolean {
-  return /buscaListagem|\/veiculos\/[^"'\s]+|busca\.php/i.test(html);
+  return /buscaListagem|\/veiculos\/[^"'\s]+|busca\.php|loja\.php/i.test(html);
 }
 
 /** Separa vários documentos HTML colados no mesmo campo (ingestão assistida). */

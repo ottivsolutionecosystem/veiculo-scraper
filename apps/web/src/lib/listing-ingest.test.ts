@@ -22,4 +22,19 @@ describe("listing-ingest URLs", () => {
     expect(range[0]?.url).toContain("pagina=1");
     expect(range[1]?.url).toContain("pagina=2");
   });
+
+  it("monta intervalo para vitrine loja.php (Barbosa)", () => {
+    const range = buildShopcarListingUrlRange(
+      "https://www.shopcar.com.br/loja.php?loja=1847",
+      1,
+      2,
+    );
+    expect(range).toHaveLength(2);
+    expect(range[0]?.url).toBe(
+      "https://www.shopcar.com.br/loja.php?loja=1847&pagina=1",
+    );
+    expect(range[1]?.url).toBe(
+      "https://www.shopcar.com.br/loja.php?loja=1847&pagina=2",
+    );
+  });
 });

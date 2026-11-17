@@ -20,6 +20,7 @@ import {
 import { sourceLabel } from "@/lib/labels";
 import {
   isShopcarPartnerSource,
+  partnerStorefrontUrl,
   SHOPCAR_FAMILY_SOURCES,
   SHOPCAR_MARKET_SOURCE,
   type ShopcarFamilySource,
@@ -66,7 +67,9 @@ export function ListingIngestPanel({
   const [now, setNow] = React.useState(() => Date.now());
   const [scriptOk, setScriptOk] = React.useState(false);
 
-  const [baseUrl, setBaseUrl] = React.useState(partner ? "" : DEFAULT_MARKET_BASE);
+  const [baseUrl, setBaseUrl] = React.useState(() =>
+    partner ? partnerStorefrontUrl(source) : DEFAULT_MARKET_BASE,
+  );
   const [rangeFrom, setRangeFrom] = React.useState("1");
   const [rangeTo, setRangeTo] = React.useState(partner ? "3" : "10");
   const [pastedLinks, setPastedLinks] = React.useState("");
@@ -81,7 +84,7 @@ export function ListingIngestPanel({
     setError(null);
     setMessage(null);
     const nextPartner = isShopcarPartnerSource(family);
-    setBaseUrl(nextPartner ? "" : DEFAULT_MARKET_BASE);
+    setBaseUrl(nextPartner ? partnerStorefrontUrl(family) : DEFAULT_MARKET_BASE);
     setRangeTo(nextPartner ? "3" : "10");
     setPastedLinks("");
   }

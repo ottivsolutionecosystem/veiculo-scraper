@@ -9,10 +9,20 @@ export const SHOPCAR_FAMILY_SOURCES = [SHOPCAR_MARKET_SOURCE, ...SHOPCAR_PARTNER
 
 export type ShopcarFamilySource = (typeof SHOPCAR_FAMILY_SOURCES)[number];
 
+/** Vitrine pública no Shopcar (loja.php) — preenchida quando conhecida. */
+export const SHOPCAR_PARTNER_STOREFRONT: Partial<Record<ShopcarPartnerSource, string>> = {
+  barbosa: "https://www.shopcar.com.br/loja.php?loja=1847",
+};
+
 export function isShopcarFamilySource(source: string): source is ShopcarFamilySource {
   return (SHOPCAR_FAMILY_SOURCES as readonly string[]).includes(source);
 }
 
 export function isShopcarPartnerSource(source: string): source is ShopcarPartnerSource {
   return (SHOPCAR_PARTNER_SOURCES as readonly string[]).includes(source);
+}
+
+export function partnerStorefrontUrl(source: string): string {
+  if (!isShopcarPartnerSource(source)) return "";
+  return SHOPCAR_PARTNER_STOREFRONT[source] ?? "";
 }
