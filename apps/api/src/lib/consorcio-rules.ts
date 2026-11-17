@@ -16,12 +16,21 @@ export function missingRequiredPhotos(offer: ConsorcioOffer): ConsorcioRequiredP
   return REQUIRED.filter((s) => !have.has(s));
 }
 
+function financeOk(offer: ConsorcioOffer): boolean {
+  if (offer.financed === false) return true;
+  if (offer.financed === true) {
+    return offer.payoffCents !== null && offer.payoffCents > 0;
+  }
+  return false;
+}
+
 export function canListOffer(offer: ConsorcioOffer): boolean {
   return (
     Boolean(offer.plate) &&
     Boolean(offer.fipe?.code) &&
     offer.bidCents !== null &&
     offer.bidCents > 0 &&
+    financeOk(offer) &&
     missingRequiredPhotos(offer).length === 0
   );
 }

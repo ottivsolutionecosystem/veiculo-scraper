@@ -26,6 +26,8 @@ function base(): ConsorcioOffer {
       vehicleType: "carros",
     },
     bidCents: 5000000,
+    financed: false,
+    payoffCents: null,
     tires: {
       frontLeft: "good",
       frontRight: "good",
@@ -52,7 +54,27 @@ describe("offer-rules", () => {
     expect(missingRequiredPhotos(o)).toHaveLength(6);
   });
 
+  it("exige quitação quando financiado", () => {
+    const o = {
+      ...base(),
+      financed: true,
+      payoffCents: null,
+      photos: (["front", "rear", "side_right", "side_left", "dashboard", "odometer"] as const).map(
+        (slot) => ({
+          id: slot,
+          slot,
+          url: "data:image/jpeg;base64,xx",
+          caption: null,
+          createdAt: new Date().toISOString(),
+        }),
+      ),
+    };
+    expect(canListOffer(o)).toBe(false);
+    expect(canListOffer({ ...o, payoffCents: 12_000_00 })).toBe(true);
+  });
+
   it("mede progresso parcial", () => {
-    expect(offerProgressPct(base())).toBe(75);
+    // placa + fipe + lance + financiamento = 4/5; fotos faltando
+    expect(offerProgressPct(base())).toBe(80);
   });
 });

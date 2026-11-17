@@ -607,6 +607,10 @@ export interface ConsorcioOffer {
   fipe: ConsorcioFipeSelection | null;
   /** Lance (centavos) — o que o dono precisa no consórcio */
   bidCents: number | null;
+  /** null = ainda não respondeu; true = financiado (exige payoffCents) */
+  financed: boolean | null;
+  /** Valor da quitação em centavos — só quando financed === true */
+  payoffCents: number | null;
   tires: ConsorcioTireReport;
   photos: ConsorcioPhoto[];
   ownerName: string | null;

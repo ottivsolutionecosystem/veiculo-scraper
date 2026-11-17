@@ -1,12 +1,12 @@
-# RELATORIO — pergunta explícita de avarias
+# RELATORIO — financiamento / quitação no oferecimento
 
 ## Feito
-- Bloco de avarias com pergunta clara: tem batida/arranhão/pintura?
-- Sim → pede foto de cada local; Não → declara limpo.
-- Destaque visual pra não passar batido.
+- Campos `financed` + `payoffCents` no domínio, migration `0028`, API e UI.
+- Sim → pede valor da quitação; Não → segue. Exigido pra enviar/listar.
+- SPEC 11b atualizado.
 
 ## Decidido
-- Sem campo novo no banco: resposta na UI; fotos de avaria continuam opcionais.
+- Quitação só quando financiado; resposta obrigatória no checklist.
 
 ## Pendente de decisão sua
-- Exigir resposta Sim/Não (ou foto) pra liberar o envio?
+- Nenhuma.

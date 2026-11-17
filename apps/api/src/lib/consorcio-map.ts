@@ -30,6 +30,9 @@ export function mapConsorcioRow(row: Record<string, unknown>): ConsorcioOffer {
     km: row.km === null || row.km === undefined ? null : Number(row.km),
     fipe: (row.fipe as ConsorcioFipeSelection | null) ?? null,
     bidCents: row.bid_cents === null || row.bid_cents === undefined ? null : Number(row.bid_cents),
+    financed: row.financed === null || row.financed === undefined ? null : Boolean(row.financed),
+    payoffCents:
+      row.payoff_cents === null || row.payoff_cents === undefined ? null : Number(row.payoff_cents),
     tires: (row.tires as ConsorcioTireReport) ?? EMPTY_TIRES,
     photos: (row.photos as ConsorcioPhoto[]) ?? [],
     ownerName: (row.owner_name as string | null) ?? null,

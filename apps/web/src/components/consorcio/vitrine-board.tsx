@@ -129,6 +129,11 @@ export function VitrineBoard() {
                 </CardHeader>
                 <CardContent className="space-y-2 text-sm">
                   <p>Lance: {formatCents(o.bidCents)}</p>
+                  <p>
+                    {o.financed
+                      ? `Quitação: ${formatCents(o.payoffCents)}`
+                      : "Sem financiamento"}
+                  </p>
                   <p>FIPE: {formatCents(o.fipe?.priceCents ?? null)}</p>
                   <p className="text-xs text-muted-foreground">{o.proposals.length} proposta(s)</p>
                   <Button type="button" size="sm" className="w-full" onClick={() => setActive(o)}>

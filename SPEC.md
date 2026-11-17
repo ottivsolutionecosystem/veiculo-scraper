@@ -243,8 +243,9 @@ Fluxo paralelo à consignação de classificados. **Não amarra carta** na v1.
 4. FIPE via consulta pública (BrasilAPI marcas + cascade Parallelum / mesma
    tabela FIPE). Se houver mais de um ano/combustível, escolhe-se o certo.
 5. Campo **lance** = quanto a pessoa precisa.
-6. Consignador libera na **vitrine do lojista**; lojista registra proposta.
-7. **Cartas contempladas**: tela reservada; sync via API externa ainda pendente.
+6. **Financiado?** Se sim, informar **valor da quitação**; se não, segue.
+7. Consignador libera na **vitrine do lojista**; lojista registra proposta.
+8. **Cartas contempladas**: tela reservada; sync via API externa ainda pendente.
 
 Persistência: tabela `consorcio_oferecimentos` + rotas `/api/consorcio/*`
 (público por token sem login).
@@ -307,9 +308,10 @@ ou busca.
     de km, templates, horários, unidades, webhooks.
 11. **Auditoria** — quem revelou contato, quem descartou, quem mudou peso.
 12. **Consórcio / oferecimentos** — placa, cascade FIPE (seleção se houver mais
-    de um ano/combustível), lance, estado dos pneus, 6 fotos obrigatórias + até
-    15 de avaria; link público de upload; liberação na vitrine do lojista com
-    proposta. Cartas contempladas: tela placeholder até API externa.
+    de um ano/combustível), lance, financiado/quitação, estado dos pneus,
+    6 fotos obrigatórias + até 15 de avaria; link público de upload; liberação
+    na vitrine do lojista com proposta. Cartas contempladas: tela placeholder
+    até API externa.
 13. **Vitrine do lojista** — veículos liberados + registro de proposta.
 14. **Link público `/o/:token`** — avaliação completa pelo cliente (fora do login).
 

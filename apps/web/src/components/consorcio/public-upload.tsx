@@ -80,7 +80,7 @@ export function PublicUpload({ token }: { token: string }) {
   async function submit() {
     if (!offer) return;
     if (!canListOffer(offer)) {
-      setFeedback("Complete placa, FIPE, lance e as 6 fotos obrigatórias.");
+      setFeedback("Complete placa, FIPE, lance, financiamento e as 6 fotos.");
       return;
     }
     const snapshot = offer;
@@ -91,6 +91,8 @@ export function PublicUpload({ token }: { token: string }) {
         plate: snapshot.plate,
         fipe: snapshot.fipe,
         bidCents: snapshot.bidCents,
+        financed: snapshot.financed,
+        payoffCents: snapshot.payoffCents,
         tires: snapshot.tires,
         photos: snapshot.photos,
         ownerName: snapshot.ownerName,

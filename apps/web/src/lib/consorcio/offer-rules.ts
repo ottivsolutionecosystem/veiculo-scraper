@@ -14,7 +14,15 @@ export function damagePhotoCount(offer: ConsorcioOffer): number {
   return offer.photos.filter((p) => p.slot === "damage").length;
 }
 
-/** Pronto pra vitrine: placa, FIPE, lance, 6 fotos obrigatórias. */
+export function financeOk(offer: ConsorcioOffer): boolean {
+  if (offer.financed === false) return true;
+  if (offer.financed === true) {
+    return offer.payoffCents !== null && offer.payoffCents > 0;
+  }
+  return false;
+}
+
+/** Pronto pra vitrine: placa, FIPE, lance, financiamento e 6 fotos. */
 export function canListOffer(offer: ConsorcioOffer): boolean {
   return (
     Boolean(offer.plate) &&
@@ -22,11 +30,12 @@ export function canListOffer(offer: ConsorcioOffer): boolean {
     Boolean(offer.fipe?.code) &&
     offer.bidCents !== null &&
     offer.bidCents > 0 &&
+    financeOk(offer) &&
     missingRequiredPhotos(offer).length === 0
   );
 }
 
-export type OfferChecklistKey = "plate" | "fipe" | "bid" | "photos";
+export type OfferChecklistKey = "plate" | "fipe" | "bid" | "finance" | "photos";
 
 export function offerChecklist(offer: ConsorcioOffer): Array<{
   key: OfferChecklistKey;
@@ -37,6 +46,7 @@ export function offerChecklist(offer: ConsorcioOffer): Array<{
     { key: "plate", label: "Placa", done: Boolean(offer.plate) && isValidPlate(offer.plate) },
     { key: "fipe", label: "FIPE", done: Boolean(offer.fipe?.code) },
     { key: "bid", label: "Lance", done: offer.bidCents !== null && offer.bidCents > 0 },
+    { key: "finance", label: "Financiamento", done: financeOk(offer) },
     { key: "photos", label: "Fotos", done: missingRequiredPhotos(offer).length === 0 },
   ];
 }

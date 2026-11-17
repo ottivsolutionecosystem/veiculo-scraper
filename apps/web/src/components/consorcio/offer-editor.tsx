@@ -88,12 +88,19 @@ export function OfferEditor({
   const [bidText, setBidText] = React.useState(
     offer.bidCents !== null ? String(Math.round(offer.bidCents / 100)) : "",
   );
+  const [payoffText, setPayoffText] = React.useState(
+    offer.payoffCents !== null ? String(Math.round(offer.payoffCents / 100)) : "",
+  );
   const [copied, setCopied] = React.useState(false);
   const [msg, setMsg] = React.useState<string | null>(null);
 
   React.useEffect(() => {
     setBidText(offer.bidCents !== null ? String(Math.round(offer.bidCents / 100)) : "");
   }, [offer.id, offer.bidCents]);
+
+  React.useEffect(() => {
+    setPayoffText(offer.payoffCents !== null ? String(Math.round(offer.payoffCents / 100)) : "");
+  }, [offer.id, offer.payoffCents]);
 
   function setFeedback(next: string | null) {
     setMsg(next);
@@ -121,6 +128,11 @@ export function OfferEditor({
       !offer.plate || !isValidPlate(offer.plate) ? "placa válida" : null,
       !offer.fipe ? "FIPE" : null,
       !offer.bidCents ? "lance" : null,
+      offer.financed === null
+        ? "dizer se está financiado"
+        : offer.financed && !offer.payoffCents
+          ? "valor da quitação"
+          : null,
       ...missingRequiredPhotos(offer).map((s) => `foto ${REQUIRED_PHOTO_LABEL[s]}`),
     ]
       .filter(Boolean)
@@ -250,6 +262,73 @@ export function OfferEditor({
               ? ` · ${(((offer.fipe.priceCents - offer.bidCents) / offer.fipe.priceCents) * 100).toFixed(1)}% vs FIPE`
               : ""}
           </p>
+        </div>
+      </Section>
+
+      <Section
+        publicMode={publicMode}
+        title="Financiamento"
+        hint="Se o carro ainda tem financiamento, informe o valor pra quitar. Se estiver quitado, marque Não."
+      >
+        <div className="space-y-3">
+          <p className="text-sm font-medium text-navy">O veículo está financiado?</p>
+          <div className="grid grid-cols-2 gap-2">
+            <Button
+              type="button"
+              variant={offer.financed === true ? "default" : "outline"}
+              className="h-11 rounded-xl"
+              onClick={() => {
+                onChange({ ...offer, financed: true });
+                void persist({ financed: true });
+              }}
+            >
+              Sim, está financiado
+            </Button>
+            <Button
+              type="button"
+              variant={offer.financed === false ? "default" : "outline"}
+              className="h-11 rounded-xl"
+              onClick={() => {
+                setPayoffText("");
+                onChange({ ...offer, financed: false, payoffCents: null });
+                void persist({ financed: false, payoffCents: null });
+              }}
+            >
+              Não, está quitado
+            </Button>
+          </div>
+
+          {offer.financed === null ? (
+            <p className="rounded-xl border border-dashed border-orange/35 bg-orange/[0.07] px-3 py-2 text-xs font-medium text-navy">
+              Responda Sim ou Não — o lojista precisa saber se há saldo a quitar.
+            </p>
+          ) : null}
+
+          {offer.financed === true ? (
+            <div className="space-y-1.5 rounded-2xl border border-coral/30 bg-coral/[0.05] p-3">
+              <Label>Valor da quitação (R$)</Label>
+              <Input
+                inputMode="numeric"
+                value={payoffText}
+                onChange={(e) => {
+                  setPayoffText(e.target.value);
+                  const payoffCents = parseMoneyToCents(e.target.value);
+                  onChange({ ...offer, financed: true, payoffCents });
+                  void persist({ financed: true, payoffCents });
+                }}
+                placeholder="18500"
+              />
+              <p className="text-xs text-muted-foreground">
+                Quanto falta pra quitar o financiamento. Gravado: {formatCents(offer.payoffCents)}
+              </p>
+            </div>
+          ) : null}
+
+          {offer.financed === false ? (
+            <p className="text-xs text-muted-foreground">
+              Declarado: veículo sem financiamento ativo.
+            </p>
+          ) : null}
         </div>
       </Section>
 

@@ -93,6 +93,13 @@ export function OffersBoard() {
                 </CardHeader>
                 <CardContent className="space-y-1 text-xs text-muted-foreground">
                   <p>Lance: {formatCents(o.bidCents)}</p>
+                  <p>
+                    {o.financed === true
+                      ? `Quitação: ${formatCents(o.payoffCents)}`
+                      : o.financed === false
+                        ? "Sem financiamento"
+                        : "Financiamento: —"}
+                  </p>
                   <p>FIPE: {formatCents(o.fipe?.priceCents ?? null)}</p>
                   <p>Atualizado {formatDateTime(o.updatedAt)}</p>
                 </CardContent>

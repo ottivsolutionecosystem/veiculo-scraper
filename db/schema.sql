@@ -113,6 +113,8 @@ CREATE TABLE IF NOT EXISTS consorcio_oferecimentos (
     km              integer,
     fipe            jsonb,
     bid_cents       bigint,
+    financed        boolean,
+    payoff_cents    bigint,
     tires           jsonb NOT NULL DEFAULT '{}'::jsonb,
     photos          jsonb NOT NULL DEFAULT '[]'::jsonb,
     owner_name      text,

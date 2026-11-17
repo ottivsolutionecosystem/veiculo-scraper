@@ -57,6 +57,8 @@ const patchSchema = z.object({
   km: z.number().int().nullable().optional(),
   fipe: fipeSchema.optional(),
   bidCents: z.number().int().nullable().optional(),
+  financed: z.boolean().nullable().optional(),
+  payoffCents: z.number().int().nonnegative().nullable().optional(),
   tires: tiresSchema.optional(),
   photos: z.array(photoSchema).max(30).optional(),
   ownerName: z.string().max(120).nullable().optional(),
@@ -91,9 +93,10 @@ async function persist(offer: ReturnType<typeof mapConsorcioRow>) {
   await pool.query(
     `UPDATE consorcio_oferecimentos SET
       status = $2, plate = $3, brand = $4, model = $5, model_year = $6, color = $7, km = $8,
-      fipe = $9::jsonb, bid_cents = $10, tires = $11::jsonb, photos = $12::jsonb,
-      owner_name = $13, owner_phone = $14, notes = $15, updated_at = now(),
-      listed_at = $16, proposals = $17::jsonb
+      fipe = $9::jsonb, bid_cents = $10, financed = $11, payoff_cents = $12,
+      tires = $13::jsonb, photos = $14::jsonb,
+      owner_name = $15, owner_phone = $16, notes = $17, updated_at = now(),
+      listed_at = $18, proposals = $19::jsonb
      WHERE id = $1`,
     [
       offer.id,
@@ -106,6 +109,8 @@ async function persist(offer: ReturnType<typeof mapConsorcioRow>) {
       offer.km,
       JSON.stringify(offer.fipe),
       offer.bidCents,
+      offer.financed,
+      offer.payoffCents,
       JSON.stringify(offer.tires),
       JSON.stringify(offer.photos),
       offer.ownerName,
@@ -132,6 +137,13 @@ function applyPatch(
     km: body.km !== undefined ? body.km : offer.km,
     fipe: body.fipe !== undefined ? body.fipe : offer.fipe,
     bidCents: body.bidCents !== undefined ? body.bidCents : offer.bidCents,
+    financed: body.financed !== undefined ? body.financed : offer.financed,
+    payoffCents:
+      body.financed === false
+        ? null
+        : body.payoffCents !== undefined
+          ? body.payoffCents
+          : offer.payoffCents,
     tires: body.tires !== undefined ? body.tires : offer.tires,
     photos: body.photos !== undefined ? body.photos : offer.photos,
     ownerName: body.ownerName !== undefined ? body.ownerName : offer.ownerName,
@@ -187,7 +199,9 @@ export async function consorcioRoutes(app: FastifyInstance) {
     const current = await loadById(id);
     if (!current) throw new NotFoundError("Oferecimento não encontrado.");
     if (!canListOffer(current)) {
-      throw new ValidationError("Complete placa, FIPE, lance e as 6 fotos obrigatórias.");
+      throw new ValidationError(
+        "Complete placa, FIPE, lance, financiamento e as 6 fotos obrigatórias.",
+      );
     }
     const next = await persist({
       ...current,
