@@ -3,20 +3,42 @@
 import * as React from "react";
 import { Camera, Trash2 } from "lucide-react";
 
-import type { ConsorcioOffer, ConsorcioRequiredPhotoSlot } from "@veiculo/types";
+import type { ConsorcioOffer, ConsorcioPhoto, ConsorcioRequiredPhotoSlot } from "@veiculo/types";
 import { Button } from "@/components/ui/button";
 import { MAX_DAMAGE_PHOTOS, REQUIRED_PHOTO_LABEL, REQUIRED_PHOTO_SLOTS } from "@/lib/consorcio/labels";
 import { fileToDataUrl } from "@/lib/consorcio/photo-file";
-import { removePhoto, upsertPhoto } from "@/lib/consorcio/store";
+
+function uid(): string {
+  return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+}
+
+function withRequiredPhoto(
+  photos: ConsorcioPhoto[],
+  slot: ConsorcioRequiredPhotoSlot,
+  url: string,
+): ConsorcioPhoto[] {
+  const row: ConsorcioPhoto = {
+    id: uid(),
+    slot,
+    url,
+    caption: null,
+    createdAt: new Date().toISOString(),
+  };
+  const i = photos.findIndex((p) => p.slot === slot);
+  if (i >= 0) {
+    const next = [...photos];
+    next[i] = row;
+    return next;
+  }
+  return [...photos, row];
+}
 
 export function PhotoSlots({
   offer,
   onChange,
-  damageOnly = false,
 }: {
   offer: ConsorcioOffer;
   onChange: (next: ConsorcioOffer) => void;
-  damageOnly?: boolean;
 }) {
   const [error, setError] = React.useState<string | null>(null);
 
@@ -24,8 +46,7 @@ export function PhotoSlots({
     setError(null);
     try {
       const url = await fileToDataUrl(file);
-      const next = upsertPhoto(offer.id, { slot, url, caption: null });
-      if (next) onChange(next);
+      onChange({ ...offer, photos: withRequiredPhoto(offer.photos, slot, url) });
     } catch {
       setError("Não deu pra ler a foto.");
     }
@@ -40,38 +61,46 @@ export function PhotoSlots({
     setError(null);
     try {
       const url = await fileToDataUrl(file);
-      const next = upsertPhoto(offer.id, { slot: "damage", url, caption: null });
-      if (next) onChange(next);
+      onChange({
+        ...offer,
+        photos: [
+          ...offer.photos,
+          {
+            id: uid(),
+            slot: "damage",
+            url,
+            caption: null,
+            createdAt: new Date().toISOString(),
+          },
+        ],
+      });
     } catch {
       setError("Não deu pra ler a foto.");
     }
   }
 
   function remove(photoId: string) {
-    const next = removePhoto(offer.id, photoId);
-    if (next) onChange(next);
+    onChange({ ...offer, photos: offer.photos.filter((p) => p.id !== photoId) });
   }
 
   const damage = offer.photos.filter((p) => p.slot === "damage");
 
   return (
     <div className="space-y-4">
-      {!damageOnly && (
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {REQUIRED_PHOTO_SLOTS.map((slot) => {
-            const photo = offer.photos.find((p) => p.slot === slot);
-            return (
-              <SlotCard
-                key={slot}
-                title={REQUIRED_PHOTO_LABEL[slot]}
-                url={photo?.url}
-                onFile={(f) => void addRequired(slot, f)}
-                onClear={photo ? () => remove(photo.id) : undefined}
-              />
-            );
-          })}
-        </div>
-      )}
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        {REQUIRED_PHOTO_SLOTS.map((slot) => {
+          const photo = offer.photos.find((p) => p.slot === slot);
+          return (
+            <SlotCard
+              key={slot}
+              title={REQUIRED_PHOTO_LABEL[slot]}
+              url={photo?.url}
+              onFile={(f) => void addRequired(slot, f)}
+              onClear={photo ? () => remove(photo.id) : undefined}
+            />
+          );
+        })}
+      </div>
 
       <div className="space-y-2">
         <div className="flex items-center justify-between gap-2">

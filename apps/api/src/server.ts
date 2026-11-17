@@ -22,6 +22,7 @@ import { authRoutes } from "./routes/auth.js";
 import { operatorRoutes } from "./routes/operators.js";
 import { opsRoutes } from "./routes/ops.js";
 import { telephonyRoutes } from "./routes/telephony.js";
+import { consorcioRoutes } from "./routes/consorcio.js";
 
 export function buildServer() {
   const app = Fastify({ logger: true, trustProxy: true });
@@ -76,6 +77,7 @@ export function buildServer() {
   app.register(branchRoutes);
   app.register(webhookRoutes);
   app.register(telephonyRoutes);
+  app.register(consorcioRoutes);
 
   app.get("/health", async () => ({ ok: true }));
 

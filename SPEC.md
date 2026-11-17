@@ -235,17 +235,19 @@ proposta_feita → fechado | recusado | nao_compareceu`
 
 Fluxo paralelo à consignação de classificados. **Não amarra carta** na v1.
 
-1. Consignador cria **oferecimento** (placa, FIPE, lance, pneus, fotos).
-2. Link público `/o/:token` permite o dono do carro enviar as fotos.
+1. Consignador cria **oferecimento** e copia o link público.
+2. Link `/o/:token` — o **cliente faz a avaliação completa** (placa, FIPE,
+   lance, pneus, fotos, contato). Também pode preencher no painel.
 3. Fotos obrigatórias: frente, traseira, lateral D/E, painel, velocímetro
    (carro ligado, km visível). Avarias: até 15 fotos.
 4. FIPE via consulta pública (BrasilAPI marcas + cascade Parallelum / mesma
-   tabela FIPE). Se houver mais de um ano/combustível, o consignador escolhe.
+   tabela FIPE). Se houver mais de um ano/combustível, escolhe-se o certo.
 5. Campo **lance** = quanto a pessoa precisa.
-6. Ao completar, libera na **vitrine do lojista**; lojista registra proposta.
+6. Consignador libera na **vitrine do lojista**; lojista registra proposta.
 7. **Cartas contempladas**: tela reservada; sync via API externa ainda pendente.
 
-Persistência v1: mock em `localStorage` no web até migrations/API (fase seguinte).
+Persistência: tabela `consorcio_oferecimentos` + rotas `/api/consorcio/*`
+(público por token sem login).
 
 ## 12. Contato e discador
 
@@ -309,7 +311,7 @@ ou busca.
     15 de avaria; link público de upload; liberação na vitrine do lojista com
     proposta. Cartas contempladas: tela placeholder até API externa.
 13. **Vitrine do lojista** — veículos liberados + registro de proposta.
-14. **Link público `/o/:token`** — só envio de fotos (fora do login).
+14. **Link público `/o/:token`** — avaliação completa pelo cliente (fora do login).
 
 Todas com estado vazio, loading (skeleton) e erro.
 

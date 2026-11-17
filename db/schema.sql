@@ -99,3 +99,28 @@ INSERT INTO fontes (fonte, nivel_acesso, base_legal, ativa) VALUES
     ('webmotors', 'autorizado',      'PENDENTE - homologacao Sensedia',            false),
     ('olx',       'manual',          'entrada manual pelo usuario',                false)
 ON CONFLICT (fonte) DO NOTHING;
+
+-- Consórcio / oferecimentos (vistoria remota + link público)
+CREATE TABLE IF NOT EXISTS consorcio_oferecimentos (
+    id              text PRIMARY KEY,
+    public_token    text NOT NULL UNIQUE,
+    status          text NOT NULL,
+    plate           text NOT NULL DEFAULT '',
+    brand           text,
+    model           text,
+    model_year      integer,
+    color           text,
+    km              integer,
+    fipe            jsonb,
+    bid_cents       bigint,
+    tires           jsonb NOT NULL DEFAULT '{}'::jsonb,
+    photos          jsonb NOT NULL DEFAULT '[]'::jsonb,
+    owner_name      text,
+    owner_phone     text,
+    notes           text,
+    created_by      text,
+    created_at      timestamptz NOT NULL DEFAULT now(),
+    updated_at      timestamptz NOT NULL DEFAULT now(),
+    listed_at       timestamptz,
+    proposals       jsonb NOT NULL DEFAULT '[]'::jsonb
+);

@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { Store } from "lucide-react";
+import { Loader2, Store } from "lucide-react";
 
 import type { ConsorcioOffer } from "@veiculo/types";
 import { Badge } from "@/components/ui/badge";
@@ -13,42 +13,72 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { EmptyState } from "@/components/shared/empty-state";
+import { ApiError } from "@/lib/api";
 import { formatCents } from "@/lib/format";
+import { addConsorcioProposal, listConsorcioOffers } from "@/lib/consorcio/api";
 import { OFFER_STATUS_LABEL } from "@/lib/consorcio/labels";
-import { addProposal, listListedOffers } from "@/lib/consorcio/store";
 
 export function VitrineBoard() {
-  const [items, setItems] = React.useState<ConsorcioOffer[]>([]);
+  const [items, setItems] = React.useState<ConsorcioOffer[] | null>(null);
   const [active, setActive] = React.useState<ConsorcioOffer | null>(null);
   const [dealer, setDealer] = React.useState("");
   const [amount, setAmount] = React.useState("");
   const [notes, setNotes] = React.useState("");
   const [msg, setMsg] = React.useState<string | null>(null);
+  const [error, setError] = React.useState<string | null>(null);
+
+  async function reload() {
+    const res = await listConsorcioOffers();
+    setItems(res.items.filter((o) => o.status === "listed" || o.status === "proposed"));
+  }
 
   React.useEffect(() => {
-    setItems(listListedOffers());
+    let cancelled = false;
+    void reload()
+      .then(() => {
+        if (!cancelled) setError(null);
+      })
+      .catch((err: unknown) => {
+        if (!cancelled) {
+          setItems([]);
+          setError(err instanceof ApiError ? err.message : "Não carregou a vitrine.");
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
-  function submitProposal() {
+  async function submitProposal() {
     if (!active) return;
     const cents = Number.parseInt(amount.replace(/\D/g, "") || "0", 10) * 100;
     if (!cents) {
       setMsg("Informe o valor da proposta.");
       return;
     }
-    const next = addProposal(active.id, {
-      dealerName: dealer,
-      amountCents: cents,
-      notes,
-    });
-    if (next) {
-      setItems(listListedOffers());
+    try {
+      await addConsorcioProposal(active.id, {
+        dealerName: dealer,
+        amountCents: cents,
+        notes,
+      });
+      await reload();
       setActive(null);
       setDealer("");
       setAmount("");
       setNotes("");
       setMsg("Proposta registrada.");
+    } catch (err) {
+      setMsg(err instanceof ApiError ? err.message : "Não registrou a proposta.");
     }
+  }
+
+  if (!items) {
+    return (
+      <div className="flex items-center gap-2 p-6 text-sm text-muted-foreground">
+        <Loader2 className="h-4 w-4 animate-spin" /> Carregando…
+      </div>
+    );
   }
 
   return (
@@ -57,7 +87,7 @@ export function VitrineBoard() {
         <div>
           <h2 className="text-lg font-semibold text-navy">Vitrine do lojista</h2>
           <p className="text-sm text-muted-foreground">
-            Veículos liberados para proposta (oferecimento, sem amarrar carta).
+            Veículos liberados para proposta.
           </p>
         </div>
         <Button asChild variant="outline" size="sm">
@@ -66,12 +96,13 @@ export function VitrineBoard() {
       </div>
 
       {msg && <p className="text-sm text-navy">{msg}</p>}
+      {error && <p className="text-sm text-destructive">{error}</p>}
 
       {items.length === 0 ? (
         <EmptyState
           icon={Store}
           title="Vitrine vazia"
-          description="Quando um oferecimento estiver completo, use “Liberar na vitrine”."
+          description="Quando a avaliação estiver completa, use “Liberar na vitrine”."
         />
       ) : (
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
@@ -99,9 +130,7 @@ export function VitrineBoard() {
                 <CardContent className="space-y-2 text-sm">
                   <p>Lance: {formatCents(o.bidCents)}</p>
                   <p>FIPE: {formatCents(o.fipe?.priceCents ?? null)}</p>
-                  <p className="text-xs text-muted-foreground">
-                    {o.proposals.length} proposta(s)
-                  </p>
+                  <p className="text-xs text-muted-foreground">{o.proposals.length} proposta(s)</p>
                   <Button type="button" size="sm" className="w-full" onClick={() => setActive(o)}>
                     Fazer proposta
                   </Button>
@@ -135,7 +164,7 @@ export function VitrineBoard() {
               <Label>Observações</Label>
               <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={3} />
             </div>
-            <Button type="button" onClick={submitProposal}>
+            <Button type="button" onClick={() => void submitProposal()}>
               Enviar proposta
             </Button>
           </div>
