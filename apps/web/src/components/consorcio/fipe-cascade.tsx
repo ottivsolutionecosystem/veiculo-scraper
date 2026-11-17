@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { Check, Loader2 } from "lucide-react";
+import { Check, Loader2, X } from "lucide-react";
 
 import type { ConsorcioFipeSelection } from "@veiculo/types";
 import { Label } from "@/components/ui/label";
@@ -115,7 +115,21 @@ export function FipeCascade({
     }
   }
 
+  function clearSelection() {
+    setBrand("");
+    setModel("");
+    setYear("");
+    setModels([]);
+    setYears([]);
+    setError(null);
+    onChange(null);
+  }
+
   function pickCandidate(candidate: PlateFipeCandidate) {
+    if (value?.code === candidate.code) {
+      clearSelection();
+      return;
+    }
     const { principal: _p, ...fipe } = candidate;
     onChange(fipe);
   }
@@ -129,13 +143,38 @@ export function FipeCascade({
       ) : null}
       {plateLookupError ? <p className="text-sm text-destructive">{plateLookupError}</p> : null}
 
+      {value ? (
+        <div className="flex items-start gap-3 rounded-xl border border-navy/10 bg-navy/[0.03] px-3 py-3">
+          <div className="min-w-0 flex-1 text-sm">
+            <p className="font-semibold text-navy">
+              {value.brand} {value.model}
+            </p>
+            <p className="text-xs text-muted-foreground">
+              {value.modelYear}
+              {value.fuel ? ` · ${value.fuel}` : ""} · FIPE {formatCents(value.priceCents)}
+            </p>
+            <p className="font-mono text-[11px] text-muted-foreground">
+              {value.code} · ref. {value.referenceMonth}
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={clearSelection}
+            className="inline-flex shrink-0 items-center gap-1 rounded-lg border border-navy/15 bg-white px-2.5 py-1.5 text-xs font-medium text-navy transition hover:border-destructive/40 hover:text-destructive"
+          >
+            <X className="h-3.5 w-3.5" />
+            Trocar
+          </button>
+        </div>
+      ) : null}
+
       {fromPlate && !manual ? (
         <div className="space-y-2">
           <p className="text-sm font-medium text-navy">
-            Qual versão bate com o documento do veículo?
+            {value ? "Ou escolha outra versão" : "Qual versão bate com o documento do veículo?"}
           </p>
           <p className="text-xs text-muted-foreground">
-            Toque na opção correta. Se houver mais de uma, confira marca, modelo e ano no CRLV.
+            Toque na opção correta. Toque de novo na selecionada para limpar.
           </p>
           <ul className="space-y-2">
             {plateCandidates!.map((c) => {
@@ -145,6 +184,7 @@ export function FipeCascade({
                   <button
                     type="button"
                     onClick={() => pickCandidate(c)}
+                    aria-pressed={selected}
                     className={cn(
                       "flex w-full items-start gap-3 rounded-xl border px-3.5 py-3 text-left transition",
                       selected
@@ -170,6 +210,7 @@ export function FipeCascade({
                         {c.modelYear}
                         {c.fuel ? ` · ${c.fuel}` : ""}
                         {c.principal ? " · sugerida" : ""}
+                        {selected ? " · toque para limpar" : ""}
                       </span>
                       <span className="block text-sm font-medium text-navy">
                         FIPE {formatCents(c.priceCents)}
@@ -280,13 +321,6 @@ export function FipeCascade({
         </p>
       )}
       {error && <p className="text-xs text-destructive">{error}</p>}
-      {value && fromPlate && !manual ? null : value ? (
-        <p className="rounded-xl border border-navy/10 bg-navy/[0.03] px-3 py-2 text-sm">
-          <span className="font-medium text-navy">{value.code}</span> · {value.brand} {value.model}{" "}
-          {value.modelYear} · {formatCents(value.priceCents)}
-          <span className="block text-xs text-muted-foreground">Ref. {value.referenceMonth}</span>
-        </p>
-      ) : null}
     </div>
   );
 }
