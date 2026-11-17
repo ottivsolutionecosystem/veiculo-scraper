@@ -16,6 +16,7 @@ import { formatCents } from "@/lib/format";
 import { canListOffer, missingRequiredPhotos } from "@/lib/consorcio/offer-rules";
 import { formatPlate, isValidPlate, normalizePlate } from "@/lib/consorcio/plate";
 import { REQUIRED_PHOTO_LABEL } from "@/lib/consorcio/labels";
+import { cn } from "@/lib/utils";
 
 function parseMoneyToCents(raw: string): number | null {
   const digits = raw.replace(/[^\d]/g, "");
@@ -23,25 +24,67 @@ function parseMoneyToCents(raw: string): number | null {
   return Number.parseInt(digits, 10) * 100;
 }
 
+function Section({
+  title,
+  hint,
+  children,
+  publicMode,
+}: {
+  title: string;
+  hint?: string;
+  children: React.ReactNode;
+  publicMode: boolean;
+}) {
+  if (!publicMode) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>{title}</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          {hint ? <p className="text-xs text-muted-foreground">{hint}</p> : null}
+          {children}
+        </CardContent>
+      </Card>
+    );
+  }
+
+  return (
+    <section className="overflow-hidden rounded-[1.25rem] border border-navy/[0.08] bg-card shadow-card">
+      <div className="space-y-1 border-b border-navy/[0.06] px-5 py-4">
+        <div className="accent-rule mb-2 max-w-[4.5rem]" />
+        <h2 className="text-base font-semibold tracking-tight text-navy">{title}</h2>
+        {hint ? <p className="text-xs leading-relaxed text-muted-foreground">{hint}</p> : null}
+      </div>
+      <div className="space-y-3 px-5 py-4">{children}</div>
+    </section>
+  );
+}
+
 export function OfferEditor({
   offer,
   mode,
   busy = false,
+  hideActions = false,
   onChange,
   onPersist,
   onPublish,
   onSubmitPublic,
   publicUrl,
+  onMessage,
 }: {
   offer: ConsorcioOffer;
   mode: "internal" | "public";
   busy?: boolean;
+  hideActions?: boolean;
   onChange: (next: ConsorcioOffer) => void;
   onPersist: (patch: Partial<ConsorcioOffer>) => Promise<void> | void;
   onPublish?: () => Promise<void> | void;
   onSubmitPublic?: () => Promise<void> | void;
   publicUrl?: string;
+  onMessage?: (msg: string | null) => void;
 }) {
+  const publicMode = mode === "public";
   const [bidText, setBidText] = React.useState(
     offer.bidCents !== null ? String(Math.round(offer.bidCents / 100)) : "",
   );
@@ -52,8 +95,13 @@ export function OfferEditor({
     setBidText(offer.bidCents !== null ? String(Math.round(offer.bidCents / 100)) : "");
   }, [offer.id, offer.bidCents]);
 
+  function setFeedback(next: string | null) {
+    setMsg(next);
+    onMessage?.(next);
+  }
+
   async function persist(patch: Partial<ConsorcioOffer>) {
-    setMsg(null);
+    setFeedback(null);
     await onPersist(patch);
   }
 
@@ -64,7 +112,7 @@ export function OfferEditor({
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch {
-      setMsg("Não copiou — copie o link manualmente.");
+      setFeedback("Não copiou — copie o link manualmente.");
     }
   }
 
@@ -81,7 +129,7 @@ export function OfferEditor({
 
   async function handlePublish() {
     if (!canListOffer(offer)) {
-      setMsg(`Falta: ${incompleteMessage()}`);
+      setFeedback(`Falta: ${incompleteMessage()}`);
       return;
     }
     await onPublish?.();
@@ -89,34 +137,36 @@ export function OfferEditor({
 
   async function handleSubmitPublic() {
     if (!canListOffer(offer)) {
-      setMsg(`Complete antes de enviar: ${incompleteMessage()}`);
+      setFeedback(`Complete antes de enviar: ${incompleteMessage()}`);
       return;
     }
     await onSubmitPublic?.();
-    setMsg("Avaliação enviada. O consignador já consegue ver tudo e liberar na vitrine.");
+    setFeedback("Avaliação enviada. O consignador já consegue ver tudo.");
   }
 
-  const readOnlyListed = offer.status === "listed" || offer.status === "proposed" || offer.status === "closed";
+  const readOnlyListed =
+    offer.status === "listed" || offer.status === "proposed" || offer.status === "closed";
 
   return (
-    <div className="space-y-4">
-      <Card>
-        <CardHeader>
-          <CardTitle>Placa e contato</CardTitle>
-        </CardHeader>
-        <CardContent className="grid gap-3 sm:grid-cols-2">
+    <div className={cn("space-y-4", publicMode && "pb-28")}>
+      <Section
+        publicMode={publicMode}
+        title="Placa e contato"
+        hint="Use a placa do documento. O km deve aparecer no velocímetro com o carro ligado."
+      >
+        <div className="grid gap-3 sm:grid-cols-2">
           <div className="space-y-1.5">
             <Label>Placa</Label>
             <Input
               value={formatPlate(offer.plate)}
-              disabled={readOnlyListed && mode === "public"}
+              disabled={readOnlyListed && publicMode}
               onChange={(e) => {
                 const plate = normalizePlate(e.target.value);
                 onChange({ ...offer, plate });
                 void persist({ plate });
               }}
               placeholder="ABC1D23"
-              className="font-mono uppercase"
+              className="font-mono uppercase tracking-wider"
             />
           </div>
           <div className="space-y-1.5">
@@ -132,7 +182,7 @@ export function OfferEditor({
             />
           </div>
           <div className="space-y-1.5">
-            <Label>Seu nome</Label>
+            <Label>{publicMode ? "Seu nome" : "Nome do dono"}</Label>
             <Input
               value={offer.ownerName ?? ""}
               onChange={(e) => {
@@ -153,39 +203,36 @@ export function OfferEditor({
               }}
             />
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </Section>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>FIPE do veículo</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p className="mb-3 text-xs text-muted-foreground">
-            Se aparecer mais de um ano/combustível, escolha o que bate com o seu carro.
-          </p>
-          <FipeCascade
-            value={offer.fipe}
-            onChange={(fipe) => {
-              const patch = {
-                fipe,
-                brand: fipe?.brand ?? null,
-                model: fipe?.model ?? null,
-                modelYear: fipe?.modelYear ?? null,
-              };
-              onChange({ ...offer, ...patch });
-              void persist(patch);
-            }}
-          />
-        </CardContent>
-      </Card>
+      <Section
+        publicMode={publicMode}
+        title="FIPE do veículo"
+        hint="Escolha marca, modelo e o ano/combustível que bate com o seu carro."
+      >
+        <FipeCascade
+          value={offer.fipe}
+          onChange={(fipe) => {
+            const patch = {
+              fipe,
+              brand: fipe?.brand ?? null,
+              model: fipe?.model ?? null,
+              modelYear: fipe?.modelYear ?? null,
+            };
+            onChange({ ...offer, ...patch });
+            void persist(patch);
+          }}
+        />
+      </Section>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Lance</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-1.5">
-          <Label>Quanto precisa receber (R$)</Label>
+      <Section
+        publicMode={publicMode}
+        title="Lance"
+        hint="Quanto você precisa receber neste oferecimento."
+      >
+        <div className="space-y-1.5">
+          <Label>Valor do lance (R$)</Label>
           <Input
             inputMode="numeric"
             value={bidText}
@@ -203,84 +250,106 @@ export function OfferEditor({
               ? ` · ${(((offer.fipe.priceCents - offer.bidCents) / offer.fipe.priceCents) * 100).toFixed(1)}% vs FIPE`
               : ""}
           </p>
-        </CardContent>
-      </Card>
+        </div>
+      </Section>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Estado dos pneus</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <TireFields
-            value={offer.tires}
-            onChange={(tires) => {
-              onChange({ ...offer, tires });
-              void persist({ tires });
-            }}
-          />
-        </CardContent>
-      </Card>
+      <Section publicMode={publicMode} title="Estado dos pneus">
+        <TireFields
+          value={offer.tires}
+          onChange={(tires) => {
+            onChange({ ...offer, tires });
+            void persist({ tires });
+          }}
+        />
+      </Section>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Fotos do veículo</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          {mode === "internal" && publicUrl && (
-            <div className="flex flex-wrap items-center gap-2 rounded-xl border border-dashed border-navy/15 bg-navy/[0.02] px-3 py-2 text-xs">
-              <span className="text-muted-foreground">
-                Link completo pro cliente fazer a avaliação:
-              </span>
-              <code className="truncate font-mono text-[11px] text-navy">{publicUrl}</code>
-              <Button type="button" size="sm" variant="outline" onClick={() => void copyLink()}>
-                {copied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
-                {copied ? "Copiado" : "Copiar"}
-              </Button>
-            </div>
+      <Section
+        publicMode={publicMode}
+        title="Fotos do veículo"
+        hint="Frente, traseira, laterais, painel e velocímetro ligado. Avarias à parte (até 15)."
+      >
+        {mode === "internal" && publicUrl && (
+          <div className="mb-3 flex flex-wrap items-center gap-2 rounded-xl border border-dashed border-navy/15 bg-navy/[0.02] px-3 py-2 text-xs">
+            <span className="text-muted-foreground">Link completo pro cliente:</span>
+            <code className="truncate font-mono text-[11px] text-navy">{publicUrl}</code>
+            <Button type="button" size="sm" variant="outline" onClick={() => void copyLink()}>
+              {copied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
+              {copied ? "Copiado" : "Copiar"}
+            </Button>
+          </div>
+        )}
+        <PhotoSlots
+          offer={offer}
+          onChange={(next) => {
+            onChange(next);
+            void persist({ photos: next.photos });
+          }}
+        />
+      </Section>
+
+      <Section publicMode={publicMode} title="Observações" hint="Opcional.">
+        <Textarea
+          value={offer.notes ?? ""}
+          onChange={(e) => {
+            const notes = e.target.value || null;
+            onChange({ ...offer, notes });
+            void persist({ notes });
+          }}
+          rows={3}
+          placeholder="Algo que o lojista precise saber"
+        />
+      </Section>
+
+      {!hideActions && (
+        <div className="flex flex-wrap gap-2">
+          {mode === "internal" && (
+            <Button type="button" disabled={busy} onClick={() => void handlePublish()}>
+              {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Store className="h-4 w-4" />}
+              Liberar na vitrine
+            </Button>
           )}
-          <PhotoSlots
-            offer={offer}
-            onChange={(next) => {
-              onChange(next);
-              void persist({ photos: next.photos });
-            }}
-          />
-        </CardContent>
-      </Card>
+          {mode === "public" && (
+            <Button type="button" disabled={busy} onClick={() => void handleSubmitPublic()}>
+              {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+              Enviar avaliação completa
+            </Button>
+          )}
+        </div>
+      )}
+      {msg && !onMessage && <p className="text-sm text-navy">{msg}</p>}
+    </div>
+  );
+}
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Observações</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <Textarea
-            value={offer.notes ?? ""}
-            onChange={(e) => {
-              const notes = e.target.value || null;
-              onChange({ ...offer, notes });
-              void persist({ notes });
-            }}
-            rows={3}
-            placeholder="Opcional"
-          />
-        </CardContent>
-      </Card>
-
-      <div className="flex flex-wrap gap-2">
-        {mode === "internal" && (
-          <Button type="button" disabled={busy} onClick={() => void handlePublish()}>
-            {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Store className="h-4 w-4" />}
-            Liberar na vitrine
-          </Button>
-        )}
-        {mode === "public" && (
-          <Button type="button" disabled={busy} onClick={() => void handleSubmitPublic()}>
-            {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-            Enviar avaliação completa
-          </Button>
-        )}
+export function PublicSubmitBar({
+  ready,
+  busy,
+  onSubmit,
+  message,
+}: {
+  ready: boolean;
+  busy: boolean;
+  onSubmit: () => void;
+  message?: string | null;
+}) {
+  return (
+    <div className="fixed inset-x-0 bottom-0 z-40 border-t border-white/10 bg-navy-deep/95 px-4 py-3 backdrop-blur-xl">
+      <div
+        className="mx-auto flex w-full max-w-3xl flex-col gap-2"
+        style={{ paddingBottom: "max(0.25rem, env(safe-area-inset-bottom, 0px))" }}
+      >
+        {message ? <p className="text-center text-xs text-coral">{message}</p> : null}
+        <Button
+          type="button"
+          size="lg"
+          className="h-12 w-full rounded-xl text-base"
+          disabled={busy || !ready}
+          onClick={onSubmit}
+        >
+          {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+          {ready ? "Enviar avaliação completa" : "Complete os passos acima"}
+        </Button>
       </div>
-      {msg && <p className="text-sm text-navy">{msg}</p>}
     </div>
   );
 }

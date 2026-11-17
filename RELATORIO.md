@@ -1,14 +1,12 @@
-# RELATORIO — Link público com avaliação completa
+# RELATORIO — UI/UX do link público de avaliação
 
 ## Feito
-- `/o/:token` agora tem placa, FIPE, lance, pneus, fotos e “Enviar avaliação”.
-- API + migration `0027_consorcio_oferecimentos` (persistência no Postgres —
-  link funciona no celular do cliente).
-- Painel e link compartilham o mesmo formulário (`OfferEditor`).
+- Link `/o/:token` no padrão Auttus: navy + atmosfera do entrar, progresso,
+  formulário em papel cream, CTA fixo no rodapé.
+- Estados loading / inválido / enviado alinhados à marca.
 
 ## Decidido
-- Cliente completa tudo; consignador só libera na vitrine.
-- Fotos ainda em data URL no JSON (S3/R2 depois se pesar).
+- Mesma linguagem visual do login; formulário claro por cima do navy.
 
 ## Pendente de decisão sua
-- Redeploy **api** + **web** (migration sobe com a api).
+- Redeploy web (só UI).

@@ -161,9 +161,11 @@
   }
 }
 
-/* Tela de entrar: fundo navy mesmo se o body for cream. */
+/* Tela de entrar / avaliação pública: fundo navy mesmo se o body for cream. */
 html:has([data-entrar]),
-html:has([data-entrar]) body {
+html:has([data-entrar]) body,
+html:has([data-avaliacao]),
+html:has([data-avaliacao]) body {
   background-color: #0a1520;
 }
 

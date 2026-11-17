@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import type { ConsorcioOffer } from "@veiculo/types";
 
-import { canListOffer, missingRequiredPhotos } from "./offer-rules";
+import { canListOffer, missingRequiredPhotos, offerProgressPct } from "./offer-rules";
 
 function base(): ConsorcioOffer {
   return {
@@ -50,5 +50,9 @@ describe("offer-rules", () => {
     const o = base();
     expect(canListOffer(o)).toBe(false);
     expect(missingRequiredPhotos(o)).toHaveLength(6);
+  });
+
+  it("mede progresso parcial", () => {
+    expect(offerProgressPct(base())).toBe(75);
   });
 });
