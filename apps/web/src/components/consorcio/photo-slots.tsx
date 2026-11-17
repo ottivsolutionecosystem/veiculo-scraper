@@ -9,8 +9,6 @@ import { MAX_DAMAGE_PHOTOS, REQUIRED_PHOTO_LABEL, REQUIRED_PHOTO_SLOTS } from "@
 import { fileToDataUrl } from "@/lib/consorcio/photo-file";
 import { cn } from "@/lib/utils";
 
-type DamageAnswer = "yes" | "no" | null;
-
 function uid(): string {
   return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
 }
@@ -45,15 +43,8 @@ export function PhotoSlots({
 }) {
   const [error, setError] = React.useState<string | null>(null);
   const damage = offer.photos.filter((p) => p.slot === "damage");
-  const [damageAnswer, setDamageAnswer] = React.useState<DamageAnswer>(() =>
-    damage.length > 0 ? "yes" : null,
-  );
-
-  React.useEffect(() => {
-    if (damage.length > 0 && damageAnswer !== "yes") {
-      setDamageAnswer("yes");
-    }
-  }, [damage.length, damageAnswer]);
+  const damageAnswer: boolean | null =
+    offer.hasDamage === true || damage.length > 0 ? true : offer.hasDamage;
 
   async function addRequired(slot: ConsorcioRequiredPhotoSlot, file: File) {
     setError(null);
@@ -73,9 +64,9 @@ export function PhotoSlots({
     setError(null);
     try {
       const url = await fileToDataUrl(file);
-      setDamageAnswer("yes");
       onChange({
         ...offer,
+        hasDamage: true,
         photos: [
           ...offer.photos,
           {
@@ -96,15 +87,17 @@ export function PhotoSlots({
     onChange({ ...offer, photos: offer.photos.filter((p) => p.id !== photoId) });
   }
 
-  function chooseDamage(answer: DamageAnswer) {
+  function chooseDamage(answer: boolean) {
     setError(null);
-    if (answer === "no" && damage.length > 0) {
+    if (!answer) {
       onChange({
         ...offer,
+        hasDamage: false,
         photos: offer.photos.filter((p) => p.slot !== "damage"),
       });
+      return;
     }
-    setDamageAnswer(answer);
+    onChange({ ...offer, hasDamage: true });
   }
 
   return (
@@ -129,7 +122,7 @@ export function PhotoSlots({
           "space-y-3 rounded-2xl border-2 p-4",
           damageAnswer === null
             ? "border-orange/50 bg-orange/[0.07]"
-            : damageAnswer === "yes"
+            : damageAnswer === true
               ? "border-coral/40 bg-coral/[0.06]"
               : "border-navy/10 bg-navy/[0.02]",
         )}
@@ -138,7 +131,7 @@ export function PhotoSlots({
           <span
             className={cn(
               "mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl",
-              damageAnswer === "no" ? "bg-navy/10 text-navy" : "bg-orange/15 text-orange",
+              damageAnswer === false ? "bg-navy/10 text-navy" : "bg-orange/15 text-orange",
             )}
           >
             <AlertTriangle className="h-4 w-4" />
@@ -158,17 +151,17 @@ export function PhotoSlots({
         <div className="grid grid-cols-2 gap-2">
           <Button
             type="button"
-            variant={damageAnswer === "yes" ? "default" : "outline"}
+            variant={damageAnswer === true ? "default" : "outline"}
             className="h-11 rounded-xl"
-            onClick={() => chooseDamage("yes")}
+            onClick={() => chooseDamage(true)}
           >
             Sim, tem detalhe
           </Button>
           <Button
             type="button"
-            variant={damageAnswer === "no" ? "default" : "outline"}
+            variant={damageAnswer === false ? "default" : "outline"}
             className="h-11 rounded-xl"
-            onClick={() => chooseDamage("no")}
+            onClick={() => chooseDamage(false)}
           >
             Não, está limpo
           </Button>
@@ -180,14 +173,14 @@ export function PhotoSlots({
           </p>
         ) : null}
 
-        {damageAnswer === "no" ? (
+        {damageAnswer === false ? (
           <p className="rounded-xl border border-navy/10 bg-background/80 px-3 py-2 text-xs leading-relaxed text-muted-foreground">
             Declarado: sem batida, arranhão nem detalhe de pintura. Se lembrar de algo depois,
             volte e marque <span className="font-medium text-navy">Sim, tem detalhe</span>.
           </p>
         ) : null}
 
-        {damageAnswer === "yes" ? (
+        {damageAnswer === true ? (
           <div className="space-y-3 border-t border-coral/20 pt-3">
             <div className="space-y-1">
               <p className="text-sm font-semibold text-navy">

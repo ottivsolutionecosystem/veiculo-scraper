@@ -1,4 +1,4 @@
-import type { ConsorcioOffer, ConsorcioRequiredPhotoSlot } from "@veiculo/types";
+import type { ConsorcioOffer, ConsorcioRequiredPhotoSlot, ConsorcioTireReport } from "@veiculo/types";
 
 const REQUIRED: ConsorcioRequiredPhotoSlot[] = [
   "front",
@@ -24,6 +24,23 @@ function financeOk(offer: ConsorcioOffer): boolean {
   return false;
 }
 
+function tiresOk(tires: ConsorcioTireReport): boolean {
+  return (
+    tires.frontLeft !== "unknown" &&
+    tires.frontRight !== "unknown" &&
+    tires.rearLeft !== "unknown" &&
+    tires.rearRight !== "unknown"
+  );
+}
+
+function damageOk(offer: ConsorcioOffer): boolean {
+  if (offer.hasDamage === false) return true;
+  if (offer.hasDamage === true) {
+    return offer.photos.some((p) => p.slot === "damage");
+  }
+  return false;
+}
+
 export function canListOffer(offer: ConsorcioOffer): boolean {
   return (
     Boolean(offer.plate) &&
@@ -31,6 +48,8 @@ export function canListOffer(offer: ConsorcioOffer): boolean {
     offer.bidCents !== null &&
     offer.bidCents > 0 &&
     financeOk(offer) &&
+    tiresOk(offer.tires) &&
+    damageOk(offer) &&
     missingRequiredPhotos(offer).length === 0
   );
 }

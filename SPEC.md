@@ -237,7 +237,8 @@ Fluxo paralelo à consignação de classificados. **Não amarra carta** na v1.
 
 1. Consignador cria **oferecimento** e copia o link público.
 2. Link `/o/:token` — o **cliente faz a avaliação completa** (placa, FIPE,
-   lance, pneus, fotos, contato). Também pode preencher no painel.
+   lance, financiamento, pneus, fotos, avarias, contato). Também pode
+   preencher no painel.
 3. Fotos obrigatórias: frente, traseira, lateral D/E, painel, velocímetro
    (carro ligado, km visível). Avarias: até 15 fotos.
 4. FIPE via consulta pública (BrasilAPI marcas + cascade Parallelum / mesma

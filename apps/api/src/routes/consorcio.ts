@@ -59,6 +59,7 @@ const patchSchema = z.object({
   bidCents: z.number().int().nullable().optional(),
   financed: z.boolean().nullable().optional(),
   payoffCents: z.number().int().nonnegative().nullable().optional(),
+  hasDamage: z.boolean().nullable().optional(),
   tires: tiresSchema.optional(),
   photos: z.array(photoSchema).max(30).optional(),
   ownerName: z.string().max(120).nullable().optional(),
@@ -94,9 +95,9 @@ async function persist(offer: ReturnType<typeof mapConsorcioRow>) {
     `UPDATE consorcio_oferecimentos SET
       status = $2, plate = $3, brand = $4, model = $5, model_year = $6, color = $7, km = $8,
       fipe = $9::jsonb, bid_cents = $10, financed = $11, payoff_cents = $12,
-      tires = $13::jsonb, photos = $14::jsonb,
-      owner_name = $15, owner_phone = $16, notes = $17, updated_at = now(),
-      listed_at = $18, proposals = $19::jsonb
+      has_damage = $13, tires = $14::jsonb, photos = $15::jsonb,
+      owner_name = $16, owner_phone = $17, notes = $18, updated_at = now(),
+      listed_at = $19, proposals = $20::jsonb
      WHERE id = $1`,
     [
       offer.id,
@@ -111,6 +112,7 @@ async function persist(offer: ReturnType<typeof mapConsorcioRow>) {
       offer.bidCents,
       offer.financed,
       offer.payoffCents,
+      offer.hasDamage,
       JSON.stringify(offer.tires),
       JSON.stringify(offer.photos),
       offer.ownerName,
@@ -144,6 +146,7 @@ function applyPatch(
         : body.payoffCents !== undefined
           ? body.payoffCents
           : offer.payoffCents,
+    hasDamage: body.hasDamage !== undefined ? body.hasDamage : offer.hasDamage,
     tires: body.tires !== undefined ? body.tires : offer.tires,
     photos: body.photos !== undefined ? body.photos : offer.photos,
     ownerName: body.ownerName !== undefined ? body.ownerName : offer.ownerName,

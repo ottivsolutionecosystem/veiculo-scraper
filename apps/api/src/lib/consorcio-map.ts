@@ -33,6 +33,7 @@ export function mapConsorcioRow(row: Record<string, unknown>): ConsorcioOffer {
     financed: row.financed === null || row.financed === undefined ? null : Boolean(row.financed),
     payoffCents:
       row.payoff_cents === null || row.payoff_cents === undefined ? null : Number(row.payoff_cents),
+    hasDamage: row.has_damage === null || row.has_damage === undefined ? null : Boolean(row.has_damage),
     tires: (row.tires as ConsorcioTireReport) ?? EMPTY_TIRES,
     photos: (row.photos as ConsorcioPhoto[]) ?? [],
     ownerName: (row.owner_name as string | null) ?? null,

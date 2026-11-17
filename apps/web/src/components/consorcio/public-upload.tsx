@@ -80,7 +80,7 @@ export function PublicUpload({ token }: { token: string }) {
   async function submit() {
     if (!offer) return;
     if (!canListOffer(offer)) {
-      setFeedback("Complete placa, FIPE, lance, financiamento e as 6 fotos.");
+      setFeedback("Complete todos os passos do progresso antes de enviar.");
       return;
     }
     const snapshot = offer;
@@ -93,6 +93,7 @@ export function PublicUpload({ token }: { token: string }) {
         bidCents: snapshot.bidCents,
         financed: snapshot.financed,
         payoffCents: snapshot.payoffCents,
+        hasDamage: snapshot.hasDamage,
         tires: snapshot.tires,
         photos: snapshot.photos,
         ownerName: snapshot.ownerName,
@@ -138,7 +139,7 @@ export function PublicUpload({ token }: { token: string }) {
   return (
     <PublicShell
       title="Conte sobre o seu carro"
-      subtitle="Leva poucos minutos: placa, FIPE, lance, pneus e fotos. Salvamos conforme você preenche."
+      subtitle="Leva poucos minutos: placa, FIPE, lance, financiamento, pneus, fotos e avarias. Salvamos conforme você preenche."
     >
       <div className="space-y-4 pb-28">
         <PublicProgress offer={offer} />

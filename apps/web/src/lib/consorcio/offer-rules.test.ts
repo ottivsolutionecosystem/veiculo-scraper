@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import type { ConsorcioOffer } from "@veiculo/types";
 
-import { canListOffer, missingRequiredPhotos, offerProgressPct } from "./offer-rules";
+import { canListOffer, missingRequiredPhotos, offerChecklist, offerProgressPct } from "./offer-rules";
 
 function base(): ConsorcioOffer {
   return {
@@ -28,6 +28,7 @@ function base(): ConsorcioOffer {
     bidCents: 5000000,
     financed: false,
     payoffCents: null,
+    hasDamage: false,
     tires: {
       frontLeft: "good",
       frontRight: "good",
@@ -48,6 +49,18 @@ function base(): ConsorcioOffer {
 }
 
 describe("offer-rules", () => {
+  it("lista os 7 passos do progresso", () => {
+    expect(offerChecklist(base()).map((s) => s.key)).toEqual([
+      "plate",
+      "fipe",
+      "bid",
+      "finance",
+      "tires",
+      "photos",
+      "damage",
+    ]);
+  });
+
   it("exige as 6 fotos pra listar", () => {
     const o = base();
     expect(canListOffer(o)).toBe(false);
@@ -74,7 +87,7 @@ describe("offer-rules", () => {
   });
 
   it("mede progresso parcial", () => {
-    // placa + fipe + lance + financiamento = 4/5; fotos faltando
-    expect(offerProgressPct(base())).toBe(80);
+    // placa + fipe + lance + financiamento + pneus + avarias = 6/7; fotos faltando
+    expect(offerProgressPct(base())).toBe(86);
   });
 });

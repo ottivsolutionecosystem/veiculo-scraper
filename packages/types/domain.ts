@@ -611,6 +611,8 @@ export interface ConsorcioOffer {
   financed: boolean | null;
   /** Valor da quitação em centavos — só quando financed === true */
   payoffCents: number | null;
+  /** null = ainda não respondeu; true = tem avaria (pede fotos); false = limpo */
+  hasDamage: boolean | null;
   tires: ConsorcioTireReport;
   photos: ConsorcioPhoto[];
   ownerName: string | null;

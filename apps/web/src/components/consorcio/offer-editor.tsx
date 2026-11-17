@@ -133,6 +133,17 @@ export function OfferEditor({
         : offer.financed && !offer.payoffCents
           ? "valor da quitação"
           : null,
+      offer.tires.frontLeft === "unknown" ||
+      offer.tires.frontRight === "unknown" ||
+      offer.tires.rearLeft === "unknown" ||
+      offer.tires.rearRight === "unknown"
+        ? "estado dos pneus"
+        : null,
+      offer.hasDamage === null
+        ? "dizer se há avaria"
+        : offer.hasDamage && !offer.photos.some((p) => p.slot === "damage")
+          ? "foto da avaria"
+          : null,
       ...missingRequiredPhotos(offer).map((s) => `foto ${REQUIRED_PHOTO_LABEL[s]}`),
     ]
       .filter(Boolean)
@@ -361,7 +372,7 @@ export function OfferEditor({
           offer={offer}
           onChange={(next) => {
             onChange(next);
-            void persist({ photos: next.photos });
+            void persist({ photos: next.photos, hasDamage: next.hasDamage });
           }}
         />
       </Section>

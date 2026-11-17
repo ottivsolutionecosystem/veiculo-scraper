@@ -1,12 +1,12 @@
-# RELATORIO — financiamento / quitação no oferecimento
+# RELATORIO — progresso com todos os passos
 
 ## Feito
-- Campos `financed` + `payoffCents` no domínio, migration `0028`, API e UI.
-- Sim → pede valor da quitação; Não → segue. Exigido pra enviar/listar.
-- SPEC 11b atualizado.
+- Progresso com 7 passos: Placa, FIPE, Lance, Financiamento, Pneus, Fotos,
+  Avarias.
+- `hasDamage` persistido (migration 0029); pneus e avarias entram no envio.
 
 ## Decidido
-- Quitação só quando financiado; resposta obrigatória no checklist.
+- Avarias “sim” exige ao menos 1 foto; pneus exigem os 4 cantos informados.
 
 ## Pendente de decisão sua
 - Nenhuma.

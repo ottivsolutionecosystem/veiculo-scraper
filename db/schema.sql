@@ -115,6 +115,7 @@ CREATE TABLE IF NOT EXISTS consorcio_oferecimentos (
     bid_cents       bigint,
     financed        boolean,
     payoff_cents    bigint,
+    has_damage      boolean,
     tires           jsonb NOT NULL DEFAULT '{}'::jsonb,
     photos          jsonb NOT NULL DEFAULT '[]'::jsonb,
     owner_name      text,

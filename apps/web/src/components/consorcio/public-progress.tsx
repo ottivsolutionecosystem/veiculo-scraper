@@ -20,7 +20,7 @@ export function PublicProgress({ offer }: { offer: ConsorcioOffer }) {
           style={{ width: `${pct}%` }}
         />
       </div>
-      <ol className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5">
+      <ol className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
         {steps.map((step) => (
           <li
             key={step.key}
