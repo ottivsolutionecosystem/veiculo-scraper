@@ -138,7 +138,7 @@ export function PublicUpload({ token }: { token: string }) {
       title="Conte sobre o seu carro"
       subtitle="Leva poucos minutos: placa, FIPE, lance, pneus e fotos. Salvamos conforme você preenche."
     >
-      <div className="space-y-4">
+      <div className="space-y-4 pb-28">
         <PublicProgress offer={offer} />
 
         <div className="rounded-[1.5rem] border border-white/10 bg-[hsl(var(--background))] p-3 shadow-[0_40px_80px_-28px_rgba(0,0,0,0.55)] sm:p-5">

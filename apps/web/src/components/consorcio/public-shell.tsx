@@ -16,10 +16,13 @@ export function PublicShell({
   subtitle?: string;
 }) {
   return (
-    <div data-avaliacao className="relative min-h-dvh overflow-x-hidden bg-navy-deep text-foreground">
+    <div
+      data-avaliacao
+      className="relative h-dvh max-h-dvh overflow-x-hidden overflow-y-auto overscroll-y-contain bg-navy-deep text-foreground [-webkit-overflow-scrolling:touch]"
+    >
       <EntrarAtmosphere />
       <div
-        className="relative z-10 mx-auto flex min-h-dvh w-full max-w-3xl flex-col px-4 pb-10 sm:px-6"
+        className="relative z-10 mx-auto flex min-h-full w-full max-w-3xl flex-col px-4 sm:px-6"
         style={{
           paddingTop: "max(1.25rem, env(safe-area-inset-top, 0px))",
           paddingBottom: "max(2.5rem, env(safe-area-inset-bottom, 0px))",

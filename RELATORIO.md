@@ -1,12 +1,12 @@
-# RELATORIO — UI/UX do link público de avaliação
+# RELATORIO — scroll do link público
 
 ## Feito
-- Link `/o/:token` no padrão Auttus: navy + atmosfera do entrar, progresso,
-  formulário em papel cream, CTA fixo no rodapé.
-- Estados loading / inválido / enviado alinhados à marca.
+- Shell `/o/:token` vira o container de scroll (`h-dvh` + `overflow-y-auto`).
+- `html/body` com `overflow: hidden` só nessa rota — evita travar no mobile.
+- Padding extra no formulário para não ficar atrás do CTA fixo.
 
 ## Decidido
-- Mesma linguagem visual do login; formulário claro por cima do navy.
+- Scroll no shell, não no documento (padrão do painel).
 
 ## Pendente de decisão sua
-- Redeploy web (só UI).
+- Nenhuma.
