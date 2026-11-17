@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { Check, Copy, Loader2, Search, Send, Store } from "lucide-react";
+import { Check, Copy, Loader2, Search, Send, Share2, Store } from "lucide-react";
 
 import type { ConsorcioOffer } from "@veiculo/types";
 import { FipeCascade } from "@/components/consorcio/fipe-cascade";
@@ -166,6 +166,24 @@ export function OfferEditor({
     }
   }
 
+  async function shareLink() {
+    if (!publicUrl) return;
+    if (typeof navigator !== "undefined" && typeof navigator.share === "function") {
+      try {
+        await navigator.share({
+          title: "Avaliação do veículo",
+          text: "Preencha a avaliação completa do veículo neste link:",
+          url: publicUrl,
+        });
+        return;
+      } catch (err) {
+        if (err instanceof DOMException && err.name === "AbortError") return;
+      }
+    }
+    await copyLink();
+    setFeedback("Link copiado — cole no WhatsApp ou no e-mail.");
+  }
+
   function incompleteMessage() {
     return [
       !offer.plate || !isValidPlate(offer.plate) ? "placa válida" : null,
@@ -217,6 +235,30 @@ export function OfferEditor({
 
   return (
     <div className={cn("space-y-4", publicMode && "pb-28")}>
+      {mode === "internal" && publicUrl ? (
+        <Section
+          publicMode={false}
+          title="Link pro cliente"
+          hint="Envie este link para o dono do carro preencher a avaliação completa."
+        >
+          <div className="space-y-3">
+            <code className="block break-all rounded-xl border border-navy/10 bg-navy/[0.03] px-3 py-2.5 font-mono text-xs text-navy">
+              {publicUrl}
+            </code>
+            <div className="flex flex-wrap gap-2">
+              <Button type="button" variant="outline" onClick={() => void copyLink()}>
+                {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+                {copied ? "Copiado" : "Copiar link"}
+              </Button>
+              <Button type="button" onClick={() => void shareLink()}>
+                <Share2 className="h-4 w-4" />
+                Compartilhar
+              </Button>
+            </div>
+          </div>
+        </Section>
+      ) : null}
+
       <Section
         publicMode={publicMode}
         title="Placa e contato"
@@ -403,7 +445,11 @@ export function OfferEditor({
         </div>
       </Section>
 
-      <Section publicMode={publicMode} title="Estado dos pneus">
+      <Section
+        publicMode={publicMode}
+        title="Estado dos pneus"
+        hint="Olhe o carro de cima: toque Bom, Médio ou Ruim em cada canto. Use o atalho se todos estiverem iguais."
+      >
         <TireFields
           value={offer.tires}
           onChange={(tires) => {
@@ -418,16 +464,6 @@ export function OfferEditor({
         title="Fotos do veículo"
         hint="Obrigatórias: frente, traseira, laterais, painel e velocímetro ligado. Em seguida, diga se há batida, arranhão ou detalhe de pintura."
       >
-        {mode === "internal" && publicUrl && (
-          <div className="mb-3 flex flex-wrap items-center gap-2 rounded-xl border border-dashed border-navy/15 bg-navy/[0.02] px-3 py-2 text-xs">
-            <span className="text-muted-foreground">Link completo pro cliente:</span>
-            <code className="truncate font-mono text-[11px] text-navy">{publicUrl}</code>
-            <Button type="button" size="sm" variant="outline" onClick={() => void copyLink()}>
-              {copied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
-              {copied ? "Copiado" : "Copiar"}
-            </Button>
-          </div>
-        )}
         <PhotoSlots
           offer={offer}
           onChange={(next) => {

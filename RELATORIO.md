@@ -1,9 +1,5 @@
-# RELATORIO — consultar placa + opções FIPE
+# RELATORIO — link no topo + pneus visuais
 
 ## Feito
-- Botão **Consultar veículo** (sem auto-consulta ao digitar).
-- Resultados FIPE em cartões clicáveis; escolha explícita da versão.
-- Removido campo de km digitável — km fica na foto do painel/velocímetro.
-
-## Decidido
-- Não cobra APIBrasil até o usuário pedir; menos gasto e fluxo mais claro.
+- Link do cliente no topo (interno) com Copiar e Compartilhar.
+- Pneus: vista do carro + toques Bom/Médio/Ruim + atalho “marcar todos”.
