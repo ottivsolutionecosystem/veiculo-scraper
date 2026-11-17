@@ -145,11 +145,23 @@ export class ApiBrasilPlateLookupProvider implements PlateLookupProvider {
     if (res.status === 402) {
       throw new Error("Saldo insuficiente na APIBrasil.");
     }
-    if (!res.ok) {
+
+    let body: ApiBrasilEnvelope;
+    try {
+      body = (await res.json()) as ApiBrasilEnvelope;
+    } catch {
       throw new Error(`Consulta de placa indisponível (${res.status}).`);
     }
 
-    const body = (await res.json()) as ApiBrasilEnvelope;
+    if (!res.ok) {
+      const detail = body.message?.trim();
+      throw new Error(
+        detail
+          ? `Consulta de placa: ${detail}`
+          : `Consulta de placa indisponível (${res.status}).`,
+      );
+    }
+
     return mapApiBrasilFipeResponse(plate, body);
   }
 }
