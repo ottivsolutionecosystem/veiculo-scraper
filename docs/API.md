@@ -270,31 +270,21 @@ sem `iniciado_em` — coletor/work parado), `started` (coletor pegou, ainda
 sem `progresso`), `running` (tem contadores). `progress.stage` vem de
 `progresso.fase`: `listing` a cada página da busca, `detailing` nas fichas.
 
-`PATCH`: 403 se `source` não for `shopcar` — `webmotors` e `olx` não têm
-self-service de ligar por API (CLAUDE.md: "não ligue por conta própria");
-a mudança delas só acontece por migration/config manual depois de
-homologação (`webmotors`) ou nunca via automação (`olx`, modo manual por
-definição). O toggle da tela em Fase 1 já nasceu travado pra essas duas —
-isso é só o espelho no backend.
+`PATCH`: self-service para `shopcar` e parceiros (`teca`, `barbosa`, `p12`).
+`webmotors` e `olx` — 403 (CLAUDE.md: "não ligue por conta própria"); só
+migration/config após homologação (`webmotors`) ou modo manual (`olx`).
 
-`POST .../run` (Fase 4, botão "Rodar coleta agora"): mesma trava do
-`PATCH` — 403 se `source` não for self-service. 409 se já existe pedido
-pendente pra essa fonte (`processado_em IS NULL`), pra não empilhar clique.
-Grava linha em `execucoes_solicitadas` [N] e retorna 202 — **não** dispara
-a coleta: não é RPC (SPEC seção 5), é o coletor Python que lê essa tabela
-quando roda (`captacao_bot.cli pedidos --fonte <fonte>`, hoje só manual;
-agendamento em produção é decisão de infra, seção 5 do SPEC — "orquestrador
-de produção em aberto").
+`POST .../run` (botão "Rodar coleta agora"): só `shopcar` (marketplace).
+Parceiros — 403 (use ingestão assistida com o link da vitrine). 409 se já
+existe pedido pendente. Grava `execucoes_solicitadas` [N] e retorna 202 —
+não dispara RPC; o coletor lê a tabela (`cli pedidos`).
 
-`POST .../ingest-listings` (ingestão assistida): só `shopcar`. O usuário
-cola HTML da busca já aberto no browser; a API grava em
-`ingestao_listagens` [N] (202). Fila de URLs para o script do Console:
-`POST/GET /api/sources/:source/ingest-url-queue` e
-`POST .../ingest-url-queue/advance` (só master; sem GET na fonte).
-O coletor processa com `captacao_bot.cli ingerir` — parse dos cards,
-sem GET na fonte. Não
-desativa anúncios ausentes (cada página é recorte). `GET` devolve o
-histórico recente e o `GET /api/sources` inclui `pendingListingIngest`.
+`POST .../ingest-listings` (ingestão assistida): família Shopcar
+(`shopcar`, `teca`, `barbosa`, `p12`). HTML da listagem/vitrine já aberta
+no browser → `ingestao_listagens` [N] (202). Fila de URLs:
+`POST/GET .../ingest-url-queue` e `POST .../advance` (só master). Coletor:
+`cli ingerir --fonte <fonte>`. `GET /api/sources` inclui
+`pendingListingIngest`.
 
 ## 10. Ajustes (`/ajustes`)
 

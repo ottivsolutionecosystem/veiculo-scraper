@@ -20,13 +20,15 @@ import sys
 from pathlib import Path
 
 from .adapters.shopcar import ShopcarAdapter
-from .config import FONTES, USER_AGENT
+from .config import FONTES, SHOPCAR_FAMILY, USER_AGENT
 from .http_client import PoliteClient
 from .pipeline import normalizar, precisa_revisao
 from .storage import MemoryStorage, PostgresStorage
 from .runner import Runner
 
-ADAPTERS = {"shopcar": ShopcarAdapter}
+# Parceiros (teca/barbosa/p12) reutilizam o parser Shopcar; a fonte gravada
+# vem de AdapterConfig.fonte.
+ADAPTERS = {nome: ShopcarAdapter for nome in SHOPCAR_FAMILY}
 
 
 def _adapter(fonte: str):

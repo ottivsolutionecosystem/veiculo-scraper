@@ -16,12 +16,14 @@ import {
   splitHtmlDocuments,
   validateListingHtmlChunk,
 } from "@/lib/listing-ingest";
+import { sourceLabel } from "@/lib/labels";
+import { isShopcarPartnerSource } from "@/lib/shopcar-family";
 
 const MAX_PAGES = 10;
 const STALE_MS = 90_000;
 const POLL_MS = 3000;
 
-const DEFAULT_BASE =
+const DEFAULT_MARKET_BASE =
   "https://www.shopcar.com.br/busca.php?tipo=1&tipoanuncio=2&pagina=1";
 
 /** Rota Next (+ rewrite .user.js) — não depende de arquivo em /public no standalone. */
@@ -50,9 +52,10 @@ export function ListingIngestPanel({
   const [now, setNow] = React.useState(() => Date.now());
   const [scriptOk, setScriptOk] = React.useState(false);
 
-  const [baseUrl, setBaseUrl] = React.useState(DEFAULT_BASE);
+  const partner = isShopcarPartnerSource(source);
+  const [baseUrl, setBaseUrl] = React.useState(partner ? "" : DEFAULT_MARKET_BASE);
   const [rangeFrom, setRangeFrom] = React.useState("1");
-  const [rangeTo, setRangeTo] = React.useState("10");
+  const [rangeTo, setRangeTo] = React.useState(partner ? "3" : "10");
   const [pastedLinks, setPastedLinks] = React.useState("");
 
   const reloadRecent = React.useCallback(() => {
@@ -117,7 +120,11 @@ export function ListingIngestPanel({
         ? fromPaste
         : buildShopcarListingUrlRange(baseUrl, from, to);
       if (urls.length === 0) {
-        setError("Nenhum link de busca. Ajuste o intervalo ou cole URLs.");
+        setError(
+          partner
+            ? "Cole o link da vitrine do parceiro no Shopcar (ou o intervalo de páginas)."
+            : "Nenhum link de busca. Ajuste o intervalo ou cole URLs.",
+        );
         return;
       }
       setBusy(true);
@@ -195,10 +202,15 @@ export function ListingIngestPanel({
   return (
     <div className="space-y-3 border-t border-navy/[0.06] pt-3">
       <div>
-        <p className="text-xs font-medium text-navy">Ingestão assistida (listagem)</p>
+        <p className="text-xs font-medium text-navy">
+          {partner
+            ? `Ingestão — ${sourceLabel(source)}`
+            : "Ingestão assistida (listagem)"}
+        </p>
         <p className="mt-1 text-xs text-muted-foreground">
-          Um botão percorre as páginas no <strong className="font-medium">seu</strong> Chrome (passa na
-          Cloudflare). Instale o capturador uma vez.
+          {partner
+            ? "Cole o link da vitrine no Shopcar e diga de qual até qual página raspar. A captura roda no seu Chrome."
+            : "Um botão percorre as páginas no seu Chrome (passa na Cloudflare). Instale o capturador uma vez."}
         </p>
       </div>
 
@@ -235,11 +247,16 @@ export function ListingIngestPanel({
 
       <label className="block space-y-1">
         <span className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
-          URL base da busca
+          {partner ? "Link da vitrine no Shopcar" : "URL base da busca"}
         </span>
         <Input
           value={baseUrl}
           onChange={(ev) => setBaseUrl(ev.target.value)}
+          placeholder={
+            partner
+              ? "https://www.shopcar.com.br/… (cole o link da loja)"
+              : undefined
+          }
           className="h-8 font-mono text-[11px]"
         />
       </label>
@@ -276,7 +293,7 @@ export function ListingIngestPanel({
         <Textarea
           value={pastedLinks}
           onChange={(ev) => setPastedLinks(ev.target.value)}
-          placeholder="https://www.shopcar.com.br/busca.php?…&pagina=1"
+          placeholder="https://www.shopcar.com.br/…&pagina=1"
           className="min-h-[56px] font-mono text-[11px]"
         />
       </label>

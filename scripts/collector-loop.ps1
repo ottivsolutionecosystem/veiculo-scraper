@@ -18,10 +18,14 @@ if (-not $hasBot) {
   Write-Host "aviso: BOT_CONTACT_* ausentes — so processa ingestao assistida."
 }
 
-Write-Host "coletor em loop (ingestao+pedidos shopcar a cada 15s). Ctrl+C para parar."
+$ingestFontes = @("shopcar", "teca", "barbosa", "p12")
+
+Write-Host "coletor em loop (ingestao $($ingestFontes -join ',') + pedidos shopcar a cada 15s). Ctrl+C para parar."
 Set-Location $Collector
 while ($true) {
-  & $VenvPython -m captacao_bot.cli ingerir --fonte shopcar
+  foreach ($fonte in $ingestFontes) {
+    & $VenvPython -m captacao_bot.cli ingerir --fonte $fonte
+  }
   if ($hasBot) {
     & $VenvPython -m captacao_bot.cli pedidos --fonte shopcar
   }

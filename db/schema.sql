@@ -93,6 +93,9 @@ CREATE INDEX IF NOT EXISTS ix_runs_fonte ON scrape_runs (fonte, iniciado_em DESC
 
 INSERT INTO fontes (fonte, nivel_acesso, base_legal, ativa) VALUES
     ('shopcar',   'publico_educado', 'robots.txt permite; autorizacao solicitada', true),
+    ('teca',      'autorizado',      'parceria Teca Automoveis; vitrine no Shopcar', true),
+    ('barbosa',   'autorizado',      'parceria Barbosa Automoveis; vitrine no Shopcar', true),
+    ('p12',       'autorizado',      'parceria P12 Motors; vitrine no Shopcar', true),
     ('webmotors', 'autorizado',      'PENDENTE - homologacao Sensedia',            false),
     ('olx',       'manual',          'entrada manual pelo usuario',                false)
 ON CONFLICT (fonte) DO NOTHING;

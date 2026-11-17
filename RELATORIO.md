@@ -1,14 +1,15 @@
-# RELATORIO — fling rápido no hide-on-scroll
+# RELATORIO — fontes parceiras Shopcar
 
 ## Feito
-- Hide do sticky da fila via DOM (`transform`), sem setState no scroll —
-  evita re-render da lista virtual no meio do momentum.
-- Fling grande (≥ 40px num evento) esconde/mostra na hora.
-- Revelar exige subida ≥ 56px — bounce do iOS no fling não tremia mais.
-- Sem CSS transition no sticky (animação + fling brigava com o compositor).
+- Fontes `teca`, `barbosa`, `p12` no banco (migration 0026) e no coletor.
+- Mesmo adapter Shopcar; anúncios gravados com a fonte do parceiro.
+- Painel Fontes: card + ingestão (link da vitrine + de/até página).
+- Sem coleta automática GET nos parceiros (só shopcar marketplace).
+- Loop do coletor drena ingestão das 4 fontes da família Shopcar.
 
 ## Decidido
-- Histerese assimétrica: esconder fácil, revelar mais difícil no meio do gesto.
+- Parceiro = fonte própria no dropdown (não subfiltro do shopcar).
+- URL da vitrine é apontada pelo operador — não inventamos id de loja.
 
 ## Pendente de decisão sua
 - Nenhuma.

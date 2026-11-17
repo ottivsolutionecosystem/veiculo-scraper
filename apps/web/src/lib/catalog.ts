@@ -52,7 +52,7 @@ export const BODY_TYPES = [
   "conversivel",
 ] as const;
 
-export const SOURCES = ["shopcar", "webmotors", "olx"] as const;
+export const SOURCES = ["shopcar", "teca", "barbosa", "p12", "webmotors", "olx"] as const;
 
 export const SELLER_NAMES = [
   "Revenda Show de Carros", "Auto Show Multimarcas", "Carlos Eduardo Silva",

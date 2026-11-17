@@ -77,6 +77,9 @@ export const INTEREST_STATUS_LABELS: Record<InterestStatus, string> = {
 
 export const SOURCE_LABELS: Record<string, string> = {
   shopcar: "Shopcar",
+  teca: "Teca Automóveis",
+  barbosa: "Barbosa Automóveis",
+  p12: "P12 Motors",
   webmotors: "Webmotors",
   olx: "OLX",
 };

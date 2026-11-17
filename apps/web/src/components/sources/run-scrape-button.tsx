@@ -14,18 +14,27 @@ export function RunScrapeButton({
   locked,
   pendingRequest,
   onRefresh,
+  ingestOnly = false,
 }: {
   source: string;
   locked: boolean;
   pendingRequest: ScrapeRequest | null;
   onRefresh?: () => void | Promise<unknown>;
+  /** Parceiro Shopcar: sem GET automático — só painel de link + páginas. */
+  ingestOnly?: boolean;
 }) {
   const [sellerType, setSellerType] = React.useState<string>("individual");
   const [running, setRunning] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
 
   if (locked) {
-    return <p className="text-xs text-muted-foreground">Coleta sob demanda indisponível para esta fonte.</p>;
+    return (
+      <p className="text-xs text-muted-foreground">
+        {ingestOnly
+          ? "Sem coleta automática. Cole o link da vitrine e as páginas no painel abaixo."
+          : "Coleta sob demanda indisponível para esta fonte."}
+      </p>
+    );
   }
 
   if (pendingRequest) {

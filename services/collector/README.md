@@ -68,10 +68,12 @@ precisaria disso não é escrito: a fonte muda de nível de acesso ou sai.
    Registrar a resposta em `adapters/<fonte>/README.md`.
 4. Sem resposta ou negativa: desativar a fonte e marcar como manual.
 
-## Situação das três fontes
+## Situação das fontes
 
-- **shopcar** — ativa, nível público educado. Comece por aqui: valida o
-  pipeline inteiro sem briga.
+- **shopcar** — ativa, nível público educado. Marketplace (particular/loja).
+- **teca / barbosa / p12** — ativas, nível autorizado (parceria). Mesmo
+  adapter Shopcar; só ingestão assistida (link da vitrine + páginas no
+  painel). Sem `pedidos`/GET automático.
 - **webmotors** — desligada. Só liga após homologação no portal de
   desenvolvedores. A API entrega o estoque do lojista que autoriza, não o
   marketplace.

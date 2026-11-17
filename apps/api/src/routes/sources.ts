@@ -6,6 +6,11 @@ import { decodeCursor, encodeCursor, parseLimit } from "../lib/pagination.js";
 import { mapSource, mapScrapeRun, mapScrapeRequest, mapListingIngest, unmapSellerType } from "../lib/serialize.js";
 import { ForbiddenError, NotFoundError, ConflictError } from "../lib/http-errors.js";
 import { requireMaster } from "../lib/current-operator.js";
+import {
+  isShopcarFamilySource,
+  SHOPCAR_FAMILY_SOURCES,
+  SHOPCAR_MARKET_SOURCE,
+} from "../lib/shopcar-family.js";
 
 const patchBody = z.object({ active: z.boolean() });
 const runsQuery = z.object({ cursor: z.string().optional(), limit: z.string().optional() });
@@ -36,11 +41,13 @@ const ingestBody = z.object({
     .max(MAX_PAGES_PER_REQUEST, `No máximo ${MAX_PAGES_PER_REQUEST} páginas por envio.`),
 });
 
-// Só shopcar tem self-service de liga/desliga — webmotors/olx nascem
-// desligadas por decisão de projeto (CLAUDE.md) e só mudam por
-// homologação/config manual, nunca pela API.
-const SELF_SERVICE_SOURCES = new Set(["shopcar"]);
-const LISTING_INGEST_SOURCES = new Set(["shopcar"]);
+// Shopcar + parceiros (vitrine Shopcar): liga/desliga e ingestão assistida.
+// webmotors/olx nascem desligadas (CLAUDE.md) e não mudam pela API.
+// Pedido de coleta com GET automático: só o marketplace shopcar — parceiro
+// é só link + páginas no browser (evita varrer todas as lojas).
+const SELF_SERVICE_SOURCES = new Set<string>(SHOPCAR_FAMILY_SOURCES);
+const LISTING_INGEST_SOURCES = new Set<string>(SHOPCAR_FAMILY_SOURCES);
+const AUTO_SCRAPE_SOURCES = new Set<string>([SHOPCAR_MARKET_SOURCE]);
 
 /** GET/PATCH /api/sources* — Fontes (docs/API.md seção 9). */
 export async function sourceRoutes(app: FastifyInstance) {
@@ -123,9 +130,11 @@ export async function sourceRoutes(app: FastifyInstance) {
     const actor = await requireMaster(req);
     const source = (req.params as { source: string }).source;
     const body = runBody.parse(req.body);
-    if (!SELF_SERVICE_SOURCES.has(source)) {
+    if (!AUTO_SCRAPE_SOURCES.has(source)) {
       throw new ForbiddenError(
-        `"${source}" não pode ter coleta disparada pela API — segue a escada de escalonamento da seção 4.5 do SPEC.`,
+        isShopcarFamilySource(source) && source !== SHOPCAR_MARKET_SOURCE
+          ? `"${source}" é parceiro: use a ingestão assistida (cole o link da vitrine e as páginas).`
+          : `"${source}" não pode ter coleta disparada pela API — segue a escada de escalonamento da seção 4.5 do SPEC.`,
       );
     }
 
@@ -156,7 +165,7 @@ export async function sourceRoutes(app: FastifyInstance) {
       const source = (req.params as { source: string }).source;
       if (!LISTING_INGEST_SOURCES.has(source)) {
         throw new ForbiddenError(
-          `"${source}" não aceita ingestão de listagem — só shopcar por enquanto.`,
+          `"${source}" não aceita ingestão de listagem — só fontes da família Shopcar.`,
         );
       }
       const parsed = ingestBody.safeParse(req.body);
@@ -169,8 +178,7 @@ export async function sourceRoutes(app: FastifyInstance) {
       const body = parsed.data;
       const { rows: fonteRows } = await pool.query("SELECT fonte FROM fontes WHERE fonte = $1", [source]);
       if (!fonteRows[0]) throw new NotFoundError("Fonte não encontrada.");
-      const defaultBase =
-        source === "shopcar" ? "https://www.shopcar.com.br" : `https://www.${source}.com.br`;
+      const defaultBase = "https://www.shopcar.com.br";
 
       const inserted = [];
       for (const page of body.pages) {

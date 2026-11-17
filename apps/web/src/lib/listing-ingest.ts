@@ -29,7 +29,11 @@ export function validateListingHtmlChunk(html: string): string | null {
 
 export type ShopcarListingUrl = { url: string; page: number };
 
-/** Extrai links de busca Shopcar (um por linha ou separados por espaço). */
+function isShopcarHost(hostname: string): boolean {
+  return hostname.toLowerCase().endsWith("shopcar.com.br");
+}
+
+/** Extrai links Shopcar (busca ou vitrine de loja) — um por linha ou separados. */
 export function parseShopcarListingUrls(raw: string): ShopcarListingUrl[] {
   const found = raw.match(/https?:\/\/[^\s<>"']+/gi) ?? [];
   const out: ShopcarListingUrl[] = [];
@@ -42,8 +46,7 @@ export function parseShopcarListingUrls(raw: string): ShopcarListingUrl[] {
     } catch {
       continue;
     }
-    if (!parsed.hostname.toLowerCase().endsWith("shopcar.com.br")) continue;
-    if (!/busca\.php/i.test(parsed.pathname)) continue;
+    if (!isShopcarHost(parsed.hostname)) continue;
     const page = Math.max(1, Number.parseInt(parsed.searchParams.get("pagina") || "1", 10) || 1);
     const key = `${page}|${parsed.origin}${parsed.pathname}?${parsed.searchParams.toString()}`;
     if (seen.has(key)) continue;
@@ -54,7 +57,8 @@ export function parseShopcarListingUrls(raw: string): ShopcarListingUrl[] {
 }
 
 /**
- * Monta URLs pagina=from..to a partir de um link de busca (ou query base).
+ * Monta URLs pagina=from..to a partir do link colado (busca ou vitrine).
+ * Preserva path/query — parceiros não são necessariamente `/busca.php`.
  * Cloudflare bloqueia GET do servidor — a captura é no browser do usuário.
  */
 export function buildShopcarListingUrlRange(baseUrl: string, fromPage: number, toPage: number): ShopcarListingUrl[] {
@@ -69,10 +73,10 @@ export function buildShopcarListingUrlRange(baseUrl: string, fromPage: number, t
   } catch {
     throw new Error("URL base inválida.");
   }
-  if (!parsed.hostname.toLowerCase().endsWith("shopcar.com.br")) {
+  if (!isShopcarHost(parsed.hostname)) {
     throw new Error("A URL tem que ser do shopcar.com.br.");
   }
-  if (!/busca\.php/i.test(parsed.pathname)) {
+  if (!parsed.pathname || parsed.pathname === "/") {
     parsed.pathname = "/busca.php";
   }
   const out: ShopcarListingUrl[] = [];

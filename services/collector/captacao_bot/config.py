@@ -68,12 +68,40 @@ class AdapterConfig:
             raise ValueError("req_interval_ms mínimo é 1000")
 
 
+# Parceiros: mesma base Shopcar, fonte lógica própria. Só ingestão assistida
+# (painel: link da vitrine + páginas) — sem varredura do marketplace.
+_SHOPCAR_BASE = "https://www.shopcar.com.br"
+
 FONTES: dict[str, AdapterConfig] = {
     "shopcar": AdapterConfig(
         fonte="shopcar",
         nivel_acesso="publico_educado",
         base_legal="robots.txt permite; autorização solicitada por e-mail em <<data>>",
-        base_url="https://www.shopcar.com.br",
+        base_url=_SHOPCAR_BASE,
+        req_interval_ms=4000,
+        usar_sitemap=False,
+    ),
+    "teca": AdapterConfig(
+        fonte="teca",
+        nivel_acesso="autorizado",
+        base_legal="parceria Teca Automóveis; vitrine pública no Shopcar",
+        base_url=_SHOPCAR_BASE,
+        req_interval_ms=4000,
+        usar_sitemap=False,
+    ),
+    "barbosa": AdapterConfig(
+        fonte="barbosa",
+        nivel_acesso="autorizado",
+        base_legal="parceria Barbosa Automóveis; vitrine pública no Shopcar",
+        base_url=_SHOPCAR_BASE,
+        req_interval_ms=4000,
+        usar_sitemap=False,
+    ),
+    "p12": AdapterConfig(
+        fonte="p12",
+        nivel_acesso="autorizado",
+        base_legal="parceria P12 Motors; vitrine pública no Shopcar",
+        base_url=_SHOPCAR_BASE,
         req_interval_ms=4000,
         usar_sitemap=False,
     ),
@@ -96,3 +124,6 @@ FONTES: dict[str, AdapterConfig] = {
         ativa=False,
     ),
 }
+
+# Fontes cujo HTML é o do Shopcar (mesmo ShopcarAdapter).
+SHOPCAR_FAMILY = frozenset({"shopcar", "teca", "barbosa", "p12"})

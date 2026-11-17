@@ -5,7 +5,7 @@ import { Loader2, Radio } from "lucide-react";
 
 import { ApiError, getSources, resetCollected } from "@/lib/api";
 import type { SourceWithLastRun } from "@/lib/api-types";
-import { ACCESS_LEVEL_LABELS } from "@/lib/labels";
+import { ACCESS_LEVEL_LABELS, sourceLabel } from "@/lib/labels";
 import { formatDateTime } from "@/lib/format";
 import { isMaster } from "@/lib/operator";
 import { useAuth } from "@/components/auth/auth-provider";
@@ -17,9 +17,13 @@ import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@
 import { SourceToggle } from "@/components/sources/source-toggle";
 import { RunScrapeButton } from "@/components/sources/run-scrape-button";
 import { ListingIngestPanel } from "@/components/sources/listing-ingest-panel";
+import { isShopcarFamilySource, isShopcarPartnerSource } from "@/lib/shopcar-family";
 import { cn } from "@/lib/utils";
 
-const MANUALLY_LOCKED = new Set(["webmotors", "olx"]);
+/** OLX/Webmotors: sem toggle nem coleta pela UI. */
+const TOGGLE_LOCKED = new Set(["webmotors", "olx"]);
+/** Parceiros: toggle ok; sem “Rodar coleta” (só ingestão assistida). */
+const SCRAPE_LOCKED = new Set(["webmotors", "olx", "teca", "barbosa", "p12"]);
 
 const SELLER_TYPE_LABELS: Record<"individual" | "dealer", string> = {
   individual: "Particular",
@@ -105,7 +109,8 @@ export function SourcesBoard() {
       ) : (
         <div className="grid gap-3 sm:grid-cols-3">
           {sources.map((source) => {
-            const locked = MANUALLY_LOCKED.has(source.source);
+            const toggleLocked = TOGGLE_LOCKED.has(source.source);
+            const scrapeLocked = SCRAPE_LOCKED.has(source.source);
             return (
               <Card key={source.source} className="card-lift relative overflow-hidden">
                 {source.active && (
@@ -113,13 +118,13 @@ export function SourcesBoard() {
                 )}
                 <CardHeader className="flex-row items-start justify-between gap-3">
                   <div className="min-w-0 space-y-2">
-                    <CardTitle className="capitalize">{source.source}</CardTitle>
+                    <CardTitle>{sourceLabel(source.source)}</CardTitle>
                     <Badge variant="outline">{ACCESS_LEVEL_LABELS[source.accessLevel]}</Badge>
                   </div>
                   <SourceToggle
                     source={source.source}
                     active={source.active}
-                    locked={locked}
+                    locked={toggleLocked}
                     lockedReason={source.reason ?? undefined}
                   />
                 </CardHeader>
@@ -179,12 +184,13 @@ export function SourcesBoard() {
                   <div className="border-t border-navy/[0.06] pt-3">
                     <RunScrapeButton
                       source={source.source}
-                      locked={locked}
+                      locked={scrapeLocked}
                       pendingRequest={source.pendingRequest}
                       onRefresh={reload}
+                      ingestOnly={isShopcarPartnerSource(source.source)}
                     />
                   </div>
-                  {source.source === "shopcar" && (
+                  {isShopcarFamilySource(source.source) && (
                     <ListingIngestPanel
                       source={source.source}
                       pendingCount={source.pendingListingIngest ?? 0}
@@ -207,7 +213,7 @@ export function SourcesBoard() {
             <div className="space-y-2 md:hidden">
               {sourcesWithRuns.map((source) => (
                 <div key={source.source} className="rounded-xl border border-navy/[0.06] p-3 text-sm">
-                  <p className="font-semibold capitalize text-navy">{source.source}</p>
+                  <p className="font-semibold text-navy">{sourceLabel(source.source)}</p>
                   <p className="text-xs text-muted-foreground">{formatDateTime(source.lastRun!.finishedAt)}</p>
                   <p className="mt-1 text-xs text-muted-foreground">
                     {source.lastRun!.new} novos · {source.lastRun!.updated} atualizados · {source.lastRun!.errors} erros
@@ -234,7 +240,7 @@ export function SourcesBoard() {
               <TableBody>
                 {sourcesWithRuns.map((source) => (
                   <TableRow key={source.source}>
-                    <TableCell className="capitalize">{source.source}</TableCell>
+                    <TableCell>{sourceLabel(source.source)}</TableCell>
                     <TableCell>{formatDateTime(source.lastRun!.finishedAt)}</TableCell>
                     <TableCell>{source.lastRun!.requests}</TableCell>
                     <TableCell>{source.lastRun!.new}</TableCell>

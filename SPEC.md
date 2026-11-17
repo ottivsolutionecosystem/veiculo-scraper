@@ -50,6 +50,10 @@ em tempo de carga (`AdapterConfig.__post_init__`).
 
 - **shopcar.com.br** — Nível 3, ativa. Portal pequeno, sem proteção comercial
   anti-bot. Começa por aqui: valida o pipeline inteiro sem briga.
+- **teca / barbosa / p12** — Nível 2 (parceria), ativas. Mesma vitrine HTML do
+  Shopcar; fonte lógica separada por lojista parceiro. Só ingestão assistida
+  (operador cola o link da vitrine e o intervalo de páginas no painel) — sem
+  varredura automática do marketplace.
 - **webmotors.com.br** — Nível 2 possível, **desligada**. As APIs do portal de
   desenvolvedores servem o estoque do lojista que autoriza a integração, não o
   marketplace. Só liga após homologação.
