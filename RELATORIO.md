@@ -1,8 +1,7 @@
-# RELATORIO — Auttus no lugar da marca Shopcar
+# RELATORIO — faixa Auttus tapa Shopcar
 
 ## Feito
-- Galeria: bloco opaco no canto inferior esquerdo (onde a Shopcar grava a logo) com wordmark Auttus por cima.
-- Sem barra translúcida de ponta a ponta — ela deixava a Shopcar aparecer ao lado.
+- Galeria: faixa inferior **opaca full-width** (h-12/14) com wordmark Auttus — cobre a marca Shopcar de ponta a ponta.
 
 ## Pendente de você
-- Deploy web pra ver na ficha.
+- Deploy web.

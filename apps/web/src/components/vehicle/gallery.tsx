@@ -7,18 +7,16 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 /**
- * Cobre a marca d'água da Shopcar (canto inferior esquerdo da foto)
- * com um bloco opaco + wordmark Auttus no mesmo lugar.
+ * Faixa opaca na base da foto — tapa a marca d'água da Shopcar
+ * (costuma ficar no canto inferior) e coloca a Auttus no lugar.
  */
 function PhotoBrandCover({ compact = false }: { compact?: boolean }) {
   return (
     <div
       className={cn(
-        "pointer-events-none absolute z-[1] flex items-center justify-center",
-        "bg-navy-deep shadow-[0_0_0_1px_rgba(255,255,255,0.06)]",
-        compact
-          ? "bottom-0 left-0 h-[1.15rem] min-w-[3.4rem] rounded-tr-md px-1"
-          : "bottom-0 left-0 h-10 min-w-[7.75rem] rounded-tr-xl px-2.5 sm:h-11 sm:min-w-[9.5rem] sm:px-3",
+        "pointer-events-none absolute inset-x-0 bottom-0 z-[1] flex items-center",
+        "bg-navy-deep",
+        compact ? "h-5 justify-start px-1.5" : "h-12 justify-start px-3 sm:h-14 sm:px-4",
       )}
       aria-hidden
     >
@@ -28,7 +26,7 @@ function PhotoBrandCover({ compact = false }: { compact?: boolean }) {
         alt=""
         className={cn(
           "w-auto object-contain object-left",
-          compact ? "h-2.5 max-w-[3rem]" : "h-5 max-w-[7rem] sm:h-6 sm:max-w-[8.5rem]",
+          compact ? "h-3 max-w-[4rem]" : "h-6 max-w-[9rem] sm:h-7 sm:max-w-[11rem]",
         )}
       />
     </div>
