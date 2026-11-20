@@ -112,6 +112,7 @@ fase futura.
 | Método | Rota | Body |
 |---|---|---|
 | GET | `/api/vehicles/:id` | — |
+| GET | `/api/vehicles/:id/photos/export` | — (ZIP JPEG com tarja Auttus) |
 | POST | `/api/vehicles/:id/fipe-match/confirm` | `{ fipeCode: string }` |
 | POST | `/api/requests` | `{ vehicleId, branchId, customerId?, proposedAt }` |
 

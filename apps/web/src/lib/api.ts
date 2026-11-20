@@ -180,6 +180,31 @@ export function getVehicle(id: number) {
   return apiFetch<VehicleDetailResponse>(`/api/vehicles/${id}`);
 }
 
+/** Baixa ZIP das fotos com tarja Auttus (resposta binária, não JSON). */
+export async function downloadVehiclePhotosZip(id: number): Promise<Blob> {
+  const headers = new Headers();
+  const token = getStoredToken();
+  if (token) headers.set("Authorization", `Bearer ${token}`);
+  const base = await resolveFetchBase();
+  const res = await fetch(`${base}/api/vehicles/${id}/photos/export`, {
+    cache: "no-store",
+    credentials: "include",
+    headers,
+  });
+  if (!res.ok) {
+    const raw = await res.text();
+    let message = `Erro ${res.status}`;
+    try {
+      const body = JSON.parse(raw) as { error?: string };
+      if (body.error) message = body.error;
+    } catch {
+      if (raw) message = raw.slice(0, 180);
+    }
+    throw new ApiError(res.status, message);
+  }
+  return res.blob();
+}
+
 export function discardVehicle(id: number, reason: string, notes?: string) {
   return apiFetch<void>(`/api/vehicles/${id}/discard`, {
     method: "POST",

@@ -1,41 +1,57 @@
 "use client";
 
 import * as React from "react";
-import { ChevronLeft, ChevronRight, ImageOff } from "lucide-react";
+import { ChevronLeft, ChevronRight, Download, ImageOff, Loader2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { ApiError, downloadVehiclePhotosZip } from "@/lib/api";
+import {
+  PHOTO_BRAND_BAR_CLASS,
+  PHOTO_BRAND_BAR_RATIO,
+  PHOTO_BRAND_WORDMARK_SRC,
+} from "@/lib/photo-brand";
 import { cn } from "@/lib/utils";
 
 /**
- * Faixa opaca na base da foto — tapa a marca d'água da Shopcar
- * (costuma ficar no canto inferior) e coloca a Auttus no lugar.
+ * Faixa opaca full-width na base — esconde a marca Shopcar.
+ * Mesma proporção do export (corta a base e recoloca Auttus).
  */
 function PhotoBrandCover({ compact = false }: { compact?: boolean }) {
   return (
     <div
       className={cn(
-        "pointer-events-none absolute inset-x-0 bottom-0 z-[1] flex items-center",
-        "bg-navy-deep",
-        // Shopcar costuma gravar marca larga e alta na base — faixa precisa cobrir.
-        compact ? "h-6 justify-start px-1.5" : "h-16 justify-start px-3 sm:h-20 sm:px-4",
+        "pointer-events-none absolute inset-x-0 bottom-0 z-[1] flex items-center justify-start",
+        PHOTO_BRAND_BAR_CLASS,
+        compact ? "px-1.5" : "px-3 sm:px-4",
       )}
+      style={{ height: `${PHOTO_BRAND_BAR_RATIO * 100}%` }}
       aria-hidden
     >
       {/* eslint-disable-next-line @next/next/no-img-element -- arte local em /public */}
       <img
-        src="/brand/logo-wordmark-on-dark.png"
+        src={PHOTO_BRAND_WORDMARK_SRC}
         alt=""
         className={cn(
           "w-auto object-contain object-left",
-          compact ? "h-3.5 max-w-[4.5rem]" : "h-7 max-w-[10rem] sm:h-8 sm:max-w-[12rem]",
+          compact ? "h-[40%] max-w-[45%]" : "h-[40%] max-w-[35%]",
         )}
       />
     </div>
   );
 }
 
-export function Gallery({ photos, alt }: { photos: string[]; alt: string }) {
+export function Gallery({
+  photos,
+  alt,
+  vehicleId,
+}: {
+  photos: string[];
+  alt: string;
+  vehicleId?: number;
+}) {
   const [active, setActive] = React.useState(0);
+  const [exporting, setExporting] = React.useState(false);
+  const [exportError, setExportError] = React.useState<string | null>(null);
   const total = photos.length;
 
   React.useEffect(() => {
@@ -47,6 +63,29 @@ export function Gallery({ photos, alt }: { photos: string[]; alt: string }) {
   function go(delta: number) {
     if (total === 0) return;
     setActive((current) => (current + delta + total) % total);
+  }
+
+  async function handleExport() {
+    if (!vehicleId || exporting) return;
+    setExporting(true);
+    setExportError(null);
+    try {
+      const blob = await downloadVehiclePhotosZip(vehicleId);
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `fotos-${vehicleId}-auttus.zip`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      setExportError(
+        err instanceof ApiError ? err.message : "Não foi possível baixar as fotos.",
+      );
+    } finally {
+      setExporting(false);
+    }
   }
 
   if (total === 0) {
@@ -81,6 +120,25 @@ export function Gallery({ photos, alt }: { photos: string[]; alt: string }) {
             className="h-full w-full object-contain"
           />
           <PhotoBrandCover />
+          <div className="absolute left-2.5 top-2.5 z-10 flex flex-wrap items-center gap-2 sm:left-3 sm:top-3">
+            {vehicleId ? (
+              <Button
+                type="button"
+                variant="navy"
+                size="sm"
+                className="h-8 gap-1.5 rounded-full px-3 shadow-card"
+                disabled={exporting}
+                onClick={() => void handleExport()}
+              >
+                {exporting ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  <Download className="h-3.5 w-3.5" />
+                )}
+                {exporting ? "Gerando…" : "Baixar fotos"}
+              </Button>
+            ) : null}
+          </div>
           {total > 1 ? (
             <span className="absolute right-2.5 top-2.5 z-[1] rounded-full bg-navy/80 px-2.5 py-0.5 text-xs font-medium text-white sm:right-3 sm:top-3">
               {active + 1} / {total}
@@ -112,6 +170,9 @@ export function Gallery({ photos, alt }: { photos: string[]; alt: string }) {
           </>
         )}
       </div>
+
+      {exportError ? <p className="text-xs text-destructive">{exportError}</p> : null}
+
       {total > 1 && (
         <div className="flex gap-2 overflow-x-auto pb-1">
           {photos.map((photo, i) => (

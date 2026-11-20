@@ -1,10 +1,12 @@
-# RELATORIO — faixa Auttus tapa Shopcar
+# RELATORIO — botão Baixar fotos + export sem Shopcar
 
 ## Feito
-- Badge estreito não cobria a marca Shopcar → faixa opaca full-width na base.
-- Altura reforçada (h-16 / sm:h-20) após feedback “não tampou”.
-- Contador de fotos movido para o topo (não fica em cima da faixa).
-- Commit + push `deploy` + webhook crawler-web disparado.
+- Botão **Baixar fotos** no canto superior esquerdo da galeria (ficha).
+- Export corta 20% da base (remove Shopcar) e aplica tarja Auttus → ZIP.
+- Commit + deploy api/web desta entrega.
+
+## Decidido por mim
+- sharp + jszip na API (CORS do CDN impede canvas no browser).
 
 ## Pendente de você
-- Conferir na ficha se a Shopcar sumiu após o deploy terminar.
+- Abrir ficha → canto superior esquerdo da foto → **Baixar fotos**.

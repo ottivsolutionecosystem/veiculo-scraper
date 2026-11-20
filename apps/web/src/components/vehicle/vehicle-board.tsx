@@ -103,7 +103,11 @@ export function VehicleBoard({ vehicleId }: { vehicleId: number }) {
           </div>
         </div>
 
-        <Gallery photos={listing.photos} alt={`${listing.brand} ${listing.model}`} />
+        <Gallery
+          photos={listing.photos}
+          alt={`${listing.brand} ${listing.model}`}
+          vehicleId={vehicle.id}
+        />
 
         <div className="flex flex-wrap items-center gap-x-5 gap-y-2 rounded-2xl border border-navy/[0.06] bg-card p-4 text-sm shadow-card">
           <span className="text-lg font-semibold tabular-nums tracking-tight text-navy">

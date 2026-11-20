@@ -11,6 +11,8 @@ import { requireOperator } from "../lib/current-operator.js";
 import { isMaster } from "../lib/roles.js";
 import { manualContactExpiry, normalizePhoneBR, phoneHash } from "../lib/telefone.js";
 import { recordCall } from "../jobs/record-call.js";
+import { upgradeListingPhotos } from "../lib/listing-photos.js";
+import { buildBrandedPhotosZip } from "../lib/export-branded-photos.js";
 
 const discardBody = z.object({ reason: z.string(), notes: z.string().optional() });
 const callOutcome = z.enum([
@@ -130,6 +132,38 @@ export async function vehicleRoutes(app: FastifyInstance) {
       matches,
       interactions: interactionRows.map(mapInteraction),
     });
+  });
+
+  /** ZIP das fotos do anúncio principal com tarja Auttus queimada no JPEG. */
+  app.get("/api/vehicles/:id/photos/export", async (req, reply) => {
+    await requireOperator(req);
+    const id = Number((req.params as { id: string }).id);
+    if (!Number.isFinite(id) || id < 1) throw new ValidationError("ID inválido.");
+
+    const { rows } = await pool.query(
+      `SELECT a.fotos
+         FROM veiculos v
+         JOIN anuncios a ON a.id = v.anuncio_principal_id
+        WHERE v.id = $1`,
+      [id],
+    );
+    if (!rows[0]) throw new NotFoundError("Veículo não encontrado.");
+
+    const photos = upgradeListingPhotos(rows[0].fotos);
+    if (photos.length === 0) throw new ValidationError("Veículo sem fotos para exportar.");
+
+    let zip: Buffer;
+    try {
+      zip = await buildBrandedPhotosZip(photos);
+    } catch (err) {
+      throw new ValidationError((err as Error).message);
+    }
+
+    reply
+      .header("Content-Type", "application/zip")
+      .header("Content-Disposition", `attachment; filename="fotos-${id}-auttus.zip"`)
+      .header("Cache-Control", "no-store")
+      .send(zip);
   });
 
   app.post("/api/vehicles/:id/discard", async (req, reply) => {
