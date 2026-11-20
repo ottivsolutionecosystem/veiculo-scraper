@@ -16,7 +16,8 @@ function PhotoBrandCover({ compact = false }: { compact?: boolean }) {
       className={cn(
         "pointer-events-none absolute inset-x-0 bottom-0 z-[1] flex items-center",
         "bg-navy-deep",
-        compact ? "h-5 justify-start px-1.5" : "h-12 justify-start px-3 sm:h-14 sm:px-4",
+        // Shopcar costuma gravar marca larga e alta na base — faixa precisa cobrir.
+        compact ? "h-6 justify-start px-1.5" : "h-16 justify-start px-3 sm:h-20 sm:px-4",
       )}
       aria-hidden
     >
@@ -26,7 +27,7 @@ function PhotoBrandCover({ compact = false }: { compact?: boolean }) {
         alt=""
         className={cn(
           "w-auto object-contain object-left",
-          compact ? "h-3 max-w-[4rem]" : "h-6 max-w-[9rem] sm:h-7 sm:max-w-[11rem]",
+          compact ? "h-3.5 max-w-[4.5rem]" : "h-7 max-w-[10rem] sm:h-8 sm:max-w-[12rem]",
         )}
       />
     </div>
@@ -81,7 +82,7 @@ export function Gallery({ photos, alt }: { photos: string[]; alt: string }) {
           />
           <PhotoBrandCover />
           {total > 1 ? (
-            <span className="absolute bottom-2.5 right-2.5 z-[1] rounded-full bg-navy/80 px-2.5 py-0.5 text-xs font-medium text-white sm:bottom-3 sm:right-3">
+            <span className="absolute right-2.5 top-2.5 z-[1] rounded-full bg-navy/80 px-2.5 py-0.5 text-xs font-medium text-white sm:right-3 sm:top-3">
               {active + 1} / {total}
             </span>
           ) : null}
