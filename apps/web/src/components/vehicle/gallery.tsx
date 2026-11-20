@@ -6,6 +6,45 @@ import { ChevronLeft, ChevronRight, ImageOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
+function PhotoBrandBar({
+  counter,
+  compact = false,
+}: {
+  counter?: string | null;
+  compact?: boolean;
+}) {
+  return (
+    <div
+      className={cn(
+        "pointer-events-none absolute inset-x-0 bottom-0 flex items-center justify-between gap-2",
+        "bg-gradient-to-t from-navy-deep/95 via-navy-deep/80 to-transparent",
+        compact ? "px-1.5 pb-1 pt-4" : "px-3 pb-2.5 pt-8 sm:px-4 sm:pb-3",
+      )}
+      aria-hidden
+    >
+      {/* eslint-disable-next-line @next/next/no-img-element -- arte local em /public */}
+      <img
+        src="/brand/logo-wordmark-on-dark.png"
+        alt=""
+        className={cn(
+          "w-auto object-contain object-left opacity-95",
+          compact ? "h-3 max-w-[4.5rem]" : "h-5 max-w-[7.5rem] sm:h-6 sm:max-w-[9rem]",
+        )}
+      />
+      {counter ? (
+        <span
+          className={cn(
+            "rounded-full bg-white/15 font-medium text-white/90",
+            compact ? "px-1.5 py-0.5 text-[9px]" : "px-2.5 py-0.5 text-xs",
+          )}
+        >
+          {counter}
+        </span>
+      ) : null}
+    </div>
+  );
+}
+
 export function Gallery({ photos, alt }: { photos: string[]; alt: string }) {
   const [active, setActive] = React.useState(0);
   const total = photos.length;
@@ -45,9 +84,14 @@ export function Gallery({ photos, alt }: { photos: string[]; alt: string }) {
           touchX.current = null;
         }}
       >
-        <div className="flex aspect-[4/3] items-center justify-center sm:aspect-[16/10]">
-          {/* eslint-disable-next-line @next/next/no-img-element -- data URI local, sem chamada de rede */}
-          <img src={photos[active]} alt={alt} className="max-h-full max-w-full object-contain" />
+        <div className="relative flex aspect-[4/3] items-center justify-center sm:aspect-[16/10]">
+          {/* eslint-disable-next-line @next/next/no-img-element -- URL da fonte / data URI */}
+          <img
+            src={photos[active]}
+            alt={alt}
+            className="h-full w-full object-contain"
+          />
+          <PhotoBrandBar counter={total > 1 ? `${active + 1} / ${total}` : null} />
         </div>
         {total > 1 && (
           <>
@@ -55,7 +99,7 @@ export function Gallery({ photos, alt }: { photos: string[]; alt: string }) {
               type="button"
               variant="navy"
               size="icon"
-              className="absolute left-2 top-1/2 h-8 w-8 -translate-y-1/2 rounded-full shadow-card sm:left-3 sm:h-9 sm:w-9"
+              className="absolute left-2 top-1/2 z-10 h-8 w-8 -translate-y-1/2 rounded-full shadow-card sm:left-3 sm:h-9 sm:w-9"
               onClick={() => go(-1)}
               aria-label="Foto anterior"
             >
@@ -65,15 +109,12 @@ export function Gallery({ photos, alt }: { photos: string[]; alt: string }) {
               type="button"
               variant="navy"
               size="icon"
-              className="absolute right-2 top-1/2 h-8 w-8 -translate-y-1/2 rounded-full shadow-card sm:right-3 sm:h-9 sm:w-9"
+              className="absolute right-2 top-1/2 z-10 h-8 w-8 -translate-y-1/2 rounded-full shadow-card sm:right-3 sm:h-9 sm:w-9"
               onClick={() => go(1)}
               aria-label="Próxima foto"
             >
               <ChevronRight />
             </Button>
-            <span className="absolute bottom-3 right-3 rounded-full bg-navy/80 px-2.5 py-0.5 text-xs font-medium text-white">
-              {active + 1} / {total}
-            </span>
           </>
         )}
       </div>
@@ -85,12 +126,13 @@ export function Gallery({ photos, alt }: { photos: string[]; alt: string }) {
               type="button"
               onClick={() => setActive(i)}
               className={cn(
-                "h-14 w-20 shrink-0 overflow-hidden rounded-md border-2 bg-muted",
+                "relative h-14 w-20 shrink-0 overflow-hidden rounded-md border-2 bg-muted",
                 i === active ? "border-primary" : "border-transparent opacity-70 hover:opacity-100",
               )}
             >
               {/* eslint-disable-next-line @next/next/no-img-element -- data URI local */}
               <img src={photo} alt="" className="h-full w-full object-cover" />
+              <PhotoBrandBar compact />
             </button>
           ))}
         </div>

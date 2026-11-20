@@ -5,6 +5,7 @@
  * JSON à mão a partir de `row.*` fora daqui.
  */
 
+import { upgradeListingPhotos } from "./listing-photos.js";
 import { scrapePhase } from "./scrape-status.js";
 
 const num = (v: unknown): number | null => (v === null || v === undefined ? null : Number(v));
@@ -84,7 +85,7 @@ export function mapQueueRow(row: Record<string, unknown>) {
       color: row.cor,
       city: row.cidade,
       stateCode: row.uf,
-      photos: row.fotos,
+      photos: upgradeListingPhotos(row.fotos),
       sellerType: sellerType(row.tipo_anunciante),
       active: row.ativo,
       deactivatedAt: row.desativado_em ?? null,
@@ -113,7 +114,7 @@ export function mapListing(row: Record<string, unknown>) {
     color: row.cor,
     city: row.cidade,
     stateCode: row.uf,
-    photos: row.fotos,
+    photos: upgradeListingPhotos(row.fotos),
     sellerType: sellerType(row.tipo_anunciante),
     fingerprint: row.fingerprint,
     contentHash: row.content_hash,

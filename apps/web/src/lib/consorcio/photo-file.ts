@@ -1,7 +1,10 @@
-/** Redimensiona imagem pra data URL (mock local sem storage remoto). */
+/** Redimensiona imagem pra data URL (sem storage remoto).
+ * Mantém proporção; só reduz se passar do lado máximo. */
 
-const MAX_EDGE = 1024;
-const QUALITY = 0.64;
+/** Lado maior — suficiente pra retina em cards ~400px e galeria. */
+const MAX_EDGE = 1600;
+/** JPEG: nitidez boa sem estourar o PATCH (bodyLimit 16MB). */
+const QUALITY = 0.82;
 
 export async function fileToDataUrl(file: File): Promise<string> {
   const bitmap = await createImageBitmap(file);
@@ -13,6 +16,8 @@ export async function fileToDataUrl(file: File): Promise<string> {
   canvas.height = h;
   const ctx = canvas.getContext("2d");
   if (!ctx) throw new Error("Canvas indisponível.");
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = "high";
   ctx.drawImage(bitmap, 0, 0, w, h);
   bitmap.close();
   return canvas.toDataURL("image/jpeg", QUALITY);

@@ -1,13 +1,12 @@
-# RELATORIO — deploy avaliação pública
+# RELATORIO — barra Auttus nas fotos da ficha
 
 ## Feito
-- Commit `3fa21fd` na branch `deploy` (push ok).
-- **crawler-web** Done no `3fa21fd`.
-- **crawler-api** Done no `3fa21fd` (bodyLimit 16MB).
-- Webhook bare POST dá "Branch Not Match"; com payload `refs/heads/deploy` funciona.
+- Galeria da ficha: barra inferior com wordmark Auttus em cada foto (principal + miniaturas).
+- Contador `1 / N` vai na mesma barra (quando há mais de uma foto).
 
 ## Decidido
-- Deploy manual/redeploy quando o webhook simples falha.
+- Overlay CSS (não grava na imagem). Serve pra marca na UI; export/print futuro seria outro job.
 
 ## Pendente de você
-- Smoke no link: fotos, nome/telefone e termos no final.
+- Deploy web (+ api do upgrade `redim/135` se ainda não subiu).
+- Se quiser a barra também nos cards da fila, diga.

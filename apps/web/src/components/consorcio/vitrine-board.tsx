@@ -104,10 +104,10 @@ export function VitrineBoard() {
               o.photos.find((p) => p.slot !== "damage")?.url;
             return (
               <Card key={o.id} className="overflow-hidden">
-                <div className="aspect-[16/10] bg-navy/[0.04]">
+                <div className="flex aspect-[16/10] items-center justify-center bg-navy/[0.04]">
                   {thumb ? (
                     // eslint-disable-next-line @next/next/no-img-element
-                    <img src={thumb} alt="" className="h-full w-full object-cover" />
+                    <img src={thumb} alt="" className="max-h-full max-w-full object-contain" />
                   ) : null}
                 </div>
                 <CardHeader className="space-y-1">

@@ -228,9 +228,12 @@ export function PhotoSlots({
             ) : (
               <div className="grid grid-cols-3 gap-2 sm:grid-cols-5">
                 {damage.map((p) => (
-                  <div key={p.id} className="relative overflow-hidden rounded-xl border border-navy/10">
+                  <div
+                    key={p.id}
+                    className="relative flex aspect-square items-center justify-center overflow-hidden rounded-xl border border-navy/10 bg-navy/[0.03]"
+                  >
                     {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={p.url} alt="" className="aspect-square w-full object-cover" />
+                    <img src={p.url} alt="" className="max-h-full max-w-full object-contain" />
                     <button
                       type="button"
                       className="absolute right-1 top-1 rounded-full bg-black/55 p-1 text-white"
@@ -264,12 +267,16 @@ function SlotCard({
 }) {
   return (
     <div className="overflow-hidden rounded-2xl border border-navy/10 bg-card">
-      <div className="aspect-[4/3] bg-navy/[0.03]">
+      <div className="flex aspect-[4/3] items-center justify-center bg-navy/[0.03]">
         {url ? (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={url} alt={title} className="h-full w-full object-cover" />
+          <img
+            src={url}
+            alt={title}
+            className="max-h-full max-w-full object-contain"
+          />
         ) : (
-          <div className="flex h-full items-center justify-center text-navy/25">
+          <div className="flex h-full w-full items-center justify-center text-navy/25">
             <Camera className="h-8 w-8" />
           </div>
         )}
