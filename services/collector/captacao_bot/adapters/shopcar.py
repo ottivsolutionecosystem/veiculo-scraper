@@ -223,6 +223,63 @@ def _achatar_jsonld(dados) -> Iterator[dict]:
                 yield from _achatar_jsonld(dados[chave])
 
 
+# Logo do site, ícones e assets de loja — não são foto do veículo.
+_RE_FOTO_LIXO = re.compile(
+    r"(?:/images/(?:logo|anunciante)|/stored/lojas/|/favicon|/sprite)",
+    re.I,
+)
+
+
+def _foto_de_veiculo(src: str | None) -> bool:
+    if not src or not src.startswith("http"):
+        return False
+    return _RE_FOTO_LIXO.search(src) is None
+
+
+def _fotos_da_galeria(tree: LexborHTMLParser) -> list[str]:
+    """`a.fotogroup` traz a galeria completa (ordem por data-pos)."""
+    nos = tree.css("a.fotogroup")
+    if not nos:
+        for seletor in (".galeria img", "[itemprop='image']"):
+            nos = tree.css(seletor)
+            if nos:
+                break
+
+    candidatos: list[tuple[int, str]] = []
+    for i, node in enumerate(nos):
+        src = (
+            node.attributes.get("href")
+            or node.attributes.get("src")
+            or node.attributes.get("data-src")
+            or node.attributes.get("data-id")
+        )
+        if not _foto_de_veiculo(src):
+            continue
+        pos_raw = node.attributes.get("data-pos")
+        try:
+            pos = int(pos_raw) if pos_raw is not None else i
+        except ValueError:
+            pos = i
+        candidatos.append((pos, src))  # type: ignore[arg-type]
+
+    candidatos.sort(key=lambda item: item[0])
+    return [src for _, src in candidatos]
+
+
+def _mesclar_fotos(*listas: list[str], limite: int = 20) -> list[str]:
+    vistos: set[str] = set()
+    saida: list[str] = []
+    for lista in listas:
+        for src in lista:
+            if not _foto_de_veiculo(src) or src in vistos:
+                continue
+            vistos.add(src)
+            saida.append(src)
+            if len(saida) >= limite:
+                return saida
+    return saida
+
+
 class ShopcarAdapter(Adapter):
     def urls_de_listagem(self, tipo_anunciante: str | None = None) -> Iterator[str]:
         # Filtra na URL do Shopcar — 1546 particulares, não 18 mil misturados.
@@ -339,7 +396,7 @@ class ShopcarAdapter(Adapter):
 
         titulo = None
         preco = None
-        fotos: list[str] = []
+        fotos_jsonld: list[str] = []
         km = None
         cor = None
         cidade = None
@@ -357,10 +414,10 @@ class ShopcarAdapter(Adapter):
                 preco = str(oferta.get("price"))
             imagem = jsonld.get("image")
             if isinstance(imagem, str):
-                fotos = [imagem]
+                fotos_jsonld = [imagem]
             elif isinstance(imagem, list):
-                fotos = [i for i in imagem if isinstance(i, str)]
-            foto_principal = foto_principal or (fotos[0] if fotos else None)
+                fotos_jsonld = [i for i in imagem if isinstance(i, str)]
+            foto_principal = foto_principal or (fotos_jsonld[0] if fotos_jsonld else None)
             odometro = jsonld.get("mileageFromOdometer")
             if isinstance(odometro, dict):
                 km = f"{odometro.get('value')} {odometro.get('unitCode', 'KM')}"
@@ -385,19 +442,11 @@ class ShopcarAdapter(Adapter):
             cor = _primeiro(tree, SELETORES["cor"])
         if not cidade:
             cidade = _primeiro(tree, SELETORES["cidade"])
-        if not fotos:
-            for seletor in SELETORES["fotos"].split(","):
-                for node in tree.css(seletor.strip()):
-                    src = (
-                        node.attributes.get("href")
-                        or node.attributes.get("src")
-                        or node.attributes.get("data-src")
-                        or node.attributes.get("data-id")
-                    )
-                    if src and src.startswith("http"):
-                        fotos.append(src)
-                if fotos:
-                    break
+
+        # Galeria HTML primeiro: o JSON-LD só traz 1 imagem (a capa).
+        fotos_galeria = _fotos_da_galeria(tree)
+        fotos_og = [foto_principal] if _foto_de_veiculo(foto_principal) else []
+        fotos = _mesclar_fotos(fotos_galeria, fotos_jsonld, fotos_og)
 
         ano = str(ano_jsonld) if ano_jsonld else _primeiro(tree, SELETORES["ano"])
         tipo_anunciante, vendedor_nome = detectar_tipo_anunciante(tree, foto_principal)
@@ -430,7 +479,7 @@ class ShopcarAdapter(Adapter):
             combustivel_texto=_primeiro(tree, SELETORES["combustivel"]),
             cor_texto=cor,
             cidade_texto=cidade,
-            fotos=[urljoin(url, f) for f in fotos][:20],
+            fotos=[urljoin(url, f) for f in fotos],
             vendedor_nome=vendedor_nome,
             vendedor_telefone=None,
             vendedor_tipo=tipo_anunciante,

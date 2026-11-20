@@ -135,7 +135,7 @@ export function Gallery({
                 ) : (
                   <Download className="h-3.5 w-3.5" />
                 )}
-                {exporting ? "Gerando…" : "Baixar fotos"}
+                {exporting ? "Gerando…" : total === 1 ? "Baixar foto" : `Baixar ${total} fotos`}
               </Button>
             ) : null}
           </div>

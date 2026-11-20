@@ -177,6 +177,20 @@ class TestParseAnuncio:
         assert bruto.vendedor_telefone is None
         assert adapter.id_externo(URL_PARTICULAR) == "1626325"
 
+    def test_html_real_traz_galeria_completa(self, adapter):
+        """JSON-LD só tem a capa; a galeria vem de a.fotogroup (8+ fotos)."""
+        html = (FIXTURES / "shopcar_anuncio.html").read_text(encoding="utf-8")
+        bruto = adapter.parse_anuncio(html, URL_PARTICULAR)
+        assert bruto is not None
+        assert len(bruto.fotos) >= 8
+        assert all("/stored/veiculos/" in f for f in bruto.fotos)
+        assert all("/images/logo" not in f for f in bruto.fotos)
+
+        html_loja = (FIXTURES / "shopcar_anuncio_loja.html").read_text(encoding="utf-8")
+        loja = adapter.parse_anuncio(html_loja, URL_LOJA)
+        assert loja is not None
+        assert len(loja.fotos) >= 8
+
     def test_listagem_filtra_na_url_do_shopcar(self, adapter):
         assert list(adapter.urls_de_listagem("particular")) == [
             "https://www.shopcar.com.br/busca.php?tipo=1&tipoanuncio=2",

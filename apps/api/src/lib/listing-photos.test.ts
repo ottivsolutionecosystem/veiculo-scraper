@@ -44,4 +44,15 @@ describe("upgradeListingPhotos", () => {
       "https://cdn.shopcar.com.br/s3/veiculos/y.jpg",
     ]);
   });
+
+  it("descarta logo do site e deduplica", () => {
+    expect(
+      upgradeListingPhotos([
+        "https://cdn.shopcar.com.br/images/logo.png",
+        "https://cdn.shopcar.com.br/stored/veiculos/a.jpg",
+        "https://cdn.shopcar.com.br/stored/veiculos/a.jpg",
+        "https://cdn.shopcar.com.br/stored/lojas/99.png",
+      ]),
+    ).toEqual(["https://cdn.shopcar.com.br/stored/veiculos/a.jpg"]);
+  });
 });

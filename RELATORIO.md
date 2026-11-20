@@ -1,12 +1,16 @@
-# RELATORIO — botão Baixar fotos + export sem Shopcar
+# RELATORIO — galeria completa na raspagem + export
 
 ## Feito
-- Botão **Baixar fotos** no canto superior esquerdo da galeria (ficha).
-- Export corta 20% da base (remove Shopcar) e aplica tarja Auttus → ZIP.
-- Commit + deploy api/web desta entrega.
+- **Causa do Baixar “errado”:** a maioria dos anúncios só tinha **1 foto** no banco.
+- Shopcar: JSON-LD traz só a capa; o coletor parava nela e **ignorava** `a.fotogroup` (8–10 fotos).
+- Coletor agora mescla galeria HTML + JSON-LD/og, filtra logo do site, até 20 fotos.
+- Botão mostra `Baixar N fotos` conforme o que já está na ficha.
+- API filtra URL de logo/loja no `upgradeListingPhotos`.
 
 ## Decidido por mim
-- sharp + jszip na API (CORS do CDN impede canvas no browser).
+- Galeria HTML tem prioridade sobre JSON-LD (capa única).
+- Anúncios já gravados com 1 foto só atualizam na **próxima abertura de ficha** (varredura).
 
 ## Pendente de você
-- Abrir ficha → canto superior esquerdo da foto → **Baixar fotos**.
+- Deploy collector (já disparado se commit subir) + nova varredura Shopcar para repor galerias.
+- Conferir ficha após scrape: várias thumbs + Baixar N fotos.
