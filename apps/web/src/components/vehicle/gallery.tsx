@@ -6,19 +6,19 @@ import { ChevronLeft, ChevronRight, ImageOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
-function PhotoBrandBar({
-  counter,
-  compact = false,
-}: {
-  counter?: string | null;
-  compact?: boolean;
-}) {
+/**
+ * Cobre a marca d'água da Shopcar (canto inferior esquerdo da foto)
+ * com um bloco opaco + wordmark Auttus no mesmo lugar.
+ */
+function PhotoBrandCover({ compact = false }: { compact?: boolean }) {
   return (
     <div
       className={cn(
-        "pointer-events-none absolute inset-x-0 bottom-0 flex items-center justify-between gap-2",
-        "bg-gradient-to-t from-navy-deep/95 via-navy-deep/80 to-transparent",
-        compact ? "px-1.5 pb-1 pt-4" : "px-3 pb-2.5 pt-8 sm:px-4 sm:pb-3",
+        "pointer-events-none absolute z-[1] flex items-center justify-center",
+        "bg-navy-deep shadow-[0_0_0_1px_rgba(255,255,255,0.06)]",
+        compact
+          ? "bottom-0 left-0 h-[1.15rem] min-w-[3.4rem] rounded-tr-md px-1"
+          : "bottom-0 left-0 h-10 min-w-[7.75rem] rounded-tr-xl px-2.5 sm:h-11 sm:min-w-[9.5rem] sm:px-3",
       )}
       aria-hidden
     >
@@ -27,20 +27,10 @@ function PhotoBrandBar({
         src="/brand/logo-wordmark-on-dark.png"
         alt=""
         className={cn(
-          "w-auto object-contain object-left opacity-95",
-          compact ? "h-3 max-w-[4.5rem]" : "h-5 max-w-[7.5rem] sm:h-6 sm:max-w-[9rem]",
+          "w-auto object-contain object-left",
+          compact ? "h-2.5 max-w-[3rem]" : "h-5 max-w-[7rem] sm:h-6 sm:max-w-[8.5rem]",
         )}
       />
-      {counter ? (
-        <span
-          className={cn(
-            "rounded-full bg-white/15 font-medium text-white/90",
-            compact ? "px-1.5 py-0.5 text-[9px]" : "px-2.5 py-0.5 text-xs",
-          )}
-        >
-          {counter}
-        </span>
-      ) : null}
     </div>
   );
 }
@@ -91,7 +81,12 @@ export function Gallery({ photos, alt }: { photos: string[]; alt: string }) {
             alt={alt}
             className="h-full w-full object-contain"
           />
-          <PhotoBrandBar counter={total > 1 ? `${active + 1} / ${total}` : null} />
+          <PhotoBrandCover />
+          {total > 1 ? (
+            <span className="absolute bottom-2.5 right-2.5 z-[1] rounded-full bg-navy/80 px-2.5 py-0.5 text-xs font-medium text-white sm:bottom-3 sm:right-3">
+              {active + 1} / {total}
+            </span>
+          ) : null}
         </div>
         {total > 1 && (
           <>
@@ -132,7 +127,7 @@ export function Gallery({ photos, alt }: { photos: string[]; alt: string }) {
             >
               {/* eslint-disable-next-line @next/next/no-img-element -- data URI local */}
               <img src={photo} alt="" className="h-full w-full object-cover" />
-              <PhotoBrandBar compact />
+              <PhotoBrandCover compact />
             </button>
           ))}
         </div>
