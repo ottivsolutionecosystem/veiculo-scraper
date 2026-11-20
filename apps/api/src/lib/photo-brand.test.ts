@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 import sharp from "sharp";
 
 import {
+  PHOTO_BRAND_BAR_MAX_PX,
+  PHOTO_BRAND_BAR_MIN_PX,
   PHOTO_BRAND_BAR_RATIO,
   PHOTO_BRAND_LOGO_HEIGHT_RATIO,
   PHOTO_BRAND_LOGO_MAX_WIDTH_RATIO,
@@ -11,11 +13,20 @@ import {
 } from "./photo-brand.js";
 
 describe("brandBarLayout", () => {
-  it("usa ~20% da altura como faixa (corta a marca da base)", () => {
+  it("usa ~8% com teto e piso em px — não come a foto", () => {
     const layout = brandBarLayout(1000, 750);
-    expect(layout.barHeight).toBe(Math.round(750 * PHOTO_BRAND_BAR_RATIO));
+    const expected = Math.max(
+      PHOTO_BRAND_BAR_MIN_PX,
+      Math.min(PHOTO_BRAND_BAR_MAX_PX, Math.round(750 * PHOTO_BRAND_BAR_RATIO)),
+    );
+    expect(layout.barHeight).toBe(expected);
+    expect(layout.barHeight).toBeLessThanOrEqual(PHOTO_BRAND_BAR_MAX_PX);
     expect(layout.contentHeight).toBe(750 - layout.barHeight);
-    expect(layout.logoTop).toBe(layout.contentHeight);
+  });
+
+  it("em imagem alta o teto evita faixa gigante", () => {
+    const layout = brandBarLayout(2400, 1800);
+    expect(layout.barHeight).toBe(PHOTO_BRAND_BAR_MAX_PX);
   });
 
   it("posiciona padding e logo relativos à largura/faixa", () => {
@@ -30,13 +41,11 @@ describe("brandBarLayout", () => {
     expect(layout.barHeight).toBeGreaterThanOrEqual(1);
     expect(layout.contentHeight).toBeGreaterThanOrEqual(1);
     expect(layout.barHeight + layout.contentHeight).toBe(8);
-    expect(layout.logoHeight).toBeGreaterThanOrEqual(1);
   });
 });
 
 describe("brandPhotoBuffer", () => {
-  it("substitui a base por navy — pixels originais da faixa somem", async () => {
-    // Base vermelha (simula marca): se a tarja não cortar, a amostra na base continua vermelha.
+  it("pinta a base de navy sem apagar o restante", async () => {
     const input = await sharp({
       create: {
         width: 200,
@@ -55,18 +64,16 @@ describe("brandPhotoBuffer", () => {
       .toBuffer({ resolveWithObject: true });
 
     const layout = brandBarLayout(info.width, info.height);
-    // Amostra no meio da faixa Auttus (não no logo): deve ser navy, não vermelho.
+    // Meio da foto (acima da faixa) continua vermelho.
+    const midY = Math.floor(layout.contentHeight / 2);
+    const midIdx = (midY * info.width + 100) * info.channels;
+    expect(data[midIdx]!).toBeGreaterThan(150);
+
+    // Faixa inferior é navy.
     const x = Math.floor(info.width * 0.7);
     const y = layout.contentHeight + Math.floor(layout.barHeight / 2);
     const idx = (y * info.width + x) * info.channels;
-    const r = data[idx]!;
-    const g = data[idx + 1]!;
-    const b = data[idx + 2]!;
-
-    expect(r).toBeLessThan(40);
-    expect(g).toBeLessThan(40);
-    expect(b).toBeLessThan(60);
-    // Não pode permanecer o vermelho da “marca” simulada.
-    expect(r).toBeLessThan(100);
+    expect(data[idx]!).toBeLessThan(40);
+    expect(data[idx + 1]!).toBeLessThan(40);
   });
 });

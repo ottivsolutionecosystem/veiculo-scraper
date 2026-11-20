@@ -7,14 +7,15 @@ import { Button } from "@/components/ui/button";
 import { ApiError, downloadVehiclePhotosZip } from "@/lib/api";
 import {
   PHOTO_BRAND_BAR_CLASS,
-  PHOTO_BRAND_BAR_RATIO,
+  PHOTO_BRAND_BAR_PX,
+  PHOTO_BRAND_BAR_PX_COMPACT,
   PHOTO_BRAND_WORDMARK_SRC,
 } from "@/lib/photo-brand";
 import { cn } from "@/lib/utils";
 
 /**
- * Faixa opaca full-width na base — esconde a marca Shopcar.
- * Mesma proporção do export (corta a base e recoloca Auttus).
+ * Faixa baixa full-width na base — tapa Shopcar sem comer a foto.
+ * Altura fixa em px (não % do quadro: com object-contain isso inchava).
  */
 function PhotoBrandCover({ compact = false }: { compact?: boolean }) {
   return (
@@ -24,7 +25,7 @@ function PhotoBrandCover({ compact = false }: { compact?: boolean }) {
         PHOTO_BRAND_BAR_CLASS,
         compact ? "px-1.5" : "px-3 sm:px-4",
       )}
-      style={{ height: `${PHOTO_BRAND_BAR_RATIO * 100}%` }}
+      style={{ height: compact ? PHOTO_BRAND_BAR_PX_COMPACT : PHOTO_BRAND_BAR_PX }}
       aria-hidden
     >
       {/* eslint-disable-next-line @next/next/no-img-element -- arte local em /public */}
@@ -33,7 +34,7 @@ function PhotoBrandCover({ compact = false }: { compact?: boolean }) {
         alt=""
         className={cn(
           "w-auto object-contain object-left",
-          compact ? "h-[40%] max-w-[45%]" : "h-[40%] max-w-[35%]",
+          compact ? "h-2.5 max-w-[4rem]" : "h-5 max-w-[7.5rem] sm:h-6 sm:max-w-[9rem]",
         )}
       />
     </div>
